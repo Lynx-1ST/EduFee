@@ -1,6 +1,6 @@
 # Review and improvements — 2026-09-18
 
-> Update 2026-09-19: SQLite is now the runtime source of truth under `%LocalAppData%\EduFee`; payment and receipt writes use one transaction; schema constraints, verified backup/restore, and direct receipt/debt PDF export are implemented. See `KE_HOACH_PHAT_TRIEN.md` for current status. Recommendations below are retained as the original review record and may now be completed.
+> Update 2026-09-19: SQLite is the runtime source of truth under `%LocalAppData%\EduFee`; payment and receipt writes use one transaction; schema constraints, verified backup/restore, and direct receipt/debt PDF export are implemented. All 6 core audit findings (fee rollback, receipt snapshot, ledger migration check, 24/25 row PDF pagination, SQLite restore contract, robust cache reload) are resolved. Regression runner passes 52/52 (100%). See `KE_HOACH_PHAT_TRIEN.md` for full details.
 
 The project already has useful student, tuition, receipt, import, reporting and email workflows, with shared styling and recent UI improvements. Reliability and data integrity are the priority over another visual redesign.
 

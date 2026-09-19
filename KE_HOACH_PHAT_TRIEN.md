@@ -1,6 +1,6 @@
 # EduFee — Đánh giá và kế hoạch phát triển
 
-> Trạng thái triển khai 19/09/2026: T01-T08 và phần sao lưu/phục hồi của T09 đã được triển khai. Regression có kiểm tra SQLite, transaction, backup/restore và PDF. Phần đóng gói bộ cài/máy Windows đích vẫn cần nghiệm thu trên môi trường phát hành thực tế.
+> Trạng thái triển khai 19/09/2026: Toàn bộ T01–T08 và sao lưu/phục hồi của T09 đã được triển khai hoàn chỉnh. Đã giải quyết 6 phát hiện kiến trúc & độ tin cậy cốt lõi (rollback học phí, snapshot biên lai, migration đối soát tài chính, phân trang PDF 24/25 dòng, kiểm tra hợp đồng restore SQLite, reload cache an toàn). Bộ kiểm thử `26K1_DotNet.RegressionTests` đạt 52/52 PASS (100%), `dotnet run -- --test` đạt 100% PASS.
 
 Ngày kiểm tra: 19/09/2026. Phạm vi đã được người dùng xác nhận: **ứng dụng desktop một máy / đồ án**.
 
