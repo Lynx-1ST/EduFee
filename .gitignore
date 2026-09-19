@@ -1,10 +1,24 @@
-**/bin/
-**/obj/
+# Build outputs
+**/[Bb]in/
+**/[Oo]bj/
+
+# Visual Studio files
 .vs/
 *.user
 *.suo
+*.userosscache
+*.sln.docstates
+
+# Temporary & runtime log files
+*.log
+*.tmp
+*.bak
+output/
+tmp/
+
+# Local databases generated at runtime
 *.db-shm
 *.db-wal
-*.log
-*.bak
-*.tmp
+
+# Local email settings (contains personal DPAPI credentials)
+email_settings.json

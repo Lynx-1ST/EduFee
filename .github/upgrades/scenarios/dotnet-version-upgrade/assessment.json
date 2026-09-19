@@ -1,0 +1,615 @@
+{
+  "settings": {
+    "components": {
+      "code": true,
+      "binaries": false
+    },
+    "targetId": "net8.0",
+    "targetDisplayName": ".NETCoreApp,Version=v8.0"
+  },
+  "analysisStartTime": "2026-08-17T10:52:32.2552211Z",
+  "analysisEndTime": "2026-08-17T10:52:32.2757551Z",
+  "privacyModeHelpUrl": "https://go.microsoft.com/fwlink/?linkid=2270980",
+  "stats": {
+    "summary": {
+      "projects": 1,
+      "issues": 6,
+      "incidents": 21,
+      "effort": 21
+    },
+    "charts": {
+      "severity": {
+        "Mandatory": 19,
+        "Optional": 0,
+        "Potential": 2,
+        "Information": 0
+      },
+      "category": {
+        "Project": 2,
+        "Api": 19
+      }
+    }
+  },
+  "projects": [
+    {
+      "path": "26K1_DotNet\\26K1_DotNet.csproj",
+      "startingProject": true,
+      "issues": 4,
+      "storyPoints": 21,
+      "properties": {
+        "appName": "26K1_DotNet",
+        "projectKind": "ClassicWinForms",
+        "frameworks": [
+          "net48"
+        ],
+        "languages": [
+          "C#"
+        ],
+        "tools": [
+          "MSBuild"
+        ],
+        "isSdkStyle": false,
+        "numberOfFiles": 7,
+        "numberOfCodeFiles": 6,
+        "linesTotal": 333,
+        "linesOfCode": 216,
+        "totalApiScanned": 70,
+        "minLinesOfCodeToChange": 19,
+        "maxLinesOfCodeToChange": 19
+      },
+      "ruleInstances": [
+        {
+          "incidentId": "6396ef85-c997-4b12-ba3a-ac81222ed9ac",
+          "ruleId": "Project.0001",
+          "projectPath": "26K1_DotNet\\26K1_DotNet.csproj",
+          "state": "Active",
+          "location": {
+            "kind": "File",
+            "path": "26K1_DotNet\\26K1_DotNet.csproj"
+          }
+        },
+        {
+          "incidentId": "de536d50-37d4-4667-8764-9ac454a8f0ad",
+          "ruleId": "Project.0002",
+          "projectPath": "26K1_DotNet\\26K1_DotNet.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "Current target framework: .NETFramework,Version=v4.8\nRecommended target framework: net8.0-windows",
+              "protected": "Current target framework: .NETFramework,Version=v4.8\nRecommended target framework: net8.0-windows"
+            },
+            "kind": "File",
+            "path": "26K1_DotNet\\26K1_DotNet.csproj",
+            "snippet": "Current target framework: .NETFramework,Version=v4.8\nRecommended target framework: net8.0-windows",
+            "protectedSnippet": "Current target framework: .NETFramework,Version=v4.8\nRecommended target framework: net8.0-windows",
+            "properties": {
+              "CurrentTargetFramework": ".NETFramework,Version=v4.8",
+              "RecommendedTargetFramework": "net8.0-windows"
+            }
+          }
+        },
+        {
+          "incidentId": "5fafacc5-a572-4b4d-9a6f-64d0e8e468ed",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.Configuration.ConfigurationManager, 9.0.0-preview.6.24302.3. Add package reference to System.Configuration.ConfigurationManager, 9.0.0-preview.6.24302.3",
+          "projectPath": "26K1_DotNet\\26K1_DotNet.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "ApplicationSettingsBase",
+              "protected": "M:System.Configuration.ApplicationSettingsBase.#ctor"
+            },
+            "kind": "File",
+            "path": "26K1_DotNet\\Properties\\Settings.Designer.cs",
+            "snippet": "ApplicationSettingsBase",
+            "protectedSnippet": "M:System.Configuration.ApplicationSettingsBase.#ctor",
+            "label": "M:System.Configuration.ApplicationSettingsBase.#ctor",
+            "properties": {
+              "PackageId": "System.Configuration.ConfigurationManager",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3"
+            },
+            "line": 16,
+            "column": 74
+          }
+        },
+        {
+          "incidentId": "6d97228c-03d3-4622-b471-4a28c3778580",
+          "ruleId": "Api.0002",
+          "description": "API is available in package System.Configuration.ConfigurationManager, 9.0.0-preview.6.24302.3. Add package reference to System.Configuration.ConfigurationManager, 9.0.0-preview.6.24302.3",
+          "projectPath": "26K1_DotNet\\26K1_DotNet.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "ApplicationSettingsBase",
+              "protected": "T:System.Configuration.ApplicationSettingsBase"
+            },
+            "kind": "File",
+            "path": "26K1_DotNet\\Properties\\Settings.Designer.cs",
+            "snippet": "ApplicationSettingsBase",
+            "protectedSnippet": "T:System.Configuration.ApplicationSettingsBase",
+            "label": "T:System.Configuration.ApplicationSettingsBase",
+            "properties": {
+              "PackageId": "System.Configuration.ConfigurationManager",
+              "PackageNewVersion": "9.0.0-preview.6.24302.3"
+            },
+            "line": 16,
+            "column": 74
+          }
+        },
+        {
+          "incidentId": "e6689344-dd73-4ed3-81ba-43ec21ef1ddc",
+          "ruleId": "Api.0001",
+          "description": "API is unavailable in net8.0 ",
+          "projectPath": "26K1_DotNet\\26K1_DotNet.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "Application.Run(new Form1());",
+              "protected": "T:System.Windows.Forms.Application"
+            },
+            "kind": "File",
+            "path": "26K1_DotNet\\Program.cs",
+            "snippet": "Application.Run(new Form1());",
+            "protectedSnippet": "T:System.Windows.Forms.Application",
+            "label": "T:System.Windows.Forms.Application",
+            "line": 18,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "894fd3c2-f1e4-4ea8-9f46-7634162a2df6",
+          "ruleId": "Api.0001",
+          "description": "API is unavailable in net8.0 ",
+          "projectPath": "26K1_DotNet\\26K1_DotNet.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "Application.Run(new Form1());",
+              "protected": "M:System.Windows.Forms.Application.Run(System.Windows.Forms.Form)"
+            },
+            "kind": "File",
+            "path": "26K1_DotNet\\Program.cs",
+            "snippet": "Application.Run(new Form1());",
+            "protectedSnippet": "M:System.Windows.Forms.Application.Run(System.Windows.Forms.Form)",
+            "label": "M:System.Windows.Forms.Application.Run(System.Windows.Forms.Form)",
+            "line": 18,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "6181f6e3-fa88-46b7-b0ae-e26ce860c3fb",
+          "ruleId": "Api.0001",
+          "description": "API is unavailable in net8.0 ",
+          "projectPath": "26K1_DotNet\\26K1_DotNet.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "Application.SetCompatibleTextRenderingDefault(false);",
+              "protected": "T:System.Windows.Forms.Application"
+            },
+            "kind": "File",
+            "path": "26K1_DotNet\\Program.cs",
+            "snippet": "Application.SetCompatibleTextRenderingDefault(false);",
+            "protectedSnippet": "T:System.Windows.Forms.Application",
+            "label": "T:System.Windows.Forms.Application",
+            "line": 17,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "29fe251b-90af-402c-8622-89ed5b99324c",
+          "ruleId": "Api.0001",
+          "description": "API is unavailable in net8.0 ",
+          "projectPath": "26K1_DotNet\\26K1_DotNet.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "Application.SetCompatibleTextRenderingDefault(false);",
+              "protected": "M:System.Windows.Forms.Application.SetCompatibleTextRenderingDefault(System.Boolean)"
+            },
+            "kind": "File",
+            "path": "26K1_DotNet\\Program.cs",
+            "snippet": "Application.SetCompatibleTextRenderingDefault(false);",
+            "protectedSnippet": "M:System.Windows.Forms.Application.SetCompatibleTextRenderingDefault(System.Boolean)",
+            "label": "M:System.Windows.Forms.Application.SetCompatibleTextRenderingDefault(System.Boolean)",
+            "line": 17,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "3058c1bd-240a-4631-a361-9ecfd18ef9fb",
+          "ruleId": "Api.0001",
+          "description": "API is unavailable in net8.0 ",
+          "projectPath": "26K1_DotNet\\26K1_DotNet.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "Application.EnableVisualStyles();",
+              "protected": "T:System.Windows.Forms.Application"
+            },
+            "kind": "File",
+            "path": "26K1_DotNet\\Program.cs",
+            "snippet": "Application.EnableVisualStyles();",
+            "protectedSnippet": "T:System.Windows.Forms.Application",
+            "label": "T:System.Windows.Forms.Application",
+            "line": 16,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "dbad9e0f-013f-4fcc-90d7-52d17b2ab27e",
+          "ruleId": "Api.0001",
+          "description": "API is unavailable in net8.0 ",
+          "projectPath": "26K1_DotNet\\26K1_DotNet.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "Application.EnableVisualStyles();",
+              "protected": "M:System.Windows.Forms.Application.EnableVisualStyles"
+            },
+            "kind": "File",
+            "path": "26K1_DotNet\\Program.cs",
+            "snippet": "Application.EnableVisualStyles();",
+            "protectedSnippet": "M:System.Windows.Forms.Application.EnableVisualStyles",
+            "label": "M:System.Windows.Forms.Application.EnableVisualStyles",
+            "line": 16,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "28266676-6560-4734-ad67-aaae136aa1f8",
+          "ruleId": "Api.0001",
+          "description": "API is unavailable in net8.0 ",
+          "projectPath": "26K1_DotNet\\26K1_DotNet.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "public Form1()\r\n        {\r\n            InitializeComponent();\r\n        }",
+              "protected": "M:System.Windows.Forms.Form.#ctor"
+            },
+            "kind": "File",
+            "path": "26K1_DotNet\\Form1.cs",
+            "snippet": "public Form1()\r\n        {\r\n            InitializeComponent();\r\n        }",
+            "protectedSnippet": "M:System.Windows.Forms.Form.#ctor",
+            "label": "M:System.Windows.Forms.Form.#ctor",
+            "line": 14,
+            "column": 8
+          }
+        },
+        {
+          "incidentId": "b5639909-f333-444b-a81a-356b6821dd48",
+          "ruleId": "Api.0001",
+          "description": "API is unavailable in net8.0 ",
+          "projectPath": "26K1_DotNet\\26K1_DotNet.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "this.Text = \u0022Form1\u0022;",
+              "protected": "P:System.Windows.Forms.Form.Text"
+            },
+            "kind": "File",
+            "path": "26K1_DotNet\\Form1.Designer.cs",
+            "snippet": "this.Text = \u0022Form1\u0022;",
+            "protectedSnippet": "P:System.Windows.Forms.Form.Text",
+            "label": "P:System.Windows.Forms.Form.Text",
+            "line": 33,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "021aad0e-3a3c-4b61-b8da-1a9a59645973",
+          "ruleId": "Api.0001",
+          "description": "API is unavailable in net8.0 ",
+          "projectPath": "26K1_DotNet\\26K1_DotNet.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "this.ClientSize = new System.Drawing.Size(800, 450);",
+              "protected": "P:System.Windows.Forms.Form.ClientSize"
+            },
+            "kind": "File",
+            "path": "26K1_DotNet\\Form1.Designer.cs",
+            "snippet": "this.ClientSize = new System.Drawing.Size(800, 450);",
+            "protectedSnippet": "P:System.Windows.Forms.Form.ClientSize",
+            "label": "P:System.Windows.Forms.Form.ClientSize",
+            "line": 32,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "4264d576-3ba3-4a11-a787-aca56c5c7e25",
+          "ruleId": "Api.0001",
+          "description": "API is unavailable in net8.0 ",
+          "projectPath": "26K1_DotNet\\26K1_DotNet.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;",
+              "protected": "T:System.Windows.Forms.AutoScaleMode"
+            },
+            "kind": "File",
+            "path": "26K1_DotNet\\Form1.Designer.cs",
+            "snippet": "this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;",
+            "protectedSnippet": "T:System.Windows.Forms.AutoScaleMode",
+            "label": "T:System.Windows.Forms.AutoScaleMode",
+            "line": 31,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "5da4ca20-b999-421e-b110-e0481a588e5f",
+          "ruleId": "Api.0001",
+          "description": "API is unavailable in net8.0 ",
+          "projectPath": "26K1_DotNet\\26K1_DotNet.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;",
+              "protected": "T:System.Windows.Forms.AutoScaleMode"
+            },
+            "kind": "File",
+            "path": "26K1_DotNet\\Form1.Designer.cs",
+            "snippet": "this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;",
+            "protectedSnippet": "T:System.Windows.Forms.AutoScaleMode",
+            "label": "T:System.Windows.Forms.AutoScaleMode",
+            "line": 31,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "2b643647-4345-4409-8326-4ff1a884489d",
+          "ruleId": "Api.0001",
+          "description": "API is unavailable in net8.0 ",
+          "projectPath": "26K1_DotNet\\26K1_DotNet.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;",
+              "protected": "F:System.Windows.Forms.AutoScaleMode.Font"
+            },
+            "kind": "File",
+            "path": "26K1_DotNet\\Form1.Designer.cs",
+            "snippet": "this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;",
+            "protectedSnippet": "F:System.Windows.Forms.AutoScaleMode.Font",
+            "label": "F:System.Windows.Forms.AutoScaleMode.Font",
+            "line": 31,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "7140ccdb-68a0-4819-b5de-514da302f21a",
+          "ruleId": "Api.0001",
+          "description": "API is unavailable in net8.0 ",
+          "projectPath": "26K1_DotNet\\26K1_DotNet.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;",
+              "protected": "T:System.Windows.Forms.AutoScaleMode"
+            },
+            "kind": "File",
+            "path": "26K1_DotNet\\Form1.Designer.cs",
+            "snippet": "this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;",
+            "protectedSnippet": "T:System.Windows.Forms.AutoScaleMode",
+            "label": "T:System.Windows.Forms.AutoScaleMode",
+            "line": 31,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "312e7357-76f3-4bfc-83c4-d4ed1ef01ae8",
+          "ruleId": "Api.0001",
+          "description": "API is unavailable in net8.0 ",
+          "projectPath": "26K1_DotNet\\26K1_DotNet.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;",
+              "protected": "P:System.Windows.Forms.ContainerControl.AutoScaleMode"
+            },
+            "kind": "File",
+            "path": "26K1_DotNet\\Form1.Designer.cs",
+            "snippet": "this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;",
+            "protectedSnippet": "P:System.Windows.Forms.ContainerControl.AutoScaleMode",
+            "label": "P:System.Windows.Forms.ContainerControl.AutoScaleMode",
+            "line": 31,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "8ca83edb-0224-4c6a-893c-9db33ffc1053",
+          "ruleId": "Api.0001",
+          "description": "API is unavailable in net8.0 ",
+          "projectPath": "26K1_DotNet\\26K1_DotNet.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "base.Dispose(disposing);",
+              "protected": "M:System.Windows.Forms.Form.Dispose(System.Boolean)"
+            },
+            "kind": "File",
+            "path": "26K1_DotNet\\Form1.Designer.cs",
+            "snippet": "base.Dispose(disposing);",
+            "protectedSnippet": "M:System.Windows.Forms.Form.Dispose(System.Boolean)",
+            "label": "M:System.Windows.Forms.Form.Dispose(System.Boolean)",
+            "line": 19,
+            "column": 12
+          }
+        },
+        {
+          "incidentId": "6af32735-ed75-4db9-831a-80466d2f3c0a",
+          "ruleId": "Api.0001",
+          "description": "API is unavailable in net8.0 ",
+          "projectPath": "26K1_DotNet\\26K1_DotNet.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "public Form1()\r\n        {\r\n            InitializeComponent();\r\n        }",
+              "protected": "M:System.Windows.Forms.Form.#ctor"
+            },
+            "kind": "File",
+            "path": "26K1_DotNet\\Form1.cs",
+            "snippet": "public Form1()\r\n        {\r\n            InitializeComponent();\r\n        }",
+            "protectedSnippet": "M:System.Windows.Forms.Form.#ctor",
+            "label": "M:System.Windows.Forms.Form.#ctor",
+            "line": 14,
+            "column": 8
+          }
+        },
+        {
+          "incidentId": "3205be8f-c2f1-47c2-93e7-2bcdbfbb6239",
+          "ruleId": "Api.0001",
+          "description": "API is unavailable in net8.0 ",
+          "projectPath": "26K1_DotNet\\26K1_DotNet.csproj",
+          "state": "Active",
+          "location": {
+            "snippetModel": {
+              "unrestricted": "Form",
+              "protected": "T:System.Windows.Forms.Form"
+            },
+            "kind": "File",
+            "path": "26K1_DotNet\\Form1.cs",
+            "snippet": "Form",
+            "protectedSnippet": "T:System.Windows.Forms.Form",
+            "label": "T:System.Windows.Forms.Form",
+            "line": 12,
+            "column": 33
+          }
+        }
+      ],
+      "features": [
+        {
+          "featureId": "LegacyConfiguration",
+          "incidents": [
+            "6d97228c-03d3-4622-b471-4a28c3778580",
+            "5fafacc5-a572-4b4d-9a6f-64d0e8e468ed"
+          ]
+        },
+        {
+          "featureId": "WinForms",
+          "incidents": [
+            "3205be8f-c2f1-47c2-93e7-2bcdbfbb6239",
+            "6af32735-ed75-4db9-831a-80466d2f3c0a",
+            "8ca83edb-0224-4c6a-893c-9db33ffc1053",
+            "312e7357-76f3-4bfc-83c4-d4ed1ef01ae8",
+            "7140ccdb-68a0-4819-b5de-514da302f21a",
+            "2b643647-4345-4409-8326-4ff1a884489d",
+            "5da4ca20-b999-421e-b110-e0481a588e5f",
+            "4264d576-3ba3-4a11-a787-aca56c5c7e25",
+            "021aad0e-3a3c-4b61-b8da-1a9a59645973",
+            "b5639909-f333-444b-a81a-356b6821dd48",
+            "28266676-6560-4734-ad67-aaae136aa1f8",
+            "dbad9e0f-013f-4fcc-90d7-52d17b2ab27e",
+            "3058c1bd-240a-4631-a361-9ecfd18ef9fb",
+            "29fe251b-90af-402c-8622-89ed5b99324c",
+            "6181f6e3-fa88-46b7-b0ae-e26ce860c3fb",
+            "894fd3c2-f1e4-4ea8-9f46-7634162a2df6",
+            "e6689344-dd73-4ed3-81ba-43ec21ef1ddc"
+          ]
+        }
+      ]
+    }
+  ],
+  "rules": {
+    "Project.0001": {
+      "id": "Project.0001",
+      "isFeature": false,
+      "description": "Project file needs to be converted to SDK-style. Modern .NET framework projects require a change in the project file format and use SDK corresponding to project flavor and functionality.",
+      "label": "Project file needs to be converted to SDK-style",
+      "severity": "Mandatory",
+      "effort": 1,
+      "links": [
+        {
+          "title": "Overview of porting from .NET Framework to .NET",
+          "url": "https://go.microsoft.com/fwlink/?linkid=2265227",
+          "isCustom": false
+        },
+        {
+          "title": ".NET project SDKs",
+          "url": "https://go.microsoft.com/fwlink/?linkid=2265226",
+          "isCustom": false
+        }
+      ]
+    },
+    "Project.0002": {
+      "id": "Project.0002",
+      "isFeature": false,
+      "description": "Project\u0027s target framework(s) needs to be changed to the new target framework that you selected for this upgrade.\n\nDuring upgrade target framework will be adjusted to corresponding platform when applicable. In some cases project would result in multiple target frameworks after the upgrade if it was using features that now have their own platforms in modern .NET frameworks (windows, iOS, Android etc).",
+      "label": "Project\u0027s target framework(s) needs to be changed",
+      "severity": "Mandatory",
+      "effort": 1,
+      "links": [
+        {
+          "title": "Overview of porting from .NET Framework to .NET",
+          "url": "https://go.microsoft.com/fwlink/?linkid=2265227",
+          "isCustom": false
+        },
+        {
+          "title": ".NET project SDKs",
+          "url": "https://go.microsoft.com/fwlink/?linkid=2265226",
+          "isCustom": false
+        }
+      ]
+    },
+    "Api.0002": {
+      "id": "Api.0002",
+      "isFeature": false,
+      "description": "API is source incompatible for selected .NET version: requires code changes to compile successfully when targeting a new version, such as removing obsolete APIs or changing method signatures.",
+      "label": "Source incompatible for selected .NET version",
+      "severity": "Potential",
+      "effort": 1,
+      "links": [
+        {
+          "title": "Breaking changes in .NET",
+          "url": "https://go.microsoft.com/fwlink/?linkid=2262679",
+          "isCustom": false
+        }
+      ]
+    },
+    "Api.0001": {
+      "id": "Api.0001",
+      "isFeature": false,
+      "description": "API is binary incompatible for selected .NET version: affects existing binaries, often requiring recompilation, because the API has changed in a way that prevents older binaries from loading or executing.",
+      "label": "Binary incompatible for selected .NET version",
+      "severity": "Mandatory",
+      "effort": 1,
+      "links": [
+        {
+          "title": "Breaking changes in .NET",
+          "url": "https://go.microsoft.com/fwlink/?linkid=2262679",
+          "isCustom": false
+        }
+      ]
+    },
+    "LegacyConfiguration": {
+      "id": "LegacyConfiguration",
+      "isFeature": false,
+      "description": "Legacy XML-based configuration system (app.config/web.config) that has been replaced by a more flexible configuration model in .NET Core. The old system was rigid and XML-based. Migrate to Microsoft.Extensions.Configuration with JSON/environment variables; use System.Configuration.ConfigurationManager NuGet package as interim bridge if needed.",
+      "label": "Legacy Configuration System",
+      "severity": "Mandatory",
+      "effort": 2,
+      "links": [
+        {
+          "title": "Configuration in .NET",
+          "url": "https://go.microsoft.com/fwlink/?linkid=2341702",
+          "isCustom": false
+        }
+      ]
+    },
+    "WinForms": {
+      "id": "WinForms",
+      "isFeature": false,
+      "description": "Windows Forms APIs for building Windows desktop applications with traditional Forms-based UI that are available in .NET on Windows. Enable Windows Desktop support: Option 1 (Recommended): Target net9.0-windows; Option 2: Add \u003CUseWindowsDesktop\u003Etrue\u003C/UseWindowsDesktop\u003E; Option 3 (Legacy): Use Microsoft.NET.Sdk.WindowsDesktop SDK.",
+      "label": "Windows Forms",
+      "severity": "Mandatory",
+      "effort": 1,
+      "links": [
+        {
+          "title": "Windows Forms on .NET",
+          "url": "https://go.microsoft.com/fwlink/?linkid=2341906",
+          "isCustom": false
+        }
+      ]
+    }
+  }
+}

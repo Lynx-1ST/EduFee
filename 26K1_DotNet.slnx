@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="26K1_DotNet/26K1_DotNet.csproj" />
+  <Project Path="26K1_DotNet.RegressionTests/26K1_DotNet.RegressionTests.csproj" />
+</Solution>
