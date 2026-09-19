@@ -1,0 +1,82 @@
+[
+  {
+    "Id": 1,
+    "FullName": "Đào Quang Lộc",
+    "Email": "loc.dq@humg.edu.vn",
+    "PhoneNumber": "0389770636",
+    "DateOfBirth": "2005-05-17T00:00:00",
+    "ClassName": "DCCTCT68A"
+  },
+  {
+    "Id": 2,
+    "FullName": "Nguyễn Hoàng Nam",
+    "Email": "nam.nh@humg.edu.vn",
+    "PhoneNumber": "0912345678",
+    "DateOfBirth": "2005-08-22T00:00:00",
+    "ClassName": "DCCNTT13A"
+  },
+  {
+    "Id": 3,
+    "FullName": "Trần Thị Mai Phương",
+    "Email": "phuong.ttm@humg.edu.vn",
+    "PhoneNumber": "0987654321",
+    "DateOfBirth": "2005-03-15T00:00:00",
+    "ClassName": "DCCNTT13A"
+  },
+  {
+    "Id": 4,
+    "FullName": "Lê Minh Tuấn",
+    "Email": "tuan.lm@humg.edu.vn",
+    "PhoneNumber": "0903112233",
+    "DateOfBirth": "2004-11-10T00:00:00",
+    "ClassName": "DCCNTT13A"
+  },
+  {
+    "Id": 5,
+    "FullName": "Phạm Hải Đăng",
+    "Email": "dang.ph@humg.edu.vn",
+    "PhoneNumber": "0934567890",
+    "DateOfBirth": "2005-01-28T00:00:00",
+    "ClassName": "DCCNTT13B"
+  },
+  {
+    "Id": 6,
+    "FullName": "Vũ Bích Ngọc",
+    "Email": "ngoc.vb@humg.edu.vn",
+    "PhoneNumber": "0978123456",
+    "DateOfBirth": "2005-07-09T00:00:00",
+    "ClassName": "DCCNTT13B"
+  },
+  {
+    "Id": 7,
+    "FullName": "Hoàng Đức Anh",
+    "Email": "anh.hd@humg.edu.vn",
+    "PhoneNumber": "0945678123",
+    "DateOfBirth": "2004-12-05T00:00:00",
+    "ClassName": "DCH12A"
+  },
+  {
+    "Id": 8,
+    "FullName": "Bùi Thu Thảo",
+    "Email": "thao.bt@humg.edu.vn",
+    "PhoneNumber": "0967890123",
+    "DateOfBirth": "2005-09-18T00:00:00",
+    "ClassName": "DCH12A"
+  },
+  {
+    "Id": 9,
+    "FullName": "Đỗ Gia Huy",
+    "Email": "huy.dg@humg.edu.vn",
+    "PhoneNumber": "0981234567",
+    "DateOfBirth": "2005-04-25T00:00:00",
+    "ClassName": "DCKT14A"
+  },
+  {
+    "Id": 10,
+    "FullName": "Ngô Khánh Linh",
+    "Email": "linh.nk@humg.edu.vn",
+    "PhoneNumber": "0918765432",
+    "DateOfBirth": "2005-10-30T00:00:00",
+    "ClassName": "DCKT14A"
+  }
+]
