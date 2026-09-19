@@ -478,5 +478,459 @@ namespace _26K1_DotNet
             path.CloseFigure();
             return path;
         }
+
+        // ── Phase 4 Reusable Component Builders ────────────────────────────────
+
+        /// <summary>
+        /// Create a rounded card panel with custom border and background.
+        /// </summary>
+        public static Panel CreateRoundedCard(int radius = RadiusMd, Color? bg = null, Color? border = null)
+        {
+            var p = new Panel
+            {
+                BackColor = bg ?? Surface,
+                Padding = new Padding(PadCard)
+            };
+            var borderColor = border ?? Border;
+            p.Paint += (s, e) =>
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var rect = new Rectangle(0, 0, p.Width - 1, p.Height - 1);
+                using var pen = new Pen(borderColor, 1);
+                using var path = GetRoundedPath(rect, radius);
+                e.Graphics.DrawPath(pen, path);
+            };
+            return p;
+        }
+
+        /// <summary>
+        /// Create a modern Stat Card with left accent bar and typography hierarchy (Title, Value, Subtitle).
+        /// </summary>
+        public static Panel CreateStatCard(string title, string value, string? subtitle, Color accentColor, Color? valueColor = null, int radius = RadiusMd)
+        {
+            var card = new Panel
+            {
+                BackColor = Surface,
+                Padding = new Padding(18, 14, 16, 14),
+                Margin = new Padding(6)
+            };
+
+            card.Paint += (s, e) =>
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var rect = new Rectangle(0, 0, card.Width - 1, card.Height - 1);
+                using (var pen = new Pen(Border, 1))
+                using (var path = GetRoundedPath(rect, radius))
+                {
+                    e.Graphics.DrawPath(pen, path);
+                }
+                using (var accentBrush = new SolidBrush(accentColor))
+                {
+                    e.Graphics.FillRectangle(accentBrush, 0, 10, 4, Math.Max(0, card.Height - 20));
+                }
+            };
+
+            var lblTitle = new Label
+            {
+                Text = title,
+                Font = FontSmallBold,
+                ForeColor = TextSecondary,
+                Location = new Point(16, 12),
+                AutoSize = true
+            };
+
+            var lblValue = new Label
+            {
+                Text = value,
+                Font = FontCardValue2,
+                ForeColor = valueColor ?? TextPrimary,
+                Location = new Point(16, 32),
+                AutoSize = true
+            };
+
+            card.Controls.Add(lblTitle);
+            card.Controls.Add(lblValue);
+
+            if (!string.IsNullOrEmpty(subtitle))
+            {
+                var lblSub = new Label
+                {
+                    Text = subtitle,
+                    Font = FontSmall,
+                    ForeColor = TextMuted,
+                    Location = new Point(16, 62),
+                    AutoSize = true
+                };
+                card.Controls.Add(lblSub);
+            }
+
+            return card;
+        }
+
+        /// <summary>
+        /// Create a search input field with integrated vector search icon, focus border and placeholder.
+        /// </summary>
+        public static Panel CreateSearchInput(string placeholder, out TextBox txt, int width = 260, int height = 36, Action<string>? onTextChanged = null)
+        {
+            var pnl = new Panel
+            {
+                Size = new Size(width, height),
+                BackColor = Surface,
+                Cursor = Cursors.IBeam
+            };
+
+            var innerTxt = new TextBox
+            {
+                BorderStyle = BorderStyle.None,
+                Font = FontBody,
+                ForeColor = TextPrimary,
+                BackColor = Surface,
+                PlaceholderText = placeholder,
+                Location = new Point(34, (height - 20) / 2),
+                Width = width - 42,
+                Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top
+            };
+
+            if (onTextChanged != null)
+            {
+                innerTxt.TextChanged += (s, e) => onTextChanged(innerTxt.Text);
+            }
+
+            bool hasFocus = false;
+            innerTxt.GotFocus += (s, e) => { hasFocus = true; pnl.Invalidate(); };
+            innerTxt.LostFocus += (s, e) => { hasFocus = false; pnl.Invalidate(); };
+            pnl.Click += (s, e) => innerTxt.Focus();
+
+            pnl.Paint += (s, e) =>
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var rect = new Rectangle(0, 0, pnl.Width - 1, pnl.Height - 1);
+                using (var pen = new Pen(hasFocus ? Primary : Border, hasFocus ? 1.5f : 1f))
+                using (var path = GetRoundedPath(rect, RadiusMd))
+                {
+                    e.Graphics.DrawPath(pen, path);
+                }
+
+                var iconRect = new Rectangle(10, (pnl.Height - 16) / 2, 16, 16);
+                DrawIcon(e.Graphics, IconType.Search, iconRect, hasFocus ? Primary : TextSecondary);
+            };
+
+            pnl.Controls.Add(innerTxt);
+            txt = innerTxt;
+            return pnl;
+        }
+
+        /// <summary>
+        /// Create a clean, centered empty-state display with icon, title, description and optional action button.
+        /// </summary>
+        public static Panel CreateEmptyState(string title, string description, string? actionText = null, EventHandler? onAction = null)
+        {
+            var pnl = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Surface
+            };
+
+            var flow = new FlowLayoutPanel
+            {
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                BackColor = Color.Transparent
+            };
+
+            var iconBox = new PictureBox
+            {
+                Size = new Size(48, 48),
+                BackColor = Color.Transparent,
+                Margin = new Padding(0, 0, 0, 12)
+            };
+            iconBox.Paint += (s, e) =>
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var rect = new Rectangle(0, 0, iconBox.Width, iconBox.Height);
+                using var brush = new SolidBrush(PrimaryLight);
+                e.Graphics.FillEllipse(brush, rect);
+                var iconRect = new Rectangle(14, 14, 20, 20);
+                DrawIcon(e.Graphics, IconType.Search, iconRect, Primary);
+            };
+
+            var lblTitle = new Label
+            {
+                Text = title,
+                Font = FontH2,
+                ForeColor = TextPrimary,
+                AutoSize = true,
+                Margin = new Padding(0, 0, 0, 6),
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+
+            var lblDesc = new Label
+            {
+                Text = description,
+                Font = FontBody,
+                ForeColor = TextSecondary,
+                AutoSize = true,
+                Margin = new Padding(0, 0, 0, actionText != null ? 16 : 0),
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+
+            flow.Controls.Add(iconBox);
+            flow.Controls.Add(lblTitle);
+            flow.Controls.Add(lblDesc);
+
+            if (!string.IsNullOrEmpty(actionText) && onAction != null)
+            {
+                var btn = PrimaryBtn(actionText);
+                btn.Click += onAction;
+                flow.Controls.Add(btn);
+            }
+
+            pnl.Controls.Add(flow);
+
+            void CenterFlow()
+            {
+                iconBox.Margin = new Padding(Math.Max(0, (flow.Width - iconBox.Width) / 2), 0, 0, 12);
+                lblTitle.Margin = new Padding(Math.Max(0, (flow.Width - lblTitle.Width) / 2), 0, 0, 6);
+                lblDesc.Margin = new Padding(Math.Max(0, (flow.Width - lblDesc.Width) / 2), 0, 0, actionText != null ? 16 : 0);
+                flow.Location = new Point(Math.Max(0, (pnl.Width - flow.Width) / 2), Math.Max(0, (pnl.Height - flow.Height) / 2));
+            }
+
+            pnl.Resize += (s, e) => CenterFlow();
+            flow.SizeChanged += (s, e) => CenterFlow();
+
+            return pnl;
+        }
+
+        /// <summary>
+        /// Create a section header with title and subtitle.
+        /// </summary>
+        public static Panel CreateSectionHeader(string title, string? subtitle = null)
+        {
+            var pnl = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = subtitle != null ? 48 : 34,
+                BackColor = Color.Transparent,
+                Padding = new Padding(0, 4, 0, 4)
+            };
+
+            var lblTitle = new Label
+            {
+                Text = title,
+                Font = FontH2,
+                ForeColor = TextPrimary,
+                Location = new Point(0, 2),
+                AutoSize = true
+            };
+            pnl.Controls.Add(lblTitle);
+
+            if (subtitle != null)
+            {
+                var lblSub = new Label
+                {
+                    Text = subtitle,
+                    Font = FontSmall,
+                    ForeColor = TextSecondary,
+                    Location = new Point(0, 24),
+                    AutoSize = true
+                };
+                pnl.Controls.Add(lblSub);
+            }
+
+            return pnl;
+        }
+
+        // ── Phase 7 Monochrome Vector Iconography ──────────────────────────────
+
+        public enum IconType
+        {
+            Students,
+            Tuition,
+            Statistics,
+            Settings,
+            Search,
+            Filter,
+            Add,
+            Edit,
+            Delete,
+            Receipt,
+            Calendar,
+            Export,
+            Import,
+            Refresh,
+            More,
+            Check,
+            Warning,
+            Close,
+            Money,
+            Pdf,
+            Email,
+            Database
+        }
+
+        public static void DrawIcon(Graphics g, IconType icon, Rectangle r, Color color)
+        {
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            using var pen = new Pen(color, 1.8f) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round };
+            using var brush = new SolidBrush(color);
+
+            float x = r.X, y = r.Y, w = r.Width, h = r.Height;
+
+            switch (icon)
+            {
+                case IconType.Students:
+                    float capMidX = x + w * 0.5f;
+                    PointF[] diamond = [
+                        new PointF(capMidX, y + h * 0.2f),
+                        new PointF(x + w * 0.9f, y + h * 0.45f),
+                        new PointF(capMidX, y + h * 0.7f),
+                        new PointF(x + w * 0.1f, y + h * 0.45f)
+                    ];
+                    g.DrawPolygon(pen, diamond);
+                    g.DrawArc(pen, x + w * 0.25f, y + h * 0.45f, w * 0.5f, h * 0.35f, 0, 180);
+                    g.DrawLine(pen, x + w * 0.85f, y + h * 0.48f, x + w * 0.85f, y + h * 0.8f);
+                    break;
+
+                case IconType.Tuition:
+                case IconType.Money:
+                    var cardR = new RectangleF(x + w * 0.1f, y + h * 0.22f, w * 0.8f, h * 0.56f);
+                    using (var cardPath = GetRoundedPath(Rectangle.Round(cardR), 3))
+                    {
+                        g.DrawPath(pen, cardPath);
+                    }
+                    g.DrawEllipse(pen, x + w * 0.38f, y + h * 0.38f, w * 0.24f, h * 0.24f);
+                    break;
+
+                case IconType.Statistics:
+                    float barW = w * 0.2f;
+                    float gap = w * 0.1f;
+                    float startX = x + w * 0.15f;
+                    g.FillRectangle(brush, startX, y + h * 0.55f, barW, h * 0.35f);
+                    g.FillRectangle(brush, startX + barW + gap, y + h * 0.25f, barW, h * 0.65f);
+                    g.FillRectangle(brush, startX + (barW + gap) * 2, y + h * 0.4f, barW, h * 0.5f);
+                    break;
+
+                case IconType.Settings:
+                    float rMidX = x + w * 0.5f, rMidY = y + h * 0.5f;
+                    float rad = w * 0.32f;
+                    g.DrawEllipse(pen, rMidX - rad, rMidY - rad, rad * 2, rad * 2);
+                    g.DrawEllipse(pen, rMidX - rad * 0.45f, rMidY - rad * 0.45f, rad * 0.9f, rad * 0.9f);
+                    for (int i = 0; i < 4; i++)
+                    {
+                        double ang = i * Math.PI / 4;
+                        float cos = (float)Math.Cos(ang), sin = (float)Math.Sin(ang);
+                        g.DrawLine(pen, rMidX - (rad + 2.5f) * cos, rMidY - (rad + 2.5f) * sin,
+                                        rMidX + (rad + 2.5f) * cos, rMidY + (rad + 2.5f) * sin);
+                    }
+                    break;
+
+                case IconType.Search:
+                    float cr = w * 0.30f;
+                    g.DrawEllipse(pen, x + w * 0.15f, y + h * 0.15f, cr * 2, cr * 2);
+                    g.DrawLine(pen, x + w * 0.15f + cr * 1.6f, y + h * 0.15f + cr * 1.6f, x + w * 0.85f, y + h * 0.85f);
+                    break;
+
+                case IconType.Filter:
+                    PointF[] funnel = [
+                        new PointF(x + w * 0.15f, y + h * 0.2f),
+                        new PointF(x + w * 0.85f, y + h * 0.2f),
+                        new PointF(x + w * 0.55f, y + h * 0.55f),
+                        new PointF(x + w * 0.55f, y + h * 0.85f),
+                        new PointF(x + w * 0.45f, y + h * 0.85f),
+                        new PointF(x + w * 0.45f, y + h * 0.55f)
+                    ];
+                    g.DrawPolygon(pen, funnel);
+                    break;
+
+                case IconType.Add:
+                    g.DrawLine(pen, x + w * 0.5f, y + h * 0.15f, x + w * 0.5f, y + h * 0.85f);
+                    g.DrawLine(pen, x + w * 0.15f, y + h * 0.5f, x + w * 0.85f, y + h * 0.5f);
+                    break;
+
+                case IconType.Edit:
+                    g.DrawLine(pen, x + w * 0.2f, y + h * 0.8f, x + w * 0.35f, y + h * 0.8f);
+                    g.DrawLine(pen, x + w * 0.2f, y + h * 0.8f, x + w * 0.2f, y + h * 0.65f);
+                    g.DrawLine(pen, x + w * 0.2f, y + h * 0.65f, x + w * 0.7f, y + h * 0.15f);
+                    g.DrawLine(pen, x + w * 0.35f, y + h * 0.8f, x + w * 0.85f, y + h * 0.3f);
+                    g.DrawLine(pen, x + w * 0.7f, y + h * 0.15f, x + w * 0.85f, y + h * 0.3f);
+                    break;
+
+                case IconType.Delete:
+                    g.DrawLine(pen, x + w * 0.2f, y + h * 0.3f, x + w * 0.8f, y + h * 0.3f);
+                    g.DrawLine(pen, x + w * 0.4f, y + h * 0.2f, x + w * 0.6f, y + h * 0.2f);
+                    PointF[] can = [
+                        new PointF(x + w * 0.28f, y + h * 0.3f),
+                        new PointF(x + w * 0.32f, y + h * 0.85f),
+                        new PointF(x + w * 0.68f, y + h * 0.85f),
+                        new PointF(x + w * 0.72f, y + h * 0.3f)
+                    ];
+                    g.DrawPolygon(pen, can);
+                    break;
+
+                case IconType.Calendar:
+                    var calRect = new RectangleF(x + w * 0.15f, y + h * 0.25f, w * 0.7f, h * 0.65f);
+                    using (var cp = GetRoundedPath(Rectangle.Round(calRect), 2))
+                    {
+                        g.DrawPath(pen, cp);
+                    }
+                    g.DrawLine(pen, calRect.Left, y + h * 0.45f, calRect.Right, y + h * 0.45f);
+                    g.DrawLine(pen, x + w * 0.35f, y + h * 0.15f, x + w * 0.35f, y + h * 0.3f);
+                    g.DrawLine(pen, x + w * 0.65f, y + h * 0.15f, x + w * 0.65f, y + h * 0.3f);
+                    break;
+
+                case IconType.Export:
+                    g.DrawLine(pen, x + w * 0.2f, y + h * 0.5f, x + w * 0.2f, y + h * 0.85f);
+                    g.DrawLine(pen, x + w * 0.2f, y + h * 0.85f, x + w * 0.8f, y + h * 0.85f);
+                    g.DrawLine(pen, x + w * 0.8f, y + h * 0.85f, x + w * 0.8f, y + h * 0.5f);
+                    g.DrawLine(pen, x + w * 0.5f, y + h * 0.65f, x + w * 0.5f, y + h * 0.15f);
+                    g.DrawLine(pen, x + w * 0.3f, y + h * 0.35f, x + w * 0.5f, y + h * 0.15f);
+                    g.DrawLine(pen, x + w * 0.7f, y + h * 0.35f, x + w * 0.5f, y + h * 0.15f);
+                    break;
+
+                case IconType.Import:
+                    g.DrawLine(pen, x + w * 0.2f, y + h * 0.5f, x + w * 0.2f, y + h * 0.85f);
+                    g.DrawLine(pen, x + w * 0.2f, y + h * 0.85f, x + w * 0.8f, y + h * 0.85f);
+                    g.DrawLine(pen, x + w * 0.8f, y + h * 0.85f, x + w * 0.8f, y + h * 0.5f);
+                    g.DrawLine(pen, x + w * 0.5f, y + h * 0.15f, x + w * 0.5f, y + h * 0.65f);
+                    g.DrawLine(pen, x + w * 0.3f, y + h * 0.45f, x + w * 0.5f, y + h * 0.65f);
+                    g.DrawLine(pen, x + w * 0.7f, y + h * 0.45f, x + w * 0.5f, y + h * 0.65f);
+                    break;
+
+                case IconType.Refresh:
+                    g.DrawArc(pen, x + w * 0.2f, y + h * 0.2f, w * 0.6f, h * 0.6f, 45, 270);
+                    g.DrawLine(pen, x + w * 0.7f, y + h * 0.2f, x + w * 0.85f, y + h * 0.2f);
+                    g.DrawLine(pen, x + w * 0.85f, y + h * 0.2f, x + w * 0.85f, y + h * 0.35f);
+                    break;
+
+                case IconType.Check:
+                    g.DrawLine(pen, x + w * 0.2f, y + h * 0.5f, x + w * 0.45f, y + h * 0.75f);
+                    g.DrawLine(pen, x + w * 0.45f, y + h * 0.75f, x + w * 0.85f, y + h * 0.25f);
+                    break;
+
+                case IconType.Pdf:
+                    var pdfRect = new RectangleF(x + w * 0.2f, y + h * 0.15f, w * 0.6f, h * 0.75f);
+                    using (var pp = GetRoundedPath(Rectangle.Round(pdfRect), 2))
+                    {
+                        g.DrawPath(pen, pp);
+                    }
+                    g.DrawLine(pen, x + w * 0.35f, y + h * 0.4f, x + w * 0.65f, y + h * 0.4f);
+                    g.DrawLine(pen, x + w * 0.35f, y + h * 0.55f, x + w * 0.65f, y + h * 0.55f);
+                    g.DrawLine(pen, x + w * 0.35f, y + h * 0.7f, x + w * 0.55f, y + h * 0.7f);
+                    break;
+
+                case IconType.More:
+                    float dotR = w * 0.08f;
+                    g.FillEllipse(brush, x + w * 0.25f - dotR, y + h * 0.5f - dotR, dotR * 2, dotR * 2);
+                    g.FillEllipse(brush, x + w * 0.5f - dotR, y + h * 0.5f - dotR, dotR * 2, dotR * 2);
+                    g.FillEllipse(brush, x + w * 0.75f - dotR, y + h * 0.5f - dotR, dotR * 2, dotR * 2);
+                    break;
+
+                default:
+                    g.DrawEllipse(pen, x + w * 0.2f, y + h * 0.2f, w * 0.6f, h * 0.6f);
+                    break;
+            }
+        }
     }
 }

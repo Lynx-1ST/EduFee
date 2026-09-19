@@ -57,7 +57,7 @@ namespace _26K1_DotNet
 
             var lblTitle = new Label
             {
-                Text = "✅  GHI NHẬN THU TIỀN THÀNH CÔNG",
+                Text = "Ghi nhận thu tiền thành công",
                 Font = UITheme.FontH1, ForeColor = Color.White,
                 Dock = DockStyle.Left, AutoSize = true,
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -223,21 +223,21 @@ namespace _26K1_DotNet
                 Padding = new Padding(0, 2, 0, 0)
             };
 
-            var btnPrint = UITheme.PrimaryBtn("🖨 In Phiếu", 125, 38);
+            var btnPrint = UITheme.PrimaryBtn("In phiếu", 110, 38);
             btnPrint.Margin = new Padding(0, 0, 10, 0);
             btnPrint.Click += (s, e) => PrintReceipt(paper);
 
-            var btnPdf = UITheme.SuccessBtn("PDF", 82, 38);
+            var btnPdf = UITheme.SuccessBtn("Xuất PDF", 110, 38);
             btnPdf.Margin = new Padding(0, 0, 10, 0);
             btnPdf.Click += (s, e) => ExportPdf();
 
-            var btnSendEmail = UITheme.PurpleBtn("📧 Gửi Email", 130, 38);
+            var btnSendEmail = UITheme.GhostBtn("Gửi Email", 110, 38);
             btnSendEmail.Margin = new Padding(0);
             btnSendEmail.Click += BtnSendEmail_Click;
 
             flowLeft.Controls.AddRange(new Control[] { btnPrint, btnPdf, btnSendEmail });
 
-            var btnClose = UITheme.GhostBtn("Đóng", 100, 38);
+            var btnClose = UITheme.GhostBtn("Đóng", 80, 38);
             var flowRight = new FlowLayoutPanel
             {
                 Dock = DockStyle.Right,

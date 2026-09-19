@@ -51,8 +51,8 @@ namespace _26K1_DotNet
             labelDOB = new Label();
             dateTimePickerDOB = new DateTimePicker();
             panelFooter = new Panel();
-            buttonSave = UITheme.SuccessBtn("💾  Lưu", 125, 36);
-            buttonCancel = UITheme.GhostBtn("Hủy", 90, 36);
+            buttonSave = UITheme.PrimaryBtn("Lưu thay đổi", 125, 36);
+            buttonCancel = UITheme.GhostBtn("Hủy", 80, 36);
             panelHeader.SuspendLayout();
             panelCard.SuspendLayout();
             panelFooter.SuspendLayout();
@@ -82,7 +82,7 @@ namespace _26K1_DotNet
             labelHeaderTitle.ForeColor = Color.White;
             labelHeaderTitle.UseMnemonic = false;
             labelHeaderTitle.Margin = new Padding(0, 0, 0, 2);
-            labelHeaderTitle.Text = "👤  THÔNG TIN SINH VIÊN";
+            labelHeaderTitle.Text = "Thông tin sinh viên";
 
             // labelHeaderSub
             labelHeaderSub.AutoSize = true;
@@ -103,8 +103,11 @@ namespace _26K1_DotNet
             panelCard.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             panelCard.Paint += (s, e) =>
             {
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                var rect = new Rectangle(0, 0, panelCard.Width - 1, panelCard.Height - 1);
                 using var pen = new Pen(UITheme.Border, 1);
-                e.Graphics.DrawRectangle(pen, 0, 0, panelCard.Width - 1, panelCard.Height - 1);
+                using var path = UITheme.GetRoundedPath(rect, 8);
+                e.Graphics.DrawPath(pen, path);
             };
 
             var table = new TableLayoutPanel

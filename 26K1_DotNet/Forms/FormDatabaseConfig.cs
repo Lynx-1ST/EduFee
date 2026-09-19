@@ -54,7 +54,7 @@ namespace _26K1_DotNet
             };
             header.Controls.Add(new Label
             {
-                Text = "🗄️  QUẢN TRỊ CƠ SỞ DỮ LIỆU SQL (SQLITE)",
+                Text = "QUẢN TRỊ CƠ SỞ DỮ LIỆU (SQLITE)",
                 Font = UITheme.FontH1, ForeColor = Color.White,
                 Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft
             });
@@ -126,7 +126,7 @@ namespace _26K1_DotNet
                 Location = new Point(16, 14), AutoSize = true, Parent = cardActions
             };
 
-            btnMigrate = UITheme.PrimaryBtn("🔄  Nhập Lại Dữ Liệu JSON Vào SQL", 340, 38);
+            btnMigrate = UITheme.PrimaryBtn("Nhập lại dữ liệu JSON vào SQL", 260, 38);
             btnMigrate.Location = new Point(16, 44);
             btnMigrate.Click += BtnMigrate_Click;
             cardActions.Controls.Add(btnMigrate);
@@ -138,15 +138,15 @@ namespace _26K1_DotNet
                 Location = new Point(16, 88), AutoSize = true, Parent = cardActions
             };
 
-            btnBackup = UITheme.GhostBtn("💾  Sao lưu", 145, 36);
+            btnBackup = UITheme.GhostBtn("Sao lưu", 100, 36);
             btnBackup.Margin = new Padding(0, 0, 10, 0);
             btnBackup.Click += BtnBackup_Click;
 
-            btnRestore = UITheme.GhostBtn("📥  Phục hồi", 145, 36);
+            btnRestore = UITheme.GhostBtn("Phục hồi", 100, 36);
             btnRestore.Margin = new Padding(0, 0, 10, 0);
             btnRestore.Click += BtnRestore_Click;
 
-            btnLoadSql = UITheme.SuccessBtn("↻  Làm mới", 145, 36);
+            btnLoadSql = UITheme.SuccessBtn("Làm mới", 100, 36);
             btnLoadSql.Margin = new Padding(0);
             btnLoadSql.Click += BtnLoadSql_Click;
 
@@ -235,14 +235,14 @@ namespace _26K1_DotNet
                 _mainForm.RefreshCurrentPanel();
 
                 RefreshStats();
-                lblStatus.Text = $"✅ {res.Message} ({res.Students} SV, {res.Semesters} HK, {res.Fees} HP, {res.Receipts} Biên lai)";
+                lblStatus.Text = $"✓ {res.Message} ({res.Students} SV, {res.Semesters} HK, {res.Fees} HP, {res.Receipts} Biên lai)";
                 lblStatus.ForeColor = UITheme.Success;
 
                 UiFeedback.ShowSuccess($"Đồng bộ thành công!\n- Sinh viên: {res.Students}\n- Học kỳ: {res.Semesters}\n- Phiếu học phí: {res.Fees}\n- Biên lai: {res.Receipts}");
             }
             catch (Exception ex)
             {
-                lblStatus.Text = $"❌ Lỗi: {ex.Message}";
+                lblStatus.Text = $"Lỗi: {ex.Message}";
                 lblStatus.ForeColor = UITheme.Danger;
                 UiFeedback.ShowException(ex, "Lỗi chuyển đổi dữ liệu");
             }
@@ -293,13 +293,13 @@ namespace _26K1_DotNet
 
                     _mainForm.RefreshCurrentPanel();
                     var counts = _dbContext.GetRecordCounts();
-                    lblStatus.Text = "✅ Đã làm mới dữ liệu từ SQL.";
+                    lblStatus.Text = "✓ Đã làm mới dữ liệu từ SQL.";
                     lblStatus.ForeColor = UITheme.Success;
                     UiFeedback.ShowSuccess($"Đã làm mới {counts.Students} sinh viên, {counts.Semesters} học kỳ, {counts.Fees} phiếu học phí và {counts.Receipts} biên lai từ SQL.");
                 }
                 catch (Exception ex)
                 {
-                    lblStatus.Text = $"❌ Lỗi nạp: {ex.Message}";
+                    lblStatus.Text = $"Lỗi nạp: {ex.Message}";
                     lblStatus.ForeColor = UITheme.Danger;
                     UiFeedback.ShowException(ex, "Lỗi nạp dữ liệu từ SQL");
                 }

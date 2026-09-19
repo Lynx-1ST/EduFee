@@ -61,7 +61,7 @@ namespace _26K1_DotNet
 
             var lblHeaderTitle = new Label
             {
-                Text = $"📜  LỊCH SỬ NỘP TIỀN: {_student.FullName.ToUpper()}",
+                Text = $"LỊCH SỬ NỘP TIỀN: {_student.FullName.ToUpper()}",
                 Font = UITheme.FontH1, ForeColor = Color.White,
                 AutoSize = true,
                 UseMnemonic = false,
@@ -117,15 +117,15 @@ namespace _26K1_DotNet
             };
             bottomBar.Controls.Add(lblTotalSummary);
 
-            var btnView = UITheme.PrimaryBtn("📄  Xem Biên Lai", 145, 36);
+            var btnView = UITheme.PrimaryBtn("Xem biên lai", 115, 36);
             btnView.Margin = new Padding(4, 0, 4, 0);
             btnView.Click += (s, e) => ViewSelectedReceipt();
 
-            var btnExport = UITheme.GhostBtn("📥  Xuất CSV", 120, 36);
+            var btnExport = UITheme.GhostBtn("Xuất CSV", 95, 36);
             btnExport.Margin = new Padding(4, 0, 4, 0);
             btnExport.Click += (s, e) => ExportHistoryCsv();
 
-            var btnClose = UITheme.GhostBtn("Đóng", 90, 36);
+            var btnClose = UITheme.GhostBtn("Đóng", 80, 36);
             btnClose.Margin = new Padding(4, 0, 4, 0);
             btnClose.Click += (s, e) => Close();
 

@@ -35,7 +35,7 @@ namespace _26K1_DotNet
 
         private void BuildUI()
         {
-            Text = "⚡ Tạo Học Phí Hàng Loạt Theo Lớp";
+            Text = "Tạo học phí hàng loạt theo lớp";
             ClientSize = new Size(540, 560);
             MinimumSize = new Size(540, 560);
             StartPosition = FormStartPosition.CenterParent;
@@ -56,7 +56,7 @@ namespace _26K1_DotNet
 
             topBar.Controls.Add(new Label
             {
-                Text = "⚡  TẠO HỌC PHÍ HÀNG LOẠT THEO LỚP",
+                Text = "TẠO HỌC PHÍ HÀNG LOẠT THEO LỚP",
                 Font = UITheme.FontH1, ForeColor = Color.White,
                 Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft
             });
@@ -170,7 +170,7 @@ namespace _26K1_DotNet
             var footer = new Panel { Dock = DockStyle.Bottom, Height = 64, BackColor = UITheme.SurfaceAlt };
             footer.Controls.Add(UITheme.HSep(DockStyle.Top));
 
-            var btnCreate = UITheme.SuccessBtn("⚡  Tạo Ngay", 150, 38);
+            var btnCreate = UITheme.PrimaryBtn("Tạo học phí", 130, 38);
             btnCreate.Click += BtnCreate_Click;
             btnCreate.AccessibleName = "Tạo học phí hàng loạt";
 

@@ -23,7 +23,7 @@ namespace _26K1_DotNet
         private void FormStudentDetail_Load(object sender, EventArgs e)
         {
             Text = _isNewStudent ? "Thêm Sinh Viên Mới" : "Sửa Thông Tin Sinh Viên";
-            labelHeaderTitle.Text = _isNewStudent ? "👤  THÊM SINH VIÊN MỚI" : "👤  CHỈNH SỬA SINH VIÊN";
+            labelHeaderTitle.Text = _isNewStudent ? "THÊM SINH VIÊN MỚI" : "CHỈNH SỬA SINH VIÊN";
             labelHeaderSub.Text = _isNewStudent ? "Nhập thông tin để thêm hồ sơ sinh viên mới vào hệ thống" : $"Chỉnh sửa thông tin cho sinh viên: {_student?.FullName}";
 
             if (_isNewStudent)

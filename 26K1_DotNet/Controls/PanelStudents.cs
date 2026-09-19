@@ -54,14 +54,14 @@ namespace _26K1_DotNet
 
             var lblSearch = new Label
             {
-                Text = "Tìm SV:",
+                Text = "Tìm kiếm:",
                 AutoSize = true,
                 Margin = new Padding(0, 8, 4, 0),
                 Font = UITheme.FontSmallBold,
                 ForeColor = UITheme.TextSecondary
             };
 
-            txtSearch = UITheme.MakeSearchBox("Tên, mã SV, SĐT...", 200, 32);
+            txtSearch = UITheme.MakeSearchBox("Tìm theo tên, mã SV, SĐT...", 220, 32);
             txtSearch.Margin = new Padding(0, 4, 10, 0);
             txtSearch.KeyDown += (s, e) =>
             {
@@ -92,11 +92,11 @@ namespace _26K1_DotNet
             };
             cmbClassFilter.SelectedIndexChanged += (s, e) => DoSearch();
 
-            var btnSearch = UITheme.GhostBtn("Tìm kiếm", 80, 34);
+            var btnSearch = UITheme.GhostBtn("Tìm", 60, 34);
             btnSearch.Margin = new Padding(0, 2, 8, 0);
             btnSearch.Click += (s, e) => DoSearch();
 
-            var btnRefresh = UITheme.GhostBtn("Xóa bộ lọc", 120, 34);
+            var btnRefresh = UITheme.GhostBtn("Xóa bộ lọc", 105, 34);
             btnRefresh.Margin = new Padding(0, 2, 0, 0);
             btnRefresh.Click += (s, e) => { txtSearch.Text = ""; if (cmbClassFilter.Items.Count > 0) cmbClassFilter.SelectedIndex = 0; LoadData(); };
 
@@ -112,15 +112,19 @@ namespace _26K1_DotNet
                 Padding = new Padding(0, 4, 28, 10)
             };
 
-            btnExport = UITheme.GhostBtn("Xuất CSV", 110, 34);
+            btnExport = UITheme.GhostBtn("Xuất CSV", 100, 34);
             btnExport.Margin = new Padding(8, 2, 0, 0);
             btnExport.Click += (s, e) => ExportStudentsCsv();
 
-            btnImport = UITheme.GhostBtn("Nhập CSV", 110, 34);
-            btnImport.Margin = new Padding(0, 2, 0, 0);
+            btnImport = UITheme.GhostBtn("Nhập CSV", 100, 34);
+            btnImport.Margin = new Padding(8, 2, 0, 0);
             btnImport.Click += (s, e) => ImportStudents();
 
-            flowRight.Controls.AddRange(new Control[] { btnExport, btnImport });
+            btnAdd = UITheme.PrimaryBtn("+ Thêm sinh viên", 145, 34);
+            btnAdd.Margin = new Padding(0, 2, 0, 0);
+            btnAdd.Click += BtnAdd_Click;
+
+            flowRight.Controls.AddRange(new Control[] { btnAdd, btnExport, btnImport });
 
             toolbar.Controls.Add(flowLeft);
             toolbar.Controls.Add(flowRight);
@@ -131,7 +135,7 @@ namespace _26K1_DotNet
             dgv.DoubleClick += (s, e) => EditSelectedStudent();
             dgv.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { e.Handled = true; EditSelectedStudent(); } };
 
-            _lblEmpty = UITheme.CreateEmptyStateLabel("Chưa có sinh viên nào\nChọn Thêm sinh viên hoặc Nhập CSV để bắt đầu");
+            _lblEmpty = UITheme.CreateEmptyStateLabel("Chưa có sinh viên nào\nChọn «+ Thêm sinh viên» hoặc «Nhập CSV» để bắt đầu");
 
             // ── Action bar (Clean 64px, properly centered) ───────────────
             var actionBar = new Panel
@@ -149,12 +153,10 @@ namespace _26K1_DotNet
             actionBar.Controls.Add(lblCount);
 
             // Action Buttons
-            btnViewTuition = UITheme.GhostBtn("Xem học phí", 145, 36);
-            btnAdd         = UITheme.PrimaryBtn("Thêm sinh viên", 150, 36);
-            btnEdit        = UITheme.GhostBtn("Sửa hồ sơ", 110, 36);
-            btnDelete      = UITheme.GhostBtn("Xóa", 80, 36);
+            btnViewTuition = UITheme.GhostBtn("Xem học phí", 130, 36);
+            btnEdit        = UITheme.GhostBtn("Sửa hồ sơ", 105, 36);
+            btnDelete      = UITheme.GhostBtn("Xóa", 75, 36);
             btnDelete.ForeColor = UITheme.DangerDark;
-            flowRight.Controls.Add(btnAdd);
             dgv.MultiSelect = false;
             dgv.SelectionChanged += (s, e) =>
             {
@@ -162,11 +164,10 @@ namespace _26K1_DotNet
                 btnViewTuition.Enabled = btnEdit.Enabled = btnDelete.Enabled = selected;
             };
 
-            btnViewTuition.Margin = btnAdd.Margin = btnEdit.Margin = btnDelete.Margin =
+            btnViewTuition.Margin = btnEdit.Margin = btnDelete.Margin =
                 new Padding(4, 0, 4, 0);
 
             btnViewTuition.Click += BtnViewTuition_Click;
-            btnAdd.Click         += BtnAdd_Click;
             btnEdit.Click        += (s, e) => EditSelectedStudent();
             btnDelete.Click      += BtnDelete_Click;
 
@@ -211,8 +212,8 @@ namespace _26K1_DotNet
             if (_currentList.Count == 0)
             {
                 _lblEmpty.Text = hasFilter
-                    ? "Không tìm thấy kết quả\nChọn Xóa bộ lọc để xem tất cả sinh viên"
-                    : "Chưa có sinh viên nào\nChọn Thêm sinh viên hoặc Nhập CSV để bắt đầu";
+                    ? "Không tìm thấy sinh viên phù hợp\nThử thay đổi từ khóa hoặc chọn «Xóa bộ lọc»"
+                    : "Chưa có sinh viên nào trong hệ thống\nChọn «+ Thêm sinh viên» hoặc «Nhập CSV» để bắt đầu";
                 _lblEmpty.Visible = true;
             }
             else
@@ -226,7 +227,7 @@ namespace _26K1_DotNet
                 {
                     c0.HeaderText = "Mã SV";
                     c0.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
-                    c0.Width = 75;
+                    c0.Width = 85;
                     c0.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
                     c0.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter;
                 }
@@ -237,12 +238,12 @@ namespace _26K1_DotNet
                 }
                 if (dgv.Columns["Email"] is { } c2) c2.HeaderText = "Email";
                 if (dgv.Columns["PhoneNumber"] is { } c3)
-                { c3.HeaderText = "Điện thoại"; c3.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; c3.Width = 130; }
+                { c3.HeaderText = "Điện thoại"; c3.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; c3.Width = 125; }
                 if (dgv.Columns["DateOfBirth"] is { } c4)
                 {
                     c4.HeaderText = "Ngày sinh";
                     c4.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
-                    c4.Width = 120;
+                    c4.Width = 110;
                     c4.DefaultCellStyle.Format = "dd/MM/yyyy";
                     c4.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
                     c4.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter;
@@ -251,13 +252,13 @@ namespace _26K1_DotNet
                 {
                     c5.HeaderText = "Lớp";
                     c5.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
-                    c5.Width = 100;
+                    c5.Width = 110;
                     c5.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
                     c5.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter;
                 }
             }
 
-            lblCount.Text = $"Tổng cộng  {_currentList.Count}  sinh viên";
+            lblCount.Text = $"{_currentList.Count} sinh viên";
         }
 
         private void UpdateClassFilterItems()

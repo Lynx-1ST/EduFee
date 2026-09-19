@@ -25,7 +25,7 @@ namespace _26K1_DotNet
         /// </summary>
         public static void ShowSuccess(string message, string? nextStep = null)
         {
-            var text = nextStep != null ? $"{message}\n\n💡 {nextStep}" : message;
+            var text = nextStep != null ? $"{message}\n\nGợi ý: {nextStep}" : message;
             MessageBox.Show(text, TitleSuccess, MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 

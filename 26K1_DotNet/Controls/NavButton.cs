@@ -21,6 +21,9 @@ namespace _26K1_DotNet
         public string Icon { get; set; } = "";
 
         [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+        public UITheme.IconType? VectorIcon { get; set; }
+
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string Title
         {
             get => _title;
@@ -44,6 +47,11 @@ namespace _26K1_DotNet
                     Invalidate();
                 }
             }
+        }
+
+        public NavButton(UITheme.IconType icon, string title) : this("", title)
+        {
+            VectorIcon = icon;
         }
 
         public NavButton(string icon, string title)
@@ -151,9 +159,15 @@ namespace _26K1_DotNet
 
             int yOffset = _isPressed ? 1 : 0;
 
-            // 2. Icon (centered in 30px left box) — uses cached UITheme.FontEmoji
+            // 2. Icon
+            var iconColor = IsActive ? Color.White : (_isHovered ? Color.White : UITheme.SidebarText);
+            if (VectorIcon.HasValue)
             {
-                var iconColor = IsActive ? Color.White : (_isHovered ? Color.White : UITheme.SidebarText);
+                var iconRect = new Rectangle(14, (Height - 18) / 2 + yOffset, 18, 18);
+                UITheme.DrawIcon(g, VectorIcon.Value, iconRect, iconColor);
+            }
+            else if (!string.IsNullOrEmpty(Icon))
+            {
                 var iconRect = new Rectangle(12, yOffset, 30, Height);
                 TextRenderer.DrawText(g, Icon, UITheme.FontEmoji, iconRect, iconColor,
                     TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);

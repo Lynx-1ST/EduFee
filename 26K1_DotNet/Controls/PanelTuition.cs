@@ -75,9 +75,9 @@ namespace _26K1_DotNet
                 Padding = Padding.Empty
             };
 
-            btnAdd = UITheme.PrimaryBtn("➕ Lập phiếu", 125, 34);
-            btnBatch = UITheme.GhostBtn("⚡ Tạo theo lớp", 145, 34);
-            btnExport = UITheme.GhostBtn("📥 Xuất CSV", 115, 34);
+            btnAdd = UITheme.PrimaryBtn("+ Lập phiếu", 115, 34);
+            btnBatch = UITheme.GhostBtn("Tạo theo lớp", 125, 34);
+            btnExport = UITheme.GhostBtn("Xuất CSV", 95, 34);
             btnAdd.Margin = new Padding(0, 1, 8, 0);
             btnBatch.Margin = new Padding(0, 1, 8, 0);
             btnExport.Margin = new Padding(0, 1, 0, 0);
@@ -99,13 +99,13 @@ namespace _26K1_DotNet
 
             var lblSearch = new Label
             {
-                Text = "Tìm SV:",
+                Text = "Tìm kiếm:",
                 AutoSize = true,
                 Margin = new Padding(0, 8, 6, 0),
                 Font = UITheme.FontSmallBold,
                 ForeColor = UITheme.TextSecondary
             };
-            txtSearch = UITheme.MakeSearchBox("🔍 Tìm tên, mã SV, lớp, SĐT...", 230, 32);
+            txtSearch = UITheme.MakeSearchBox("Tìm tên, mã SV, lớp, SĐT...", 210, 32);
             txtSearch.Margin = new Padding(0, 1, 6, 0);
             txtSearch.KeyDown += (s, e) =>
             {
@@ -118,11 +118,11 @@ namespace _26K1_DotNet
             };
             txtSearch.TextChanged += TxtSearch_TextChanged;
 
-            var btnFilter = UITheme.GhostBtn("Tìm", 60, 32);
+            var btnFilter = UITheme.GhostBtn("Tìm", 55, 32);
             btnFilter.Margin = new Padding(0, 1, 6, 0);
             btnFilter.Click += (s, e) => LoadData();
 
-            var btnReset = UITheme.GhostBtn("Xóa lọc", 74, 32);
+            var btnReset = UITheme.GhostBtn("Xóa lọc", 72, 32);
             btnReset.Margin = new Padding(0, 1, 0, 0);
             btnReset.Click += (s, e) => ResetFilters();
 
@@ -168,9 +168,9 @@ namespace _26K1_DotNet
                 BackColor = UITheme.SurfaceAlt,
                 Margin = new Padding(0, 2, 4, 0)
             };
-            var btnManageSem = UITheme.GhostBtn("📅", 36, 32);
+            var btnManageSem = UITheme.GhostBtn("...", 36, 30);
             btnManageSem.AccessibleName = "Quản lý học kỳ";
-            btnManageSem.Margin = new Padding(0, 1, 14, 0);
+            btnManageSem.Margin = new Padding(0, 2, 14, 0);
             btnManageSem.Click += (s, e) => _mainForm.OpenSemesterManager();
 
             var lblStatus = new Label
@@ -241,10 +241,10 @@ namespace _26K1_DotNet
             tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
             tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
-            var c1 = MakeCard("TỔNG PHẢI THU", UITheme.Primary, out lblTotalVal);
-            var c2 = MakeCard("ĐÃ THU",         UITheme.Success, out lblPaidVal);
-            var c3 = MakeCard("CÒN LẠI",        UITheme.Danger,  out lblLeftVal);
-            var c4 = MakeCard("SỐ PHIẾU",       UITheme.Purple,  out lblCountVal);
+            var c1 = MakeCard("Tổng phải thu", UITheme.Primary, out lblTotalVal);
+            var c2 = MakeCard("Đã thu",        UITheme.Success, out lblPaidVal);
+            var c3 = MakeCard("Còn phải thu",  UITheme.Danger,  out lblLeftVal);
+            var c4 = MakeCard("Số phiếu",      UITheme.Purple,  out lblCountVal);
 
             tableLayout.Controls.Add(c1, 0, 0);
             tableLayout.Controls.Add(c2, 1, 0);
@@ -274,7 +274,7 @@ namespace _26K1_DotNet
             dgv.DoubleClick += (s, e) => ViewSelectedReceiptHistory();
             dgv.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { e.Handled = true; ViewSelectedReceiptHistory(); } };
 
-            _lblEmpty = UITheme.CreateEmptyStateLabel("📋 Chưa có phiếu học phí\nChọn học kỳ và bấm ➕ Lập phiếu để bắt đầu");
+            _lblEmpty = UITheme.CreateEmptyStateLabel("Chưa có phiếu học phí\nChọn học kỳ và bấm «+ Lập phiếu» để bắt đầu");
 
             // ── Selection actions ─────────────────────────────────────────
             var actionBar = new Panel
@@ -342,17 +342,25 @@ namespace _26K1_DotNet
             };
             card.Paint += (s, e) =>
             {
-                using var pen = new Pen(UITheme.Border, 1);
-                e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
-                e.Graphics.FillRectangle(new SolidBrush(accent), 0, 0, 4, card.Height);
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                var rect = new Rectangle(0, 0, card.Width - 1, card.Height - 1);
+                using (var pen = new Pen(UITheme.Border, 1))
+                using (var path = UITheme.GetRoundedPath(rect, 8))
+                {
+                    e.Graphics.DrawPath(pen, path);
+                }
+                using (var accentBrush = new SolidBrush(accent))
+                {
+                    e.Graphics.FillRectangle(accentBrush, 0, 8, 4, Math.Max(0, card.Height - 16));
+                }
             };
 
             var lblTitle = new Label
             {
                 Text = title,
                 AutoSize = true,
-                Location = new Point(20, 14),
-                Font = UITheme.FontCardTitle,
+                Location = new Point(16, 12),
+                Font = UITheme.FontSmallBold,
                 ForeColor = UITheme.TextSecondary,
                 Parent = card
             };
@@ -361,7 +369,7 @@ namespace _26K1_DotNet
             {
                 Text = "—",
                 AutoSize = true,
-                Location = new Point(18, 36),
+                Location = new Point(14, 32),
                 Font = UITheme.FontCardValue2,
                 ForeColor = accent,
                 Parent = card
@@ -429,7 +437,7 @@ namespace _26K1_DotNet
                 cmbStatus.SelectedIndex = 0;
                 _studentContextId = studentId;
                 txtSearch.Text = sv.FullName;
-                lblStudentContext.Text = $"📌 Đang lọc: {sv.FullName} ({studentId}) ✕";
+                lblStudentContext.Text = $"Đang lọc: {sv.FullName} ({studentId})  [x]";
                 lblStudentContext.Visible = true;
             }
             finally
@@ -534,8 +542,8 @@ namespace _26K1_DotNet
             if (_current.Count == 0)
             {
                 _lblEmpty.Text = hasFilter
-                    ? "🔍 Không tìm thấy kết quả phù hợp\nBấm Xóa lọc để hiển thị tất cả"
-                    : "📋 Chưa có phiếu học phí\nChọn học kỳ và bấm ➕ Lập phiếu để bắt đầu";
+                    ? "Không tìm thấy kết quả phù hợp\nBấm Xóa lọc để hiển thị tất cả"
+                    : "Chưa có phiếu học phí\nChọn học kỳ và bấm [+ Lập phiếu] để bắt đầu";
                 _lblEmpty.Visible = true;
             }
             else

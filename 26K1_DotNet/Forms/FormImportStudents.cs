@@ -44,7 +44,7 @@ namespace _26K1_DotNet
             };
             header.Controls.Add(new Label
             {
-                Text = "📤  NHẬP DANH SÁCH SINH VIÊN TỰ ĐỘNG",
+                Text = "NHẬP DANH SÁCH SINH VIÊN TỰ ĐỘNG",
                 Font = UITheme.FontH1, ForeColor = Color.White,
                 Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft
             });
@@ -65,10 +65,10 @@ namespace _26K1_DotNet
                 WrapContents = false, BackColor = Color.Transparent
             };
 
-            var btnSelect = UITheme.PrimaryBtn("📂  Chọn file CSV...", 150, 36);
+            var btnSelect = UITheme.PrimaryBtn("Chọn file CSV...", 130, 36);
             btnSelect.Click += (s, e) => SelectFile();
 
-            var btnSample = UITheme.GhostBtn("📥  Tải file mẫu", 130, 36);
+            var btnSample = UITheme.GhostBtn("Tải file mẫu", 110, 36);
             btnSample.Margin = new Padding(8, 0, 16, 0);
             btnSample.Click += (s, e) => DownloadSampleCsv();
 
@@ -128,7 +128,7 @@ namespace _26K1_DotNet
                 Padding = new Padding(0, 14, 0, 0)
             };
 
-            btnConfirm = UITheme.SuccessBtn("💾  Xác nhận nhập", 160, 36);
+            btnConfirm = UITheme.SuccessBtn("Xác nhận nhập", 130, 36);
             btnConfirm.Enabled = false;
             btnConfirm.Click += (s, e) => ConfirmImport();
 
@@ -209,9 +209,9 @@ namespace _26K1_DotNet
             int validCount = _rows.Count(r => r.IsValid);
             int errorCount = _rows.Count - validCount;
 
-            lblSummary.Text = $"Tổng số: {_rows.Count} dòng   |   ✅ Hợp lệ: {validCount}   |   ❌ Lỗi/Trùng: {errorCount}";
+            lblSummary.Text = $"Tổng số: {_rows.Count} dòng   |   Hợp lệ: {validCount}   |   Lỗi/Trùng: {errorCount}";
             btnConfirm.Enabled = validCount > 0;
-            btnConfirm.Text = $"💾  Nhập {validCount} sinh viên";
+            btnConfirm.Text = $"Nhập {validCount} sinh viên";
         }
 
         private void Dgv_CellPainting(object? sender, DataGridViewCellPaintingEventArgs e)

@@ -46,7 +46,7 @@ namespace _26K1_DotNet
             };
             header.Controls.Add(new Label
             {
-                Text = "⚙️  CẤU HÌNH GỬI EMAIL TỰ ĐỘNG",
+                Text = "CẤU HÌNH GỬI EMAIL TỰ ĐỘNG",
                 Font = UITheme.FontH1, ForeColor = Color.White,
                 Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft
             });
@@ -118,7 +118,7 @@ namespace _26K1_DotNet
 
             var lblHint = new Label
             {
-                Text = "💡 Dùng App Password của Google (không phải mật khẩu đăng nhập Gmail).",
+                Text = "Dùng App Password của Google (không phải mật khẩu đăng nhập Gmail).",
                 Location = new Point(160, y), AutoSize = true,
                 Font = UITheme.FontSmall, ForeColor = UITheme.TextMuted
             };
@@ -139,7 +139,7 @@ namespace _26K1_DotNet
             txtTestEmail = new TextBox { Location = new Point(160, y), Size = new Size(236, 28), Font = UITheme.FontBody, BackColor = UITheme.SurfaceAlt };
             body.Controls.Add(txtTestEmail);
 
-            btnTest = UITheme.GhostBtn("🧪 Gửi Thử", 118, 30);
+            btnTest = UITheme.GhostBtn("Gửi thử", 90, 30);
             btnTest.Location = new Point(408, y - 1);
             btnTest.Click += BtnTest_Click;
             body.Controls.Add(btnTest);
@@ -157,7 +157,7 @@ namespace _26K1_DotNet
             var footer = new Panel { Dock = DockStyle.Bottom, Height = 64, BackColor = UITheme.SurfaceAlt };
             footer.Controls.Add(UITheme.HSep(DockStyle.Top));
 
-            btnSave = UITheme.SuccessBtn("💾  Lưu Cấu Hình", 150, 38);
+            btnSave = UITheme.PrimaryBtn("Lưu cấu hình", 125, 38);
             btnSave.Click += BtnSave_Click;
 
             var btnCancel = UITheme.GhostBtn("Đóng", 90, 38);
@@ -235,20 +235,20 @@ namespace _26K1_DotNet
                     var res = await _emailSvc.TestSmtpConnectionAsync(to);
                     if (res.Success)
                     {
-                        lblStatus.Text = $"✅ {res.Message}";
+                        lblStatus.Text = $"✓ {res.Message}";
                         lblStatus.ForeColor = UITheme.Success;
                         UiFeedback.ShowSuccess(res.Message);
                     }
                     else
                     {
-                        lblStatus.Text = $"❌ {res.Message}";
+                        lblStatus.Text = $"Lỗi: {res.Message}";
                         lblStatus.ForeColor = UITheme.Danger;
                         UiFeedback.ShowError(res.Message);
                     }
                 }
                 catch (Exception ex)
                 {
-                    lblStatus.Text = $"❌ {ex.Message}";
+                    lblStatus.Text = $"Lỗi: {ex.Message}";
                     lblStatus.ForeColor = UITheme.Danger;
                     UiFeedback.ShowException(ex, "Lỗi kết nối thử nghiệm");
                 }

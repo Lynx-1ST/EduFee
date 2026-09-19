@@ -52,24 +52,19 @@ namespace _26K1_DotNet
             AutoScaleMode = AutoScaleMode.Font;
 
             // ── Header ────────────────────────────────────────────────────
-            var header = new Panel { Dock = DockStyle.Top, Height = 56, BackColor = UITheme.Purple };
-            header.Controls.Add(new Label
-            {
-                Text = "💳  GHI NHẬN THANH TOÁN HỌC PHÍ",
-                Font = UITheme.FontH1, ForeColor = Color.White,
-                Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(24, 0, 0, 0)
-            });
+            var semester = _semSvc.GetById(_fee.SemesterId);
+            string sub = $"{studentName} · SV{_fee.StudentId:D4}" + (semester != null ? $" · {semester.Name}" : "");
+            var header = UITheme.CreateDialogHeader("", "Thu học phí", sub, UITheme.PrimaryDark, 64);
 
             // ── Footer with action buttons (Always pinned and visible) ───
-            var footer = new Panel { Dock = DockStyle.Bottom, Height = 64, BackColor = UITheme.SurfaceAlt };
+            var footer = new Panel { Dock = DockStyle.Bottom, Height = 64, BackColor = UITheme.Surface };
             footer.Controls.Add(UITheme.HSep(DockStyle.Top));
 
-            var btnConfirm = UITheme.PurpleBtn("💳  Xác Nhận & Xuất Biên Lai", 230, 38);
+            var btnConfirm = UITheme.PrimaryBtn("Xác nhận thu", 140, 38);
             btnConfirm.Font = UITheme.FontBold;
             btnConfirm.Click += BtnConfirm_Click;
 
-            var btnCancel = UITheme.GhostBtn("Hủy", 90, 38);
+            var btnCancel = UITheme.GhostBtn("Hủy", 80, 38);
             btnCancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
 
             var flowBtns = new FlowLayoutPanel
@@ -95,14 +90,22 @@ namespace _26K1_DotNet
             var infoPanel = new Panel
             {
                 Location = new Point(24, 14), Size = new Size(472, 122),
-                BackColor = UITheme.Background,
+                BackColor = UITheme.SurfaceAlt,
                 Parent = card
             };
             infoPanel.Paint += (s, e) =>
             {
-                using var pen = new Pen(UITheme.Border, 1);
-                e.Graphics.DrawRectangle(pen, 0, 0, infoPanel.Width - 1, infoPanel.Height - 1);
-                e.Graphics.FillRectangle(new SolidBrush(UITheme.Purple), 0, 0, 4, infoPanel.Height);
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                var rect = new Rectangle(0, 0, infoPanel.Width - 1, infoPanel.Height - 1);
+                using (var pen = new Pen(UITheme.Border, 1))
+                using (var path = UITheme.GetRoundedPath(rect, 8))
+                {
+                    e.Graphics.DrawPath(pen, path);
+                }
+                using (var accentBrush = new SolidBrush(UITheme.Primary))
+                {
+                    e.Graphics.FillRectangle(accentBrush, 0, 8, 4, Math.Max(0, infoPanel.Height - 16));
+                }
             };
 
             var dueDate = _fee.DueDate ?? _semSvc.GetById(_fee.SemesterId)?.DueDate;
@@ -110,10 +113,10 @@ namespace _26K1_DotNet
             bool isOverdue = dueDate.HasValue && DateTime.Today > dueDate.Value.Date && !_fee.IsFullyPaid;
 
             InfoRow(infoPanel, "Sinh viên:", $"{studentName} ({student?.ClassName})", UITheme.TextPrimary, 10);
-            InfoRow(infoPanel, "Tổng học phí:", $"{_fee.TotalAmount:N0} VNĐ", UITheme.TextPrimary, 32);
-            InfoRow(infoPanel, "Đã nộp:", $"{_fee.PaidAmount:N0} VNĐ", UITheme.Success, 54);
-            InfoRow(infoPanel, "Còn phải nộp:", $"{_fee.RemainingAmount:N0} VNĐ", UITheme.Danger, 76);
-            InfoRow(infoPanel, "Hạn nộp:", isOverdue ? $"{dueStr}  (⚠️ Quá hạn)" : dueStr, isOverdue ? UITheme.Danger : UITheme.TextSecondary, 98);
+            InfoRow(infoPanel, "Tổng học phí:", $"{_fee.TotalAmount:N0} ₫", UITheme.TextPrimary, 32);
+            InfoRow(infoPanel, "Đã nộp:", $"{_fee.PaidAmount:N0} ₫", UITheme.Success, 54);
+            InfoRow(infoPanel, "Còn phải nộp:", $"{_fee.RemainingAmount:N0} ₫", UITheme.Danger, 76);
+            InfoRow(infoPanel, "Hạn nộp:", isOverdue ? $"{dueStr}  (Quá hạn)" : dueStr, isOverdue ? UITheme.Danger : UITheme.TextSecondary, 98);
 
             int y = 146;
 
@@ -173,8 +176,8 @@ namespace _26K1_DotNet
             chkSendEmail = new CheckBox
             {
                 Text = !string.IsNullOrWhiteSpace(student?.Email)
-                    ? $"📧 Gửi email biên lai điện tử cho sinh viên ({student.Email})"
-                    : "📧 Sinh viên chưa có email trong hồ sơ (Không gửi)",
+                    ? $"Gửi email biên lai điện tử cho sinh viên ({student.Email})"
+                    : "Sinh viên chưa có email trong hồ sơ (Không gửi)",
                 Location = new Point(24, y),
                 AutoSize = true,
                 Font = UITheme.FontSmallBold,

@@ -48,7 +48,7 @@ namespace _26K1_DotNet
             };
             header.Controls.Add(new Label
             {
-                Text = _isNew ? "➕  Thêm Phiếu Học Phí" : "✏️  Sửa Phiếu Học Phí",
+                Text = _isNew ? "Thêm phiếu học phí" : "Sửa phiếu học phí",
                 Font = UITheme.FontH1, ForeColor = Color.White,
                 Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(20, 0, 0, 0)
@@ -214,14 +214,14 @@ namespace _26K1_DotNet
             y += 62;
 
             // Footer with action buttons
-            var footer = new Panel { Dock = DockStyle.Bottom, Height = 64, BackColor = UITheme.SurfaceAlt };
+            var footer = new Panel { Dock = DockStyle.Bottom, Height = 64, BackColor = UITheme.Surface };
             footer.Controls.Add(UITheme.HSep(DockStyle.Top));
 
-            var btnSave = UITheme.SuccessBtn(_isNew ? "💾  Thêm mới" : "💾  Lưu thay đổi", 160, 38);
+            var btnSave = UITheme.PrimaryBtn(_isNew ? "Tạo phiếu" : "Lưu thay đổi", 140, 38);
             btnSave.Click += BtnSave_Click;
             btnSave.AccessibleName = _isNew ? "Thêm mới phiếu học phí" : "Lưu thay đổi phiếu học phí";
 
-            var btnCancel = UITheme.GhostBtn("Hủy", 90, 38);
+            var btnCancel = UITheme.GhostBtn("Hủy", 80, 38);
             btnCancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
             btnCancel.AccessibleName = "Hủy bỏ";
 

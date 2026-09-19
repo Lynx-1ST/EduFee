@@ -98,7 +98,7 @@ namespace _26K1_DotNet
             };
             cmbSem.SelectedIndexChanged += (s, e) => LoadStats();
 
-            var btnRefresh = UITheme.GhostBtn("🔄 Làm mới", 120, 34);
+            var btnRefresh = UITheme.GhostBtn("Làm mới", 95, 34);
             btnRefresh.Margin = new Padding(0, 2, 0, 0);
             btnRefresh.Click += (s, e) => RefreshData();
 
@@ -127,10 +127,10 @@ namespace _26K1_DotNet
             cardsTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
             cardsTable.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
-            var c1 = BuildBigCard("TỔNG HỌC PHÍ", UITheme.Primary, out lblTotVal);
-            var c2 = BuildBigCard("ĐÃ THU",         UITheme.Success, out lblPaidVal);
-            var c3 = BuildBigCard("CÒN PHẢI THU",        UITheme.Danger,  out lblLeftVal);
-            var c4 = BuildBigCard("PHIẾU HỌC PHÍ",    UITheme.Purple,  out lblCntVal);
+            var c1 = BuildBigCard("Tổng học phí", UITheme.Primary, out lblTotVal);
+            var c2 = BuildBigCard("Đã thu",        UITheme.Success, out lblPaidVal);
+            var c3 = BuildBigCard("Còn phải thu",  UITheme.Danger,  out lblLeftVal);
+            var c4 = BuildBigCard("Số phiếu",      UITheme.Purple,  out lblCntVal);
 
             cardsTable.Controls.Add(c1, 0, 0);
             cardsTable.Controls.Add(c2, 1, 0);
@@ -149,8 +149,11 @@ namespace _26K1_DotNet
             };
             progCard.Paint += (s, e) =>
             {
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                var rect = new Rectangle(0, 0, progCard.Width - 1, progCard.Height - 1);
                 using var pen = new Pen(UITheme.Border, 1);
-                e.Graphics.DrawRectangle(pen, 0, 0, progCard.Width - 1, progCard.Height - 1);
+                using var path = UITheme.GetRoundedPath(rect, 8);
+                e.Graphics.DrawPath(pen, path);
             };
 
             var lblProgTitle = new Label
@@ -206,8 +209,11 @@ namespace _26K1_DotNet
             breakCard.Resize += (s, e) => breakCard.Invalidate();
             breakCard.Paint += (s, e) =>
             {
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                var rect = new Rectangle(0, 0, breakCard.Width - 1, breakCard.Height - 1);
                 using var pen = new Pen(UITheme.Border, 1);
-                e.Graphics.DrawRectangle(pen, 0, 0, breakCard.Width - 1, breakCard.Height - 1);
+                using var path = UITheme.GetRoundedPath(rect, 8);
+                e.Graphics.DrawPath(pen, path);
             };
 
             var statuses = new TableLayoutPanel
@@ -240,8 +246,11 @@ namespace _26K1_DotNet
             };
             debtCard.Paint += (s, e) =>
             {
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                var rect = new Rectangle(0, 0, debtCard.Width - 1, debtCard.Height - 1);
                 using var pen = new Pen(UITheme.Border, 1);
-                e.Graphics.DrawRectangle(pen, 0, 0, debtCard.Width - 1, debtCard.Height - 1);
+                using var path = UITheme.GetRoundedPath(rect, 8);
+                e.Graphics.DrawPath(pen, path);
             };
 
             var debtHeader = new Panel
@@ -324,7 +333,7 @@ namespace _26K1_DotNet
             };
             dgvDebt.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { e.Handled = true; if (_viewMode != 1) QuickPaySelectedDebt(); } };
 
-            _lblEmpty = UITheme.CreateEmptyStateLabel("🎉 Tuyệt vời! Không có sinh viên nào nợ học phí.");
+            _lblEmpty = UITheme.CreateEmptyStateLabel("Không có sinh viên nào nợ học phí trong học kỳ này.");
 
             var dgvWrap = new Panel
             {
@@ -414,16 +423,24 @@ namespace _26K1_DotNet
             card.Resize += (s, e) => card.Invalidate();
             card.Paint += (s, e) =>
             {
-                using var pen = new Pen(UITheme.Border, 1);
-                e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
-                e.Graphics.FillRectangle(new SolidBrush(accent), 0, 0, 4, card.Height);
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                var rect = new Rectangle(0, 0, card.Width - 1, card.Height - 1);
+                using (var pen = new Pen(UITheme.Border, 1))
+                using (var path = UITheme.GetRoundedPath(rect, 8))
+                {
+                    e.Graphics.DrawPath(pen, path);
+                }
+                using (var accentBrush = new SolidBrush(accent))
+                {
+                    e.Graphics.FillRectangle(accentBrush, 0, 8, 4, Math.Max(0, card.Height - 16));
+                }
             };
 
             new Label
             {
                 Text = title, AutoSize = true,
-                Location = new Point(14, 14),
-                Font = UITheme.FontCardTitle,
+                Location = new Point(14, 12),
+                Font = UITheme.FontSmallBold,
                 ForeColor = UITheme.TextSecondary,
                 Parent = card
             };
@@ -431,7 +448,7 @@ namespace _26K1_DotNet
             valLbl = new Label
             {
                 Text = "—", AutoSize = true,
-                Location = new Point(14, 38),
+                Location = new Point(14, 34),
                 Font = UITheme.FontCardValue,
                 ForeColor = accent,
                 Parent = card
@@ -507,6 +524,7 @@ namespace _26K1_DotNet
             {
                 f.Id,
                 _HidId = f.StudentId,
+                MaSV     = $"SV{f.StudentId:D4}",
                 HoTen    = svDict.TryGetValue(f.StudentId, out var sv) ? sv.FullName : $"#{f.StudentId}",
                 Lop      = svDict.TryGetValue(f.StudentId, out var sv2) ? sv2.ClassName : "",
                 PhaiNop  = f.TotalAmount,
@@ -521,7 +539,7 @@ namespace _26K1_DotNet
 
             if (_currentDebtFees.Count == 0)
             {
-                _lblEmpty.Text = "🎉 Tuyệt vời! Không có sinh viên nào nợ học phí.";
+                _lblEmpty.Text = "Không có sinh viên nào nợ học phí trong học kỳ này.";
                 _lblEmpty.Visible = true;
             }
             else
@@ -529,18 +547,7 @@ namespace _26K1_DotNet
                 _lblEmpty.Visible = false;
             }
 
-            if (dgvDebt.Columns.Count > 0)
-            {
-                if (dgvDebt.Columns["Id"] is { } cId) { cId.HeaderText = "Mã HP"; cId.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; cId.Width = 65; }
-                if (dgvDebt.Columns["_HidId"] is { } c0) c0.Visible = false;
-                if (dgvDebt.Columns["HoTen"] is { } c1) { c1.HeaderText = "Họ và Tên"; c1.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill; }
-                if (dgvDebt.Columns["Lop"] is { } c2) { c2.HeaderText = "Lớp"; c2.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; c2.Width = 95; }
-                if (dgvDebt.Columns["PhaiNop"] is { } c3) { c3.HeaderText = "Phải Nộp"; c3.DefaultCellStyle.Format = "N0"; c3.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight; c3.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight; c3.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; c3.Width = 95; }
-                if (dgvDebt.Columns["DaNop"] is { } c4) { c4.HeaderText = "Đã Nộp"; c4.DefaultCellStyle.Format = "N0"; c4.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight; c4.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight; c4.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; c4.Width = 95; }
-                if (dgvDebt.Columns["ConLai"] is { } c5) { c5.HeaderText = "Còn Lại"; c5.DefaultCellStyle.Format = "N0"; c5.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight; c5.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight; c5.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; c5.Width = 95; }
-                if (dgvDebt.Columns["HanNop"] is { } cHan) { cHan.HeaderText = "Hạn Nộp"; cHan.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter; cHan.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; cHan.Width = 95; }
-                if (dgvDebt.Columns["TrangThai"] is { } c6) { c6.HeaderText = "Trạng Thái"; c6.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; c6.Width = 115; }
-            }
+            FormatStudentFeeGrid(isDebtOnly: true);
         }
 
         private void SetViewMode(int mode)
@@ -610,7 +617,7 @@ namespace _26K1_DotNet
 
             if (classGroups.Count == 0)
             {
-                _lblEmpty.Text = "📋 Chưa có dữ liệu học phí cho học kỳ này";
+                _lblEmpty.Text = "Chưa có dữ liệu học phí cho học kỳ này.";
                 _lblEmpty.Visible = true;
             }
             else
@@ -620,12 +627,64 @@ namespace _26K1_DotNet
 
             if (dgvDebt.Columns.Count > 0)
             {
-                if (dgvDebt.Columns["Lop"] is { } cl) { cl.HeaderText = "Lớp Học"; cl.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill; }
-                if (dgvDebt.Columns["SoSV"] is { } csv) { csv.HeaderText = "Số SV"; csv.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; csv.Width = 80; csv.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter; }
-                if (dgvDebt.Columns["PhaiThu"] is { } cpt) { cpt.HeaderText = "Phải Thu"; cpt.DefaultCellStyle.Format = "N0"; cpt.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight; cpt.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; cpt.Width = 110; }
-                if (dgvDebt.Columns["DaThu"] is { } cdt) { cdt.HeaderText = "Đã Thu"; cdt.DefaultCellStyle.Format = "N0"; cdt.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight; cdt.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; cdt.Width = 110; }
-                if (dgvDebt.Columns["ConNo"] is { } ccn) { ccn.HeaderText = "Còn Nợ"; ccn.DefaultCellStyle.Format = "N0"; ccn.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight; ccn.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; ccn.Width = 110; }
-                if (dgvDebt.Columns["TyLe"] is { } ctl) { ctl.HeaderText = "Tiến Độ"; ctl.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; ctl.Width = 100; }
+                if (dgvDebt.Columns["Lop"] is { } cl)
+                {
+                    cl.HeaderText = "Lớp học";
+                    cl.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+                    cl.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
+                    cl.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleLeft;
+                    cl.DefaultCellStyle.Padding = new Padding(8, 0, 4, 0);
+                    cl.HeaderCell.Style.Padding = new Padding(8, 0, 4, 0);
+                }
+                if (dgvDebt.Columns["SoSV"] is { } csv)
+                {
+                    csv.HeaderText = "Số SV";
+                    csv.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+                    csv.Width = 85;
+                    csv.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                    csv.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                }
+                if (dgvDebt.Columns["PhaiThu"] is { } cpt)
+                {
+                    cpt.HeaderText = "Phải thu";
+                    cpt.DefaultCellStyle.Format = "N0";
+                    cpt.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                    cpt.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight;
+                    cpt.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+                    cpt.Width = 130;
+                    cpt.DefaultCellStyle.Padding = new Padding(2, 0, 8, 0);
+                    cpt.HeaderCell.Style.Padding = new Padding(2, 0, 8, 0);
+                }
+                if (dgvDebt.Columns["DaThu"] is { } cdt)
+                {
+                    cdt.HeaderText = "Đã thu";
+                    cdt.DefaultCellStyle.Format = "N0";
+                    cdt.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                    cdt.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight;
+                    cdt.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+                    cdt.Width = 130;
+                    cdt.DefaultCellStyle.Padding = new Padding(2, 0, 8, 0);
+                    cdt.HeaderCell.Style.Padding = new Padding(2, 0, 8, 0);
+                }
+                if (dgvDebt.Columns["ConNo"] is { } ccn)
+                {
+                    ccn.HeaderText = "Còn nợ";
+                    ccn.DefaultCellStyle.Format = "N0";
+                    ccn.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                    ccn.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight;
+                    ccn.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+                    ccn.Width = 130;
+                    ccn.DefaultCellStyle.Padding = new Padding(2, 0, 8, 0);
+                    ccn.HeaderCell.Style.Padding = new Padding(2, 0, 8, 0);
+                }
+                if (dgvDebt.Columns["TyLe"] is { } ctl)
+                {
+                    ctl.HeaderText = "Tiến độ";
+                    ctl.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+                    ctl.Width = 110;
+                    ctl.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                    ctl.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                }
             }
         }
 
@@ -657,7 +716,7 @@ namespace _26K1_DotNet
 
             if (_currentAllFees.Count == 0)
             {
-                _lblEmpty.Text = "📋 Chưa có sinh viên nào trong học kỳ này";
+                _lblEmpty.Text = "Chưa có sinh viên nào trong học kỳ này.";
                 _lblEmpty.Visible = true;
             }
             else
@@ -665,18 +724,97 @@ namespace _26K1_DotNet
                 _lblEmpty.Visible = false;
             }
 
-            if (dgvDebt.Columns.Count > 0)
+            FormatStudentFeeGrid(isDebtOnly: false);
+        }
+
+        private void FormatStudentFeeGrid(bool isDebtOnly)
+        {
+            if (dgvDebt.Columns.Count == 0) return;
+
+            if (dgvDebt.Columns["Id"] is { } cId) cId.Visible = false;
+            if (dgvDebt.Columns["_HidId"] is { } c0) c0.Visible = false;
+
+            if (dgvDebt.Columns["MaSV"] is { } cMa)
             {
-                if (dgvDebt.Columns["Id"] is { } cId) { cId.HeaderText = "Mã HP"; cId.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; cId.Width = 65; }
-                if (dgvDebt.Columns["_HidId"] is { } c0) c0.Visible = false;
-                if (dgvDebt.Columns["MaSV"] is { } cMa) { cMa.HeaderText = "Mã SV"; cMa.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; cMa.Width = 80; }
-                if (dgvDebt.Columns["HoTen"] is { } c1) { c1.HeaderText = "Họ và Tên"; c1.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill; }
-                if (dgvDebt.Columns["Lop"] is { } c2) { c2.HeaderText = "Lớp"; c2.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; c2.Width = 95; }
-                if (dgvDebt.Columns["PhaiNop"] is { } c3) { c3.HeaderText = "Phải Nộp"; c3.DefaultCellStyle.Format = "N0"; c3.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight; c3.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight; c3.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; c3.Width = 95; }
-                if (dgvDebt.Columns["DaNop"] is { } c4) { c4.HeaderText = "Đã Nộp"; c4.DefaultCellStyle.Format = "N0"; c4.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight; c4.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight; c4.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; c4.Width = 95; }
-                if (dgvDebt.Columns["ConLai"] is { } c5) { c5.HeaderText = "Còn Lại"; c5.DefaultCellStyle.Format = "N0"; c5.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight; c5.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight; c5.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; c5.Width = 95; }
-                if (dgvDebt.Columns["HanNop"] is { } cHan) { cHan.HeaderText = "Hạn Nộp"; cHan.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter; cHan.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; cHan.Width = 95; }
-                if (dgvDebt.Columns["TrangThai"] is { } c6) { c6.HeaderText = "Trạng Thái"; c6.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; c6.Width = 115; }
+                cMa.HeaderText = "Mã SV";
+                cMa.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+                cMa.Width = 90;
+                cMa.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                cMa.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                cMa.DefaultCellStyle.Padding = new Padding(2, 0, 2, 0);
+                cMa.HeaderCell.Style.Padding = new Padding(2, 0, 2, 0);
+            }
+            if (dgvDebt.Columns["HoTen"] is { } c1)
+            {
+                c1.HeaderText = "Họ và tên";
+                c1.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+                c1.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
+                c1.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleLeft;
+                c1.DefaultCellStyle.Padding = new Padding(8, 0, 4, 0);
+                c1.HeaderCell.Style.Padding = new Padding(8, 0, 4, 0);
+            }
+            if (dgvDebt.Columns["Lop"] is { } c2)
+            {
+                c2.HeaderText = "Lớp";
+                c2.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+                c2.Width = 105;
+                c2.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                c2.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                c2.DefaultCellStyle.Padding = new Padding(2, 0, 2, 0);
+                c2.HeaderCell.Style.Padding = new Padding(2, 0, 2, 0);
+            }
+            if (dgvDebt.Columns["PhaiNop"] is { } c3)
+            {
+                c3.HeaderText = "Phải nộp";
+                c3.DefaultCellStyle.Format = "N0";
+                c3.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                c3.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight;
+                c3.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+                c3.Width = 115;
+                c3.DefaultCellStyle.Padding = new Padding(2, 0, 8, 0);
+                c3.HeaderCell.Style.Padding = new Padding(2, 0, 8, 0);
+            }
+            if (dgvDebt.Columns["DaNop"] is { } c4)
+            {
+                c4.HeaderText = "Đã nộp";
+                c4.DefaultCellStyle.Format = "N0";
+                c4.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                c4.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight;
+                c4.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+                c4.Width = 115;
+                c4.DefaultCellStyle.Padding = new Padding(2, 0, 8, 0);
+                c4.HeaderCell.Style.Padding = new Padding(2, 0, 8, 0);
+            }
+            if (dgvDebt.Columns["ConLai"] is { } c5)
+            {
+                c5.HeaderText = isDebtOnly ? "Còn nợ" : "Còn lại";
+                c5.DefaultCellStyle.Format = "N0";
+                c5.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                c5.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight;
+                c5.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+                c5.Width = 115;
+                c5.DefaultCellStyle.Padding = new Padding(2, 0, 8, 0);
+                c5.HeaderCell.Style.Padding = new Padding(2, 0, 8, 0);
+            }
+            if (dgvDebt.Columns["HanNop"] is { } cHan)
+            {
+                cHan.HeaderText = "Hạn nộp";
+                cHan.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                cHan.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                cHan.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+                cHan.Width = 110;
+                cHan.DefaultCellStyle.Padding = new Padding(2, 0, 2, 0);
+                cHan.HeaderCell.Style.Padding = new Padding(2, 0, 2, 0);
+            }
+            if (dgvDebt.Columns["TrangThai"] is { } c6)
+            {
+                c6.HeaderText = "Trạng thái";
+                c6.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+                c6.Width = 125;
+                c6.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                c6.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                c6.DefaultCellStyle.Padding = new Padding(2, 0, 2, 0);
+                c6.HeaderCell.Style.Padding = new Padding(2, 0, 2, 0);
             }
         }
 

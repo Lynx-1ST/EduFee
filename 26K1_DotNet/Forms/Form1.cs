@@ -23,6 +23,7 @@ namespace _26K1_DotNet
         public Form1()
         {
             InitializeComponent();
+            DoubleBuffered = true;
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -132,7 +133,7 @@ namespace _26K1_DotNet
             {
                 bool isCurrent = (active != null && active.Id == sem.Id);
                 var item = new ToolStripMenuItem(
-                    isCurrent ? $"⭐  {sem.Name}  (Đang áp dụng)" : $"      {sem.Name}",
+                    isCurrent ? $"●  {sem.Name}  (Đang áp dụng)" : $"    {sem.Name}",
                     null,
                     (s, e) =>
                     {
@@ -151,7 +152,7 @@ namespace _26K1_DotNet
             }
 
             cm.Items.Add(new ToolStripSeparator());
-            cm.Items.Add(new ToolStripMenuItem("⚙️  Quản lý danh sách học kỳ...", null, (s, e) => OpenSemesterManager()));
+            cm.Items.Add(new ToolStripMenuItem("Quản lý danh sách học kỳ...", null, (s, e) => OpenSemesterManager()));
             cm.Show(anchor, offset);
         }
 
@@ -161,7 +162,7 @@ namespace _26K1_DotNet
             var act = _semesterService.GetActive();
             if (lblHeaderSemesterBadge != null)
             {
-                lblHeaderSemesterBadge.Text = act != null ? $"📅  Học kỳ: {act.Name}" : "📅  Chưa chọn học kỳ";
+                lblHeaderSemesterBadge.Text = act != null ? $"Học kỳ: {act.Name}" : "Chưa chọn học kỳ";
             }
             if (lblWidgetSemName != null)
             {
@@ -178,9 +179,9 @@ namespace _26K1_DotNet
         {
             var cm = new ContextMenuStrip();
             cm.Font = UITheme.FontBody;
-            var itemEmail = new ToolStripMenuItem("📧  Cấu Hình Gửi Email SMTP...", null, (s, e) => OpenEmailSettings());
-            var itemDb = new ToolStripMenuItem("🗄️  Quản Trị Cơ Sở Dữ Liệu SQL...", null, (s, e) => OpenDatabaseConfig());
-            var itemSem = new ToolStripMenuItem("📅  Quản Lý Danh Sách Học Kỳ...", null, (s, e) => OpenSemesterManager());
+            var itemEmail = new ToolStripMenuItem("Cấu hình gửi Email SMTP...", null, (s, e) => OpenEmailSettings());
+            var itemDb = new ToolStripMenuItem("Quản trị cơ sở dữ liệu SQL...", null, (s, e) => OpenDatabaseConfig());
+            var itemSem = new ToolStripMenuItem("Quản lý danh sách học kỳ...", null, (s, e) => OpenSemesterManager());
 
             cm.Items.AddRange(new ToolStripItem[] { itemEmail, itemDb, new ToolStripSeparator(), itemSem });
             cm.Show(btnNavSettings, new Point(0, btnNavSettings.Height));

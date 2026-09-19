@@ -57,7 +57,7 @@ namespace _26K1_DotNet
 
             topBar.Controls.Add(new Label
             {
-                Text = "📅  QUẢN LÝ DANH SÁCH HỌC KỲ",
+                Text = "QUẢN LÝ DANH SÁCH HỌC KỲ",
                 Font = UITheme.FontH1, ForeColor = Color.White,
                 Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft
             });
@@ -182,12 +182,12 @@ namespace _26K1_DotNet
             y += 12;
 
             // Action Buttons
-            btnSave = UITheme.SuccessBtn("💾  Thêm Mới", 125, 36);
+            btnSave = UITheme.SuccessBtn("Thêm mới", 100, 36);
             btnSave.Margin = new Padding(0, 0, 10, 0);
             btnSave.Click += BtnSave_Click;
             AcceptButton = btnSave;
 
-            btnClear = UITheme.GhostBtn("🔄  Làm mới", 100, 36);
+            btnClear = UITheme.GhostBtn("Làm mới", 85, 36);
             btnClear.Margin = new Padding(0);
             btnClear.Click += (s, e) => ClearForm();
 
@@ -203,11 +203,11 @@ namespace _26K1_DotNet
             formCard.Controls.Add(flowRow1);
             y += 44;
 
-            btnSetCurrent = UITheme.PurpleBtn("⭐  Kích Hoạt Kỳ Này", 170, 36);
+            btnSetCurrent = UITheme.PurpleBtn("Kích hoạt kỳ này", 145, 36);
             btnSetCurrent.Margin = new Padding(0, 0, 10, 0);
             btnSetCurrent.Click += BtnSetCurrent_Click;
 
-            btnDelete = UITheme.DangerBtn("🗑  Xóa", 85, 36);
+            btnDelete = UITheme.DangerBtn("Xóa", 75, 36);
             btnDelete.Margin = new Padding(0);
             btnDelete.Click += BtnDelete_Click;
 
@@ -223,8 +223,8 @@ namespace _26K1_DotNet
             formCard.Controls.Add(flowRow2);
             y += 44;
 
-            var btnClose = UITheme.GhostBtn("✕  Đóng (Esc)", 115, 34);
-            btnClose.Location = new Point(175, y);
+            var btnClose = UITheme.GhostBtn("Đóng", 80, 34);
+            btnClose.Location = new Point(210, y);
             btnClose.Click += (s, e) => Close();
             CancelButton = btnClose;
             formCard.Controls.Add(btnClose);
@@ -252,7 +252,7 @@ namespace _26K1_DotNet
                 s.Name,
                 s.StartDate,
                 s.DueDate,
-                TrangThai = s.IsActive ? "⭐ Hiện tại" : "—"
+                TrangThai = s.IsActive ? "Hiện tại" : "—"
             }).ToList();
 
             dgv.DataSource = null;
@@ -328,7 +328,7 @@ namespace _26K1_DotNet
             dtpDue.Value = _selectedSem.DueDate;
             chkActive.Checked = _selectedSem.IsActive;
 
-            btnSave.Text = "💾  Cập Nhật";
+            btnSave.Text = "Lưu thay đổi";
             lblFormTitle.Text = $"Chỉnh Sửa: {_selectedSem.Name}";
         }
 
@@ -342,7 +342,7 @@ namespace _26K1_DotNet
             dtpEnd.Value = DateTime.Today.AddMonths(4);
             dtpDue.Value = DateTime.Today.AddMonths(1);
             chkActive.Checked = false;
-            btnSave.Text = "💾  Thêm Mới";
+            btnSave.Text = "Thêm mới";
             lblFormTitle.Text = "Thêm Học Kỳ Mới";
             txtName.Focus();
         }

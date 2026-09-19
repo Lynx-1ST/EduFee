@@ -68,8 +68,8 @@ namespace _26K1_DotNet
             var lblBanner = new Label
             {
                 Text = _fee.Status == PaymentStatus.Overdue
-                    ? "⚠️  THÔNG BÁO QUÁ HẠN HỌC PHÍ"
-                    : "📢  GIẤY BÁO NỢ HỌC PHÍ & HƯỚNG DẪN ĐÓNG TIỀN",
+                    ? "THÔNG BÁO QUÁ HẠN HỌC PHÍ"
+                    : "GIẤY BÁO NỢ HỌC PHÍ & HƯỚNG DẪN ĐÓNG TIỀN",
                 Font = UITheme.FontH1, ForeColor = Color.White,
                 Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft
             };
@@ -93,16 +93,16 @@ namespace _26K1_DotNet
                 BackColor = Color.Transparent
             };
 
-            var btnPrint = UITheme.PrimaryBtn("🖨  In Giấy Báo", 125, 38);
+            var btnPrint = UITheme.GhostBtn("In giấy báo", 100, 38);
             btnPrint.Click += (s, e) => PrintNotice();
 
-            var btnEmail = UITheme.PurpleBtn("📧  Gửi Email", 120, 38);
+            var btnEmail = UITheme.GhostBtn("Gửi email", 95, 38);
             btnEmail.Click += BtnEmail_Click;
 
-            var btnPayNow = UITheme.SuccessBtn("💳  Thu Tiền Ngay", 145, 38);
+            var btnPayNow = UITheme.PrimaryBtn("Thu tiền ngay", 120, 38);
             btnPayNow.Click += (s, e) => OpenPaymentDialog();
 
-            var btnClose = UITheme.GhostBtn("Đóng", 85, 38);
+            var btnClose = UITheme.GhostBtn("Đóng", 80, 38);
             btnClose.Click += (s, e) => Close();
 
             AcceptButton = btnPrint;
@@ -229,7 +229,7 @@ namespace _26K1_DotNet
             int by = 12;
             new Label
             {
-                Text = "💳 THÔNG TIN CHUYỂN KHOẢN NGÂN HÀNG",
+                Text = "THÔNG TIN CHUYỂN KHOẢN NGÂN HÀNG",
                 Location = new Point(14, by), AutoSize = true,
                 Font = UITheme.FontSmallBold,
                 ForeColor = UITheme.PrimaryDark, Parent = bankCard
@@ -259,7 +259,7 @@ namespace _26K1_DotNet
             // Notice text
             var lblNotice = new Label
             {
-                Text = "⚠️ Lưu ý: Sinh viên cần ghi chính xác nội dung chuyển khoản để hệ thống tự động gạch nợ. Quá hạn nộp học phí, sinh viên sẽ bị tạm dừng quyền thi kết thúc học phần và xét học bổng.",
+                Text = "Lưu ý: Sinh viên cần ghi chính xác nội dung chuyển khoản để hệ thống tự động gạch nợ. Quá hạn nộp học phí, sinh viên sẽ bị tạm dừng quyền thi kết thúc học phần và xét học bổng.",
                 Font = UITheme.FontSmall,
                 ForeColor = UITheme.DebtAmber,
                 Location = new Point(24, y), Size = new Size(520, 44),
