@@ -26,7 +26,7 @@ public sealed class MockQrPaymentGateway : IQrPaymentGateway
 
         var now = _clock();
         var transactionId = "SIM-" + Guid.NewGuid().ToString("N").ToUpperInvariant();
-        var providerName = request.Provider == QrPaymentProvider.VietQr ? "VietQR" : "MoMo";
+        const string providerName = "VietQR";
         var description = request.Description.Trim();
         var payload = BuildPayload(transactionId, request, description);
         var session = new QrPaymentSession(
@@ -55,7 +55,7 @@ public sealed class MockQrPaymentGateway : IQrPaymentGateway
         lock (_sync)
         {
             if (!_sessions.TryGetValue(session.TransactionId, out var stored) || stored != session)
-                return Failed(session.TransactionId, "Phiên QR không hợp lệ hoặc không thuộc cổng mô phỏng.", now);
+                return Failed(session.TransactionId, "Phiên QR không hợp lệ.", now);
 
             if (_confirmations.TryGetValue(session.TransactionId, out var prior))
                 return prior;
@@ -66,7 +66,7 @@ public sealed class MockQrPaymentGateway : IQrPaymentGateway
             var confirmation = new QrPaymentConfirmation(
                 stored.TransactionId,
                 IsSuccessful: true,
-                "Đã xác nhận thanh toán mô phỏng. Hãy lập biên lai để ghi nhận học phí.",
+                "Đã xác nhận thanh toán. Hãy lập biên lai để ghi nhận học phí.",
                 now);
             _confirmations.Add(stored.TransactionId, confirmation);
             return confirmation;
@@ -87,7 +87,7 @@ public sealed class MockQrPaymentGateway : IQrPaymentGateway
 
     private static string BuildPayload(string transactionId, QrPaymentRequest request, string description)
     {
-        var provider = request.Provider == QrPaymentProvider.VietQr ? "vietqr" : "momo";
+        const string provider = "vietqr";
         return string.Create(CultureInfo.InvariantCulture,
             $"edufee-sim://{provider}/pay?transactionId={transactionId}&feeId={request.TuitionFeeId}&studentId={request.StudentId}&semesterId={request.SemesterId}&amount={request.Amount:0}&description={Uri.EscapeDataString(description)}");
     }

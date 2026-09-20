@@ -419,6 +419,7 @@ namespace _26K1_DotNet
             var (bg, fg) = status switch
             {
                 "Đã nộp đủ"  => (SuccessLight, Color.FromArgb(22, 101, 52)),   // Green-800 (WCAG 5.9:1)
+                "Nộp muộn"    => (WarningLight, WarningDark),                  // Amber-700
                 "Nộp 1 phần" => (WarningLight, DebtAmber),                     // Amber-700
                 "Quá hạn"    => (DangerLight, DangerDark),                     // Red-700
                 "Chưa nộp"   => (BorderLight, Color.FromArgb(51, 65, 85)),     // Slate-700 (WCAG 7.2:1 AAA)

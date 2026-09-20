@@ -28,6 +28,8 @@ namespace _26K1_DotNet
         private List<TuitionFee> _current = new();
         private int? _studentContextId;
         private bool _suppressFilterEvents;
+        private string? _sortColumn;
+        private bool _sortAscending = true;
 
         public PanelTuition(StudentService sv, SemesterService sem, TuitionService tui,
             ReceiptService receiptSvc, Form1 mainForm)
@@ -174,7 +176,7 @@ namespace _26K1_DotNet
                 BackColor = UITheme.SurfaceAlt,
                 Margin = new Padding(0, 2, 14, 0)
             };
-            cmbStatus.Items.AddRange(new object[] { "Tất cả", "Chưa nộp", "Nộp 1 phần", "Đã nộp đủ", "Quá hạn" });
+            cmbStatus.Items.AddRange(new object[] { "Tất cả", "Chưa nộp", "Nộp 1 phần", "Đã nộp đủ", "Nộp muộn", "Quá hạn" });
             cmbStatus.SelectedIndex = 0;
 
             lblStudentContext = new Label
@@ -252,6 +254,7 @@ namespace _26K1_DotNet
                 }
             };
             dgv.CellPainting += Dgv_CellPainting;
+            dgv.ColumnHeaderMouseClick += Dgv_ColumnHeaderMouseClick;
             dgv.SelectionChanged += (s, e) => UpdateSelectionActions();
             dgv.DataBindingComplete += (s, e) => UpdateSelectionActions();
             dgv.DoubleClick += (s, e) => ViewSelectedReceiptHistory();
@@ -463,7 +466,8 @@ namespace _26K1_DotNet
             PaymentStatus? st = cmbStatus.SelectedIndex switch
             {
                 1 => PaymentStatus.Unpaid, 2 => PaymentStatus.PartiallyPaid,
-                3 => PaymentStatus.Paid,   4 => PaymentStatus.Overdue, _ => null
+                3 => PaymentStatus.Paid, 4 => PaymentStatus.LatePaid,
+                5 => PaymentStatus.Overdue, _ => null
             };
             IEnumerable<int>? ids = _studentContextId.HasValue ? new[] { _studentContextId.Value } : null;
             if (ids == null && !string.IsNullOrWhiteSpace(txtSearch.Text))
@@ -495,6 +499,8 @@ namespace _26K1_DotNet
 
             var svDict  = _svSvc.GetAllStudents().ToDictionary(x => x.Id);
             var semDict = _semSvc.GetAll().ToDictionary(x => x.Id);
+
+            _current = SortFees(_current, svDict).ToList();
 
             var rows = _current.Select(f => new
             {
@@ -581,6 +587,10 @@ namespace _26K1_DotNet
                 Center("TrangThai", "Trạng thái", 120);
                 Hide("NgayNop");
                 Hide("GhiChu");
+                ConfigureSortableColumn("HoTen");
+                ConfigureSortableColumn("Lop");
+                ConfigureSortableColumn("TrangThai");
+                ShowSortGlyph();
             }
 
             decimal tot = _current.Sum(f => f.TotalAmount);
@@ -590,6 +600,46 @@ namespace _26K1_DotNet
             lblLeftVal.Text  = $"{(tot - pid):N0} ₫";
             lblCountVal.Text = $"{_current.Count} phiếu";
             UpdateSelectionActions();
+        }
+
+        private IEnumerable<TuitionFee> SortFees(IEnumerable<TuitionFee> fees, IReadOnlyDictionary<int, Student> students)
+        {
+            if (_sortColumn == null) return fees;
+
+            Func<TuitionFee, string> key = _sortColumn switch
+            {
+                "Lop" => fee => students.TryGetValue(fee.StudentId, out var student) ? student.ClassName : string.Empty,
+                "TrangThai" => fee => fee.StatusDisplayText,
+                _ => fee => students.TryGetValue(fee.StudentId, out var student) ? student.FullName : string.Empty
+            };
+            return _sortAscending
+                ? fees.OrderBy(key, StringComparer.CurrentCultureIgnoreCase)
+                : fees.OrderByDescending(key, StringComparer.CurrentCultureIgnoreCase);
+        }
+
+        private void Dgv_ColumnHeaderMouseClick(object? sender, DataGridViewCellMouseEventArgs e)
+        {
+            if (e.ColumnIndex < 0) return;
+            string column = dgv.Columns[e.ColumnIndex].Name;
+            if (column is not ("HoTen" or "Lop" or "TrangThai")) return;
+
+            if (_sortColumn == column) _sortAscending = !_sortAscending;
+            else { _sortColumn = column; _sortAscending = true; }
+            LoadData();
+        }
+
+        private void ConfigureSortableColumn(string name)
+        {
+            if (dgv.Columns[name] is { } column)
+                column.SortMode = DataGridViewColumnSortMode.Programmatic;
+        }
+
+        private void ShowSortGlyph()
+        {
+            foreach (DataGridViewColumn column in dgv.Columns)
+                column.HeaderCell.SortGlyphDirection = SortOrder.None;
+            if (_sortColumn != null && dgv.Columns[_sortColumn] is { } sorted)
+                sorted.HeaderCell.SortGlyphDirection = _sortAscending ? SortOrder.Ascending : SortOrder.Descending;
         }
 
         private void Dgv_CellPainting(object? sender, DataGridViewCellPaintingEventArgs e)

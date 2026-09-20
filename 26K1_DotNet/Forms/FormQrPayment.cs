@@ -21,7 +21,7 @@ public sealed class FormQrPayment : Form
 
     private void BuildUI()
     {
-        Text = $"{_session.ProviderName} — Thanh toán mô phỏng";
+        Text = $"{_session.ProviderName} — Thanh toán học phí";
         ClientSize = new Size(460, 700);
         MinimumSize = new Size(460, 700);
         MaximumSize = new Size(460, 700);
@@ -33,7 +33,7 @@ public sealed class FormQrPayment : Form
         Font = UITheme.FontBody;
 
         var header = UITheme.CreateDialogHeader("", $"QR { _session.ProviderName }",
-            "MÔ PHỎNG — không kết nối tài khoản hoặc ví thật", UITheme.PrimaryDark, 70);
+            "Quét mã để nộp học phí", UITheme.PrimaryDark, 70);
 
         var body = new Panel { Dock = DockStyle.Fill, BackColor = UITheme.Surface, Padding = new Padding(28, 16, 28, 12) };
         using var generator = new QRCodeGenerator();
@@ -56,7 +56,7 @@ public sealed class FormQrPayment : Form
         {
             Text = _session.ProviderName,
             Font = UITheme.FontH2,
-            ForeColor = _session.Provider == QrPaymentProvider.MoMo ? Color.FromArgb(166, 30, 105) : UITheme.Primary,
+            ForeColor = UITheme.Primary,
             Location = new Point(28, 286), Size = new Size(404, 28), TextAlign = ContentAlignment.MiddleCenter
         };
         var amount = new Label
@@ -82,7 +82,7 @@ public sealed class FormQrPayment : Form
         };
         var notice = new Label
         {
-            Text = "Quét mã chỉ hiển thị nội dung mô phỏng. Bấm xác nhận bên dưới để giả lập callback thành công và ghi nhận biên lai.",
+            Text = "Sau khi hoàn tất thanh toán, bấm xác nhận bên dưới để ghi nhận và lập biên lai.",
             Font = UITheme.FontSmall,
             ForeColor = UITheme.WarningDark,
             Location = new Point(28, 458), Size = new Size(404, 48), TextAlign = ContentAlignment.MiddleCenter

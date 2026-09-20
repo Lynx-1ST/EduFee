@@ -147,8 +147,7 @@ namespace _26K1_DotNet
             };
             cmbMethod.Items.AddRange(new object[]
             {
-                "VietQR (mô phỏng)", "MoMo QR (mô phỏng)",
-                "Chuyển khoản ngân hàng", "Tiền mặt", "Thẻ ATM / Thẻ tín dụng"
+                "VietQR", "Tiền mặt", "Thẻ ATM / Thẻ tín dụng"
             });
             cmbMethod.SelectedIndex = 0;
             cmbMethod.SelectedIndexChanged += (s, e) =>
@@ -255,16 +254,16 @@ namespace _26K1_DotNet
 
                 if (IsQrMethod())
                 {
-                    var provider = cmbMethod.SelectedIndex == 1 ? QrPaymentProvider.MoMo : QrPaymentProvider.VietQr;
+                    var provider = QrPaymentProvider.VietQr;
                     string description = $"SV{_fee.StudentId:D4} HP {sem?.Name ?? _fee.SemesterId.ToString()}";
                     var session = _qrGateway.CreateSession(new QrPaymentRequest(provider, _fee.Id,
                         _fee.StudentId, _fee.SemesterId, amount, description));
                     using var qrForm = new FormQrPayment(_qrGateway, session);
                     if (qrForm.ShowDialog(this) != DialogResult.OK || qrForm.Confirmation?.IsSuccessful != true) return;
-                    method = $"{session.ProviderName} (mô phỏng)";
+                    method = session.ProviderName;
                     note = string.IsNullOrWhiteSpace(note)
-                        ? $"QR mô phỏng: {session.TransactionId}"
-                        : $"{note} | QR mô phỏng: {session.TransactionId}";
+                        ? $"Mã QR: {session.TransactionId}"
+                        : $"{note} | Mã QR: {session.TransactionId}";
                 }
 
                 // Record the balance update and receipt in one SQLite transaction.
@@ -314,6 +313,6 @@ namespace _26K1_DotNet
             finally { _submitting = false; }
         }
 
-        private bool IsQrMethod() => cmbMethod.SelectedIndex is 0 or 1;
+        private bool IsQrMethod() => cmbMethod.SelectedIndex == 0;
     }
 }

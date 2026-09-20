@@ -16,7 +16,7 @@ Phạm vi: đồ án Windows Forms chạy trên một máy. Bản lõi đã hoà
 | T08 — PDF công nợ | Hoàn thành; phân trang và tổng cộng cho báo cáo nhiều dòng. |
 | T09 — Dữ liệu, backup/restore, demo | Hoàn thành phần mã; còn chạy thử trên máy Windows đích và máy in thực nếu cần. |
 
-Phần trình diễn thanh toán đã có thêm VietQR/MoMo mô phỏng. Mã QR chứa payload demo, có mã giao dịch và thời hạn; chỉ nút xác nhận callback mô phỏng mới tiếp tục ghi nhận thu tiền. Đây không phải tích hợp cổng thanh toán thật.
+Phần trình diễn thanh toán đã có VietQR. Mã QR chứa payload demo, có mã giao dịch và thời hạn; chỉ sau bước xác nhận mới tiếp tục ghi nhận thu tiền. Đây không phải tích hợp cổng thanh toán thật.
 
 Tài liệu đánh giá ban đầu có mô tả SQL chỉ là bản sao, chưa có PDF và runner dừng sau một phần kiểm tra. Đây là các phát hiện lịch sử đã được dùng làm backlog, không phải hiện trạng của bản lõi.
 

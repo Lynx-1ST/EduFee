@@ -12,12 +12,12 @@ public static class QrPaymentAcceptance
         var request = new QrPaymentRequest(QrPaymentProvider.VietQr, 10, 20, 30, 750_000m, "Nộp học phí SV20");
 
         var first = gateway.CreateSession(request);
-        var second = gateway.CreateSession(request with { Provider = QrPaymentProvider.MoMo });
+        var second = gateway.CreateSession(request);
         check(first.IsSimulation && first.ProviderName == "VietQR" && first.Amount == 750_000m &&
               first.Payload.Contains("vietqr", StringComparison.Ordinal) && first.Payload.Contains("amount=750000", StringComparison.Ordinal),
             "QR session has the expected provider, amount and simulation payload");
-        check(first.TransactionId != second.TransactionId && second.ProviderName == "MoMo",
-            "QR sessions use unique transaction IDs for each provider");
+        check(first.TransactionId != second.TransactionId && second.ProviderName == "VietQR",
+            "QR sessions use unique transaction IDs");
         check(Throws(() => gateway.CreateSession(request with { Amount = 1.5m })),
             "QR session rejects non-integral VND amounts");
 
@@ -43,7 +43,7 @@ public static class QrPaymentAcceptance
         if (!string.IsNullOrWhiteSpace(artifacts))
         {
             Directory.CreateDirectory(artifacts);
-            bitmap.Save(Path.Combine(artifacts, "qr-payment-momo.png"));
+            bitmap.Save(Path.Combine(artifacts, "qr-payment-vietqr.png"));
         }
         check(bitmap.Width > 400 && bitmap.Height > 500,
             "QR payment dialog renders a scannable simulated payment session");

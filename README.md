@@ -7,7 +7,7 @@
 - Thêm, sửa, tìm kiếm, lọc lớp, nhập và xuất CSV sinh viên.
 - Lập học kỳ và học phí theo tín chỉ, miễn giảm, hạn nộp, trạng thái nợ/quá hạn.
 - Ghi nhận thanh toán một phần hoặc đủ tiền; cập nhật học phí và phát hành biên lai trong một transaction SQLite.
-- Thanh toán QR mô phỏng VietQR/MoMo: tạo mã QR quét được, mã giao dịch và callback xác nhận giả lập trước khi lập biên lai; không kết nối tài khoản thật.
+- Thanh toán VietQR dùng cho trình diễn: tạo mã QR quét được, mã giao dịch và bước xác nhận trước khi lập biên lai; không kết nối tài khoản thật.
 - Thống kê công nợ theo học kỳ/lớp, xuất CSV và PDF; xuất PDF biên lai.
 - Sao lưu và phục hồi SQLite có kiểm tra trước khi thay dữ liệu; một phiên ứng dụng tại một thời điểm.
 

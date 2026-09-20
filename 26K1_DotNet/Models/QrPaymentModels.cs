@@ -3,8 +3,7 @@ namespace K26_DotNet.Services;
 /// <summary>Nhà cung cấp mã QR được mô phỏng trong bản đồ án.</summary>
 public enum QrPaymentProvider
 {
-    VietQr,
-    MoMo
+    VietQr
 }
 
 /// <summary>Dữ liệu cần có để tạo một yêu cầu thanh toán QR.</summary>

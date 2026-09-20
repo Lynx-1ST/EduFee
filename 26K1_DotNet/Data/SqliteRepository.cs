@@ -141,6 +141,10 @@ public sealed class SqliteRepository
             UPDATE TuitionFees SET Credits=@credits, TotalAmount=@total, DiscountAmount=@discount,
                 DiscountReason=@reason, DueDate=@dueDate,
                 Status=CASE
+                    WHEN PaidAmount >= @total
+                         AND PaidDate IS NOT NULL
+                         AND COALESCE(@dueDate, (SELECT DueDate FROM Semesters WHERE Id=TuitionFees.SemesterId)) IS NOT NULL
+                         AND date(PaidDate) > date(COALESCE(@dueDate, (SELECT DueDate FROM Semesters WHERE Id=TuitionFees.SemesterId))) THEN 4
                     WHEN PaidAmount >= @total THEN 2
                     WHEN COALESCE(@dueDate, (SELECT DueDate FROM Semesters WHERE Id=TuitionFees.SemesterId)) IS NOT NULL
                          AND @today > date(COALESCE(@dueDate, (SELECT DueDate FROM Semesters WHERE Id=TuitionFees.SemesterId))) THEN 3
@@ -206,7 +210,10 @@ public sealed class SqliteRepository
         var paymentDate = DateTime.Now;
         long newPaid = paid + amountVnd;
         var effectiveDueDate = feeDueDate ?? semesterDueDate;
-        var status = newPaid >= total ? PaymentStatus.Paid
+        var status = newPaid >= total
+            ? effectiveDueDate.HasValue && paymentDate.Date > effectiveDueDate.Value.Date
+                ? PaymentStatus.LatePaid
+                : PaymentStatus.Paid
             : effectiveDueDate.HasValue && DateTime.Today > effectiveDueDate.Value.Date ? PaymentStatus.Overdue
             : PaymentStatus.PartiallyPaid;
 

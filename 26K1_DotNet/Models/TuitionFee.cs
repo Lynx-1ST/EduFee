@@ -7,7 +7,8 @@ namespace K26_DotNet.Models
         Unpaid,           // Chưa nộp
         PartiallyPaid,    // Nộp một phần
         Paid,             // Đã nộp đủ
-        Overdue           // Quá hạn
+        Overdue,          // Quá hạn
+        LatePaid          // Nộp đủ sau hạn
     }
 
     public class TuitionFee
@@ -64,7 +65,9 @@ namespace K26_DotNet.Models
             var effectiveDueDate = DueDate ?? semesterDueDate;
             if (PaidAmount >= TotalAmount)
             {
-                Status = PaymentStatus.Paid;
+                Status = effectiveDueDate.HasValue && PaidDate.HasValue && PaidDate.Value.Date > effectiveDueDate.Value.Date
+                    ? PaymentStatus.LatePaid
+                    : PaymentStatus.Paid;
             }
             else if (effectiveDueDate.HasValue && (today ?? DateTime.Today).Date > effectiveDueDate.Value.Date)
             {
@@ -86,6 +89,7 @@ namespace K26_DotNet.Models
             PaymentStatus.PartiallyPaid => "Nộp 1 phần",
             PaymentStatus.Paid => "Đã nộp đủ",
             PaymentStatus.Overdue => "Quá hạn",
+            PaymentStatus.LatePaid => "Nộp muộn",
             _ => "Không xác định"
         };
     }

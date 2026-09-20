@@ -49,6 +49,8 @@ namespace _26K1_DotNet
         private int _viewMode = 0; // 0 = SV Nợ, 1 = Theo Lớp, 2 = Tất cả SV
         private Label _lblEmpty = null!;
         private bool _updatingDebtFilters;
+        private string? _sortColumn;
+        private bool _sortAscending = true;
 
         public PanelStatistics(StudentService sv, SemesterService sem, TuitionService tui,
             ReceiptService receiptSvc, Form1 mainForm)
@@ -337,6 +339,7 @@ namespace _26K1_DotNet
             };
             UITheme.StyleGrid(dgvDebt);
             dgvDebt.CellPainting += DgvDebt_CellPainting;
+            dgvDebt.ColumnHeaderMouseClick += DgvDebt_ColumnHeaderMouseClick;
             dgvDebt.DoubleClick += (s, e) =>
             {
                 if (_viewMode != 1) QuickPaySelectedDebt();
@@ -525,7 +528,7 @@ namespace _26K1_DotNet
                 return;
             }
 
-            _currentDebtFees = BuildFilteredDebtFees(fees, svDict);
+            _currentDebtFees = SortFees(BuildFilteredDebtFees(fees, svDict), svDict).ToList();
             lblDebtTitle.Text = "Sinh viên còn nợ";
 
             var currentSem = _semSvc.GetById(si.Id);
@@ -623,7 +626,7 @@ namespace _26K1_DotNet
             string search = txtDebtSearch.Text.Trim();
             bool onlyOverdue = chkOverdueOnly.Checked;
 
-            return fees.Where(fee => fee.Status != PaymentStatus.Paid)
+            return fees.Where(fee => fee.RemainingAmount > 0)
                 .Where(fee => !onlyOverdue || fee.Status == PaymentStatus.Overdue)
                 .Where(fee => selectedClass == "— Tất cả lớp —" ||
                     (students.TryGetValue(fee.StudentId, out var student) &&
@@ -721,9 +724,7 @@ namespace _26K1_DotNet
 
         private void LoadAllStudents(int semesterId, List<TuitionFee> fees, Dictionary<int, Student> svDict)
         {
-            _currentAllFees = fees.OrderBy(f => svDict.TryGetValue(f.StudentId, out var sv) ? sv.ClassName : "")
-                .ThenBy(f => svDict.TryGetValue(f.StudentId, out var sv) ? sv.FullName : "")
-                .ToList();
+            _currentAllFees = SortFees(fees, svDict).ToList();
 
             lblDebtTitle.Text = $"Tất cả sinh viên ({_currentAllFees.Count} SV)";
 
@@ -850,6 +851,56 @@ namespace _26K1_DotNet
                 c6.DefaultCellStyle.Padding = new Padding(2, 0, 2, 0);
                 c6.HeaderCell.Style.Padding = new Padding(2, 0, 2, 0);
             }
+
+            ConfigureSortableColumn("HoTen");
+            ConfigureSortableColumn("Lop");
+            ConfigureSortableColumn("TrangThai");
+            ShowSortGlyph();
+        }
+
+        private IEnumerable<TuitionFee> SortFees(IEnumerable<TuitionFee> fees, IReadOnlyDictionary<int, Student> students)
+        {
+            Func<TuitionFee, string> defaultKey = fee =>
+                students.TryGetValue(fee.StudentId, out var student) ? student.ClassName : string.Empty;
+            if (_sortColumn == null)
+                return fees.OrderBy(defaultKey, StringComparer.CurrentCultureIgnoreCase)
+                    .ThenBy(fee => students.TryGetValue(fee.StudentId, out var student) ? student.FullName : string.Empty,
+                        StringComparer.CurrentCultureIgnoreCase);
+
+            Func<TuitionFee, string> key = _sortColumn switch
+            {
+                "Lop" => defaultKey,
+                "TrangThai" => fee => fee.StatusDisplayText,
+                _ => fee => students.TryGetValue(fee.StudentId, out var student) ? student.FullName : string.Empty
+            };
+            return _sortAscending
+                ? fees.OrderBy(key, StringComparer.CurrentCultureIgnoreCase)
+                : fees.OrderByDescending(key, StringComparer.CurrentCultureIgnoreCase);
+        }
+
+        private void DgvDebt_ColumnHeaderMouseClick(object? sender, DataGridViewCellMouseEventArgs e)
+        {
+            if (_viewMode == 1 || e.ColumnIndex < 0) return;
+            string column = dgvDebt.Columns[e.ColumnIndex].Name;
+            if (column is not ("HoTen" or "Lop" or "TrangThai")) return;
+
+            if (_sortColumn == column) _sortAscending = !_sortAscending;
+            else { _sortColumn = column; _sortAscending = true; }
+            LoadStats();
+        }
+
+        private void ConfigureSortableColumn(string name)
+        {
+            if (dgvDebt.Columns[name] is { } column)
+                column.SortMode = DataGridViewColumnSortMode.Programmatic;
+        }
+
+        private void ShowSortGlyph()
+        {
+            foreach (DataGridViewColumn column in dgvDebt.Columns)
+                column.HeaderCell.SortGlyphDirection = SortOrder.None;
+            if (_sortColumn != null && dgvDebt.Columns[_sortColumn] is { } sorted)
+                sorted.HeaderCell.SortGlyphDirection = _sortAscending ? SortOrder.Ascending : SortOrder.Descending;
         }
 
         private void QuickPaySelectedDebt()

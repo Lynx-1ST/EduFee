@@ -351,7 +351,7 @@ namespace K26_DotNet.Services
                 SemesterId = semesterId,
                 SemesterName = semesterName,
                 TotalStudents = fees.Count,
-                PaidCount = fees.Count(f => f.Status == PaymentStatus.Paid),
+                PaidCount = fees.Count(f => f.Status is PaymentStatus.Paid or PaymentStatus.LatePaid),
                 PartialCount = fees.Count(f => f.Status == PaymentStatus.PartiallyPaid),
                 UnpaidCount = fees.Count(f => f.Status == PaymentStatus.Unpaid),
                 OverdueCount = fees.Count(f => f.Status == PaymentStatus.Overdue),
