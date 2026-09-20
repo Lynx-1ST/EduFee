@@ -45,7 +45,7 @@ Mọi thay đổi tiếp theo phải duy trì các invariant sau:
 
 # Phase 1 — Củng cố Schema Migration
 
-## 1.1. Chuẩn hóa version transition v1 → v2 → v3
+## 1.1. Chuẩn hóa version transition v1 → v2 → v3 → v4
 
 ### Vấn đề
 
@@ -70,7 +70,7 @@ Mọi thay đổi tiếp theo phải duy trì các invariant sau:
 ### Definition of Done
 
 - [x] Không tồn tại trạng thái `user_version` và schema thực tế không đồng nhất.
-- [x] Regression suite pass (107/107).
+- [x] Regression suite pass.
 - [x] Self-test pass.
 
 ---
@@ -242,15 +242,15 @@ dotnet run --project 26K1_DotNet -c Release -- --test
 
 ### Yêu cầu
 
-- [ ] Test chỉ sử dụng dữ liệu tạm.
-- [ ] Không truy cập database người dùng.
-- [ ] Không yêu cầu SMTP thật.
-- [ ] Không yêu cầu máy in thật.
-- [ ] Build hoặc regression failure phải làm workflow fail.
+- [x] Test chỉ sử dụng dữ liệu tạm.
+- [x] Không truy cập database người dùng.
+- [x] Không yêu cầu SMTP thật.
+- [x] Không yêu cầu máy in thật.
+- [x] Build hoặc regression failure phải làm workflow fail.
 
 ### Definition of Done
 
-- [ ] Mỗi commit hoặc pull request có trạng thái CI.
+- [x] Mỗi commit hoặc pull request có trạng thái CI sau khi workflow được GitHub kích hoạt.
 - [ ] Release build pass.
 - [ ] Regression pass.
 - [ ] Self-test pass.
@@ -371,14 +371,14 @@ Không đặt mục tiêu bằng số lượng test cố định. Ưu tiên cove
 
 ## Invariant phải luôn được bảo vệ
 
-- [ ] Payment update và receipt insert atomic.
-- [ ] Receipt insert failure rollback payment.
-- [ ] PaidAmount không được sửa trực tiếp.
-- [ ] Không thu vượt số còn lại.
-- [ ] Financial history không bị xóa qua foreign key.
-- [ ] SQLite chỉ nhận số tiền nguyên VND.
-- [ ] Backup/Restore từ chối ledger không hợp lệ.
-- [ ] Historical receipt snapshot không thay đổi sau khi sửa hồ sơ sinh viên.
+- [x] Payment update và receipt insert atomic.
+- [x] Receipt insert failure rollback payment.
+- [x] PaidAmount không được sửa trực tiếp.
+- [x] Không thu vượt số còn lại.
+- [x] Financial history không bị xóa qua foreign key.
+- [x] SQLite chỉ nhận số tiền nguyên VND.
+- [x] Backup/Restore từ chối ledger không hợp lệ.
+- [x] Historical receipt snapshot không thay đổi sau khi sửa hồ sơ sinh viên.
 
 ---
 
@@ -632,7 +632,7 @@ Cho phép cấu hình:
 
 ## P1 — Khuyến nghị
 
-- [ ] GitHub Actions CI.
+- [x] GitHub Actions CI.
 - [ ] TuitionPerCredit theo Semester.
 - [ ] Demo dataset lớn hơn.
 - [ ] DPI QA.
