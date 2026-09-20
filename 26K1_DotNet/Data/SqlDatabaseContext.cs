@@ -7,7 +7,7 @@ namespace K26_DotNet.Data
 {
     public class SqlDatabaseContext
     {
-        private const int CurrentSchemaVersion = 2;
+        private const int CurrentSchemaVersion = 3;
         private static readonly string[] ApplicationTables =
         {
             "Students", "Semesters", "TuitionFees", "PaymentReceipts"
@@ -54,6 +54,13 @@ namespace K26_DotNet.Data
             if (version == 1)
             {
                 MigrateV1ToV2(conn);
+                MigrateV2ToV3(conn);
+                return;
+            }
+
+            if (version == 2)
+            {
+                MigrateV2ToV3(conn);
                 return;
             }
 
@@ -200,6 +207,74 @@ namespace K26_DotNet.Data
             }
         }
 
+        private static void MigrateV2ToV3(SqliteConnection conn)
+        {
+            EnsureExpectedTables(conn);
+            using (var disableForeignKeys = conn.CreateCommand())
+            {
+                disableForeignKeys.CommandText = "PRAGMA foreign_keys = OFF;";
+                disableForeignKeys.ExecuteNonQuery();
+            }
+
+            using var tx = conn.BeginTransaction();
+            try
+            {
+                ExecuteNonQuery(conn, tx, @"
+                    CREATE TABLE TuitionFees_v3 (
+                        Id INTEGER PRIMARY KEY,
+                        StudentId INTEGER NOT NULL,
+                        SemesterId INTEGER NOT NULL,
+                        Credits INTEGER NOT NULL CHECK (Credits > 0),
+                        TotalAmount INTEGER NOT NULL CHECK (typeof(TotalAmount) = 'integer' AND TotalAmount >= 0),
+                        DiscountAmount INTEGER NOT NULL DEFAULT 0 CHECK (typeof(DiscountAmount) = 'integer' AND DiscountAmount >= 0),
+                        DiscountReason TEXT,
+                        PaidAmount INTEGER NOT NULL DEFAULT 0 CHECK (typeof(PaidAmount) = 'integer' AND PaidAmount >= 0 AND PaidAmount <= TotalAmount),
+                        PaidDate TEXT,
+                        DueDate TEXT,
+                        Status INTEGER NOT NULL DEFAULT 0 CHECK (Status IN (0, 1, 2, 3, 4)),
+                        Note TEXT,
+                        CONSTRAINT UQ_TuitionFees_Student_Semester UNIQUE (StudentId, SemesterId),
+                        CONSTRAINT FK_TuitionFees_Student FOREIGN KEY (StudentId) REFERENCES Students(Id) ON DELETE RESTRICT,
+                        CONSTRAINT FK_TuitionFees_Semester FOREIGN KEY (SemesterId) REFERENCES Semesters(Id) ON DELETE RESTRICT
+                    );
+
+                    INSERT INTO TuitionFees_v3
+                        (Id, StudentId, SemesterId, Credits, TotalAmount, DiscountAmount, DiscountReason,
+                         PaidAmount, PaidDate, DueDate, Status, Note)
+                    SELECT Id, StudentId, SemesterId, Credits, TotalAmount, DiscountAmount, DiscountReason,
+                           PaidAmount, PaidDate, DueDate, Status, Note
+                    FROM TuitionFees;
+
+                    DROP TABLE TuitionFees;
+                    ALTER TABLE TuitionFees_v3 RENAME TO TuitionFees;
+                    CREATE INDEX IX_TuitionFees_SemesterId ON TuitionFees(SemesterId);");
+
+                using (var foreignKeyCheck = conn.CreateCommand())
+                {
+                    foreignKeyCheck.Transaction = tx;
+                    foreignKeyCheck.CommandText = "PRAGMA foreign_key_check;";
+                    using var reader = foreignKeyCheck.ExecuteReader();
+                    if (reader.Read())
+                        throw new InvalidOperationException("Dữ liệu có liên kết khóa ngoại không hợp lệ.");
+                }
+
+                SetSchemaVersion(conn, tx, CurrentSchemaVersion);
+                tx.Commit();
+            }
+            catch (Exception ex)
+            {
+                tx.Rollback();
+                throw new InvalidOperationException(
+                    "Không thể nâng cấp trạng thái học phí để hỗ trợ 'Nộp muộn'. Dữ liệu gốc không bị thay đổi.", ex);
+            }
+            finally
+            {
+                using var enableForeignKeys = conn.CreateCommand();
+                enableForeignKeys.CommandText = "PRAGMA foreign_keys = ON;";
+                enableForeignKeys.ExecuteNonQuery();
+            }
+        }
+
         private static void SetSchemaVersion(SqliteConnection conn, SqliteTransaction tx, int version)
         {
             ExecuteNonQuery(conn, tx, $"PRAGMA user_version = {version};");
@@ -308,7 +383,7 @@ namespace K26_DotNet.Data
                 PaidAmount INTEGER NOT NULL DEFAULT 0 CHECK (typeof(PaidAmount) = 'integer' AND PaidAmount >= 0 AND PaidAmount <= TotalAmount),
                 PaidDate TEXT,
                 DueDate TEXT,
-                Status INTEGER NOT NULL DEFAULT 0 CHECK (Status IN (0, 1, 2, 3)),
+                Status INTEGER NOT NULL DEFAULT 0 CHECK (Status IN (0, 1, 2, 3, 4)),
                 Note TEXT,
                 CONSTRAINT UQ_TuitionFees_Student_Semester UNIQUE (StudentId, SemesterId),
                 CONSTRAINT FK_TuitionFees_Student FOREIGN KEY (StudentId) REFERENCES {students}(Id) ON DELETE RESTRICT,

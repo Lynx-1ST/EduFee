@@ -17,6 +17,7 @@ output/
 tmp/
 
 # Local databases generated at runtime
+*.db
 *.db-shm
 *.db-wal
 

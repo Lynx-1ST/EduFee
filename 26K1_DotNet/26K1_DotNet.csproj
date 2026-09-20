@@ -16,4 +16,8 @@
     <PackageReference Include="QRCoder" Version="1.8.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\humg-logo.png" LogicalName="K26_DotNet.Assets.HumgLogo.png" />
+  </ItemGroup>
+
 </Project>

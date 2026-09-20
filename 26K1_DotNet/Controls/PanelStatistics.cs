@@ -644,7 +644,7 @@ namespace _26K1_DotNet
         {
             var fees = _tuiSvc.GetBySemester(semesterId);
             var svDict = _svSvc.GetAllStudents().ToDictionary(x => x.Id);
-            var classGroups = BuildClassStats(fees, svDict);
+            var classGroups = SortClassRows(BuildClassStats(fees, svDict));
 
             dgvDebt.DataSource = null;
             dgvDebt.DataSource = classGroups;
@@ -719,6 +719,9 @@ namespace _26K1_DotNet
                     ctl.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
                     ctl.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter;
                 }
+                foreach (var column in new[] { "Lop", "SoSV", "PhaiThu", "DaThu", "ConNo", "TyLe" })
+                    ConfigureSortableColumn(column);
+                ShowSortGlyph();
             }
         }
 
@@ -852,9 +855,8 @@ namespace _26K1_DotNet
                 c6.HeaderCell.Style.Padding = new Padding(2, 0, 2, 0);
             }
 
-            ConfigureSortableColumn("HoTen");
-            ConfigureSortableColumn("Lop");
-            ConfigureSortableColumn("TrangThai");
+            foreach (var column in new[] { "MaSV", "HoTen", "Lop", "PhaiNop", "DaNop", "ConLai", "HanNop", "TrangThai" })
+                ConfigureSortableColumn(column);
             ShowSortGlyph();
         }
 
@@ -867,26 +869,54 @@ namespace _26K1_DotNet
                     .ThenBy(fee => students.TryGetValue(fee.StudentId, out var student) ? student.FullName : string.Empty,
                         StringComparer.CurrentCultureIgnoreCase);
 
-            Func<TuitionFee, string> key = _sortColumn switch
+            return _sortColumn switch
             {
-                "Lop" => defaultKey,
-                "TrangThai" => fee => fee.StatusDisplayText,
-                _ => fee => students.TryGetValue(fee.StudentId, out var student) ? student.FullName : string.Empty
+                "MaSV" => SortBy(fees, fee => fee.StudentId),
+                "Lop" => SortBy(fees, defaultKey, StringComparer.CurrentCultureIgnoreCase),
+                "PhaiNop" => SortBy(fees, fee => fee.TotalAmount),
+                "DaNop" => SortBy(fees, fee => fee.PaidAmount),
+                "ConLai" => SortBy(fees, fee => fee.RemainingAmount),
+                "HanNop" => SortBy(fees, fee => fee.DueDate ?? DateTime.MaxValue),
+                "TrangThai" => SortBy(fees, fee => fee.Status),
+                _ => SortBy(fees, fee => students.TryGetValue(fee.StudentId, out var student) ? student.FullName : string.Empty,
+                    StringComparer.CurrentCultureIgnoreCase)
             };
-            return _sortAscending
-                ? fees.OrderBy(key, StringComparer.CurrentCultureIgnoreCase)
-                : fees.OrderByDescending(key, StringComparer.CurrentCultureIgnoreCase);
+
+            IEnumerable<TuitionFee> SortBy<TKey>(IEnumerable<TuitionFee> source, Func<TuitionFee, TKey> key, IComparer<TKey>? comparer = null) =>
+                _sortAscending ? source.OrderBy(key, comparer) : source.OrderByDescending(key, comparer);
         }
 
         private void DgvDebt_ColumnHeaderMouseClick(object? sender, DataGridViewCellMouseEventArgs e)
         {
-            if (_viewMode == 1 || e.ColumnIndex < 0) return;
+            if (e.ColumnIndex < 0) return;
             string column = dgvDebt.Columns[e.ColumnIndex].Name;
-            if (column is not ("HoTen" or "Lop" or "TrangThai")) return;
+            string[] allowed = _viewMode == 1
+                ? new[] { "Lop", "SoSV", "PhaiThu", "DaThu", "ConNo", "TyLe" }
+                : new[] { "MaSV", "HoTen", "Lop", "PhaiNop", "DaNop", "ConLai", "HanNop", "TrangThai" };
+            if (!allowed.Contains(column)) return;
 
             if (_sortColumn == column) _sortAscending = !_sortAscending;
             else { _sortColumn = column; _sortAscending = true; }
             LoadStats();
+        }
+
+        private List<ClassStatRow> SortClassRows(List<ClassStatRow> rows)
+        {
+            if (_sortColumn == null) return rows;
+            IEnumerable<ClassStatRow> sorted = _sortColumn switch
+            {
+                "Lop" => SortBy(rows, row => row.Lop, StringComparer.CurrentCultureIgnoreCase),
+                "SoSV" => SortBy(rows, row => row.SoSV),
+                "PhaiThu" => SortBy(rows, row => row.PhaiThu),
+                "DaThu" => SortBy(rows, row => row.DaThu),
+                "ConNo" => SortBy(rows, row => row.ConNo),
+                "TyLe" => SortBy(rows, row => int.TryParse(row.TyLe.TrimEnd('%'), out var value) ? value : 0),
+                _ => rows
+            };
+            return sorted.ToList();
+
+            IEnumerable<ClassStatRow> SortBy<TKey>(IEnumerable<ClassStatRow> source, Func<ClassStatRow, TKey> key, IComparer<TKey>? comparer = null) =>
+                _sortAscending ? source.OrderBy(key, comparer) : source.OrderByDescending(key, comparer);
         }
 
         private void ConfigureSortableColumn(string name)

@@ -216,7 +216,7 @@ namespace _26K1_DotNet
 
             // Sidebar footer
             panelSidebarFooter.Dock = DockStyle.Bottom;
-            panelSidebarFooter.Height = 56;
+            panelSidebarFooter.Height = 112;
             panelSidebarFooter.BackColor = UITheme.SidebarDeep;
             panelSidebarFooter.Paint += (s, e) =>
             {
@@ -227,21 +227,33 @@ namespace _26K1_DotNet
             var lblFooterOrg = new Label
             {
                 Text = "ĐH Mỏ - Địa chất",
-                Location = new Point(16, 11),
+                Location = new Point(88, 33),
                 Font = UITheme.FontSmallBold,
                 ForeColor = UITheme.SidebarText,
                 BackColor = UITheme.SidebarDeep,
                 AutoSize = true
             };
 
-            lblVersion.Text = "Hệ thống quản lý học phí";
-            lblVersion.Location = new Point(16, 30);
+            lblVersion.Text = "Quản lý học phí";
+            lblVersion.Location = new Point(88, 54);
             lblVersion.Font = UITheme.FontSmall;
             lblVersion.ForeColor = UITheme.TextSecondary;
             lblVersion.BackColor = UITheme.SidebarDeep;
             lblVersion.AutoSize = true;
 
-            panelSidebarFooter.Controls.AddRange(new Control[] { lblFooterOrg, lblVersion });
+            var humgLogo = new PictureBox
+            {
+                Location = new Point(16, 20),
+                Size = new Size(60, 60),
+                SizeMode = PictureBoxSizeMode.Zoom,
+                BackColor = Color.Transparent,
+                Image = BrandAssets.TryLoadHumgLogo(),
+                AccessibleName = "Logo Trường Đại học Mỏ - Địa chất",
+                TabStop = false
+            };
+            humgLogo.Disposed += (s, e) => humgLogo.Image?.Dispose();
+
+            panelSidebarFooter.Controls.AddRange(new Control[] { humgLogo, lblFooterOrg, lblVersion });
 
             panelSidebar.Controls.Add(flowNavMiddle);
             panelSidebar.Controls.Add(panelLogo);

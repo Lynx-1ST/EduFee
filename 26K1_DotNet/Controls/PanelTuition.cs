@@ -500,7 +500,7 @@ namespace _26K1_DotNet
             var svDict  = _svSvc.GetAllStudents().ToDictionary(x => x.Id);
             var semDict = _semSvc.GetAll().ToDictionary(x => x.Id);
 
-            _current = SortFees(_current, svDict).ToList();
+            _current = SortFees(_current, svDict, semDict).ToList();
 
             var rows = _current.Select(f => new
             {
@@ -587,9 +587,8 @@ namespace _26K1_DotNet
                 Center("TrangThai", "Trạng thái", 120);
                 Hide("NgayNop");
                 Hide("GhiChu");
-                ConfigureSortableColumn("HoTen");
-                ConfigureSortableColumn("Lop");
-                ConfigureSortableColumn("TrangThai");
+                foreach (var column in new[] { "_SvId", "HoTen", "Lop", "HocKy", "PhaiNop", "DaNop", "ConLai", "HanNop", "TrangThai" })
+                    ConfigureSortableColumn(column);
                 ShowSortGlyph();
             }
 
@@ -602,26 +601,37 @@ namespace _26K1_DotNet
             UpdateSelectionActions();
         }
 
-        private IEnumerable<TuitionFee> SortFees(IEnumerable<TuitionFee> fees, IReadOnlyDictionary<int, Student> students)
+        private IEnumerable<TuitionFee> SortFees(IEnumerable<TuitionFee> fees,
+            IReadOnlyDictionary<int, Student> students, IReadOnlyDictionary<int, Semester> semesters)
         {
             if (_sortColumn == null) return fees;
 
-            Func<TuitionFee, string> key = _sortColumn switch
+            return _sortColumn switch
             {
-                "Lop" => fee => students.TryGetValue(fee.StudentId, out var student) ? student.ClassName : string.Empty,
-                "TrangThai" => fee => fee.StatusDisplayText,
-                _ => fee => students.TryGetValue(fee.StudentId, out var student) ? student.FullName : string.Empty
+                "_SvId" => SortBy(fees, fee => fee.StudentId),
+                "Lop" => SortBy(fees, fee => students.TryGetValue(fee.StudentId, out var student) ? student.ClassName : string.Empty,
+                    StringComparer.CurrentCultureIgnoreCase),
+                "HocKy" => SortBy(fees, fee => semesters.TryGetValue(fee.SemesterId, out var semester) ? semester.Name : string.Empty,
+                    StringComparer.CurrentCultureIgnoreCase),
+                "PhaiNop" => SortBy(fees, fee => fee.TotalAmount),
+                "DaNop" => SortBy(fees, fee => fee.PaidAmount),
+                "ConLai" => SortBy(fees, fee => fee.RemainingAmount),
+                "HanNop" => SortBy(fees, fee => fee.DueDate ??
+                    (semesters.TryGetValue(fee.SemesterId, out var semester) ? semester.DueDate : DateTime.MaxValue)),
+                "TrangThai" => SortBy(fees, fee => fee.Status),
+                _ => SortBy(fees, fee => students.TryGetValue(fee.StudentId, out var student) ? student.FullName : string.Empty,
+                    StringComparer.CurrentCultureIgnoreCase)
             };
-            return _sortAscending
-                ? fees.OrderBy(key, StringComparer.CurrentCultureIgnoreCase)
-                : fees.OrderByDescending(key, StringComparer.CurrentCultureIgnoreCase);
+
+            IEnumerable<TuitionFee> SortBy<TKey>(IEnumerable<TuitionFee> source, Func<TuitionFee, TKey> key, IComparer<TKey>? comparer = null) =>
+                _sortAscending ? source.OrderBy(key, comparer) : source.OrderByDescending(key, comparer);
         }
 
         private void Dgv_ColumnHeaderMouseClick(object? sender, DataGridViewCellMouseEventArgs e)
         {
             if (e.ColumnIndex < 0) return;
             string column = dgv.Columns[e.ColumnIndex].Name;
-            if (column is not ("HoTen" or "Lop" or "TrangThai")) return;
+            if (column is not ("_SvId" or "HoTen" or "Lop" or "HocKy" or "PhaiNop" or "DaNop" or "ConLai" or "HanNop" or "TrangThai")) return;
 
             if (_sortColumn == column) _sortAscending = !_sortAscending;
             else { _sortColumn = column; _sortAscending = true; }
