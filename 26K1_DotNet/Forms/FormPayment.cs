@@ -14,10 +14,14 @@ namespace _26K1_DotNet
         private readonly StudentService _studentSvc;
         private readonly ReceiptService _receiptSvc;
         private readonly EmailService _emailSvc;
-        private readonly IQrPaymentGateway _qrGateway = new MockQrPaymentGateway();
+        private readonly IPaymentGateway _mockGateway;
+        private IPaymentGateway? _momoGateway;
+        private readonly GatewayPaymentPersistenceService? _gatewayPersistence;
+        private readonly MomoSettingsService? _momoSettings;
 
         private NumericUpDown numAmount = null!;
         private ComboBox cmbMethod = null!;
+        private ComboBox cmbGateway = null!;
         private TextBox txtPayer = null!;
         private TextBox txtNote = null!;
         private CheckBox chkSendEmail = null!;
@@ -26,7 +30,9 @@ namespace _26K1_DotNet
         private bool _submitting;
 
         public FormPayment(TuitionFee fee, TuitionService tui, SemesterService sem,
-            StudentService studentSvc, ReceiptService receiptSvc, EmailService? emailSvc = null)
+            StudentService studentSvc, ReceiptService receiptSvc, EmailService? emailSvc = null,
+            IPaymentGateway? momoGateway = null, GatewayPaymentPersistenceService? gatewayPersistence = null,
+            MomoSettingsService? momoSettings = null)
         {
             _fee = fee;
             _tuiSvc = tui;
@@ -34,6 +40,10 @@ namespace _26K1_DotNet
             _studentSvc = studentSvc;
             _receiptSvc = receiptSvc;
             _emailSvc = emailSvc ?? new EmailService();
+            _mockGateway = new MockQrPaymentGateway();
+            _momoSettings = momoSettings;
+            _momoGateway = momoGateway ?? (_momoSettings?.Settings.Enabled == true ? new MomoSandboxPaymentGateway(_momoSettings) : null);
+            _gatewayPersistence = gatewayPersistence;
             BuildUI();
         }
 
@@ -44,8 +54,8 @@ namespace _26K1_DotNet
             string studentCode = student?.StudentCode ?? "—";
 
             Text = $"Ghi Nhận Thanh Toán - {studentName}";
-            ClientSize = new Size(520, 620);
-            MinimumSize = new Size(520, 620);
+            ClientSize = new Size(520, 680);
+            MinimumSize = new Size(520, 680);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -87,7 +97,7 @@ namespace _26K1_DotNet
             CancelButton = btnCancel;
 
             // ── Card ──────────────────────────────────────────────────────
-            var card = new Panel { BackColor = UITheme.Surface, Dock = DockStyle.Fill, Padding = new Padding(24, 16, 24, 16) };
+            var card = new Panel { BackColor = UITheme.Surface, Dock = DockStyle.Fill, Padding = new Padding(24, 16, 24, 16), AutoScroll = true };
 
             // Info block
             var infoPanel = new Panel
@@ -148,12 +158,28 @@ namespace _26K1_DotNet
             };
             cmbMethod.Items.AddRange(new object[]
             {
-                "VietQR", "Tiền mặt", "Thẻ ATM / Thẻ tín dụng"
+                "Thanh toán QR", "Tiền mặt", "Thẻ ATM / Thẻ tín dụng"
             });
             cmbMethod.SelectedIndex = 0;
             cmbMethod.SelectedIndexChanged += (s, e) =>
+            {
                 btnConfirm.Text = IsQrMethod() ? "Tạo mã QR" : "Xác nhận thu";
+                cmbGateway.Enabled = IsQrMethod();
+            };
             card.Controls.Add(cmbMethod);
+            y += 42;
+
+            card.Controls.Add(FieldLabel("Cổng thanh toán QR:", y)); y += 22;
+            cmbGateway = new ComboBox
+            {
+                Location = new Point(24, y), Size = new Size(472, 30), Font = UITheme.FontBody,
+                DropDownStyle = ComboBoxStyle.DropDownList, BackColor = UITheme.SurfaceAlt,
+                AccessibleName = "Cổng thanh toán QR"
+            };
+            cmbGateway.Items.Add("VietQR");
+            cmbGateway.Items.Add("MoMo Sandbox");
+            cmbGateway.SelectedIndex = 0;
+            card.Controls.Add(cmbGateway);
             y += 42;
 
             // Payer Name
@@ -255,16 +281,54 @@ namespace _26K1_DotNet
 
                 if (IsQrMethod())
                 {
-                    var provider = QrPaymentProvider.VietQr;
+                    var gateway = SelectedGateway();
+                    if (gateway == null)
+                    {
+                        var dr = MessageBox.Show(this,
+                            "Cổng MoMo Sandbox chưa được cấu hình hoặc chưa bật.\nBạn có muốn mở màn hình Cấu hình MoMo Sandbox ngay bây giờ không?",
+                            "Cấu hình MoMo Sandbox",
+                            MessageBoxButtons.YesNo,
+                            MessageBoxIcon.Question);
+                        if (dr == DialogResult.Yes)
+                        {
+                            var settingsSvc = _momoSettings ?? new MomoSettingsService();
+                            using var f = new FormMomoSettings(settingsSvc);
+                            if (f.ShowDialog(this) == DialogResult.OK && settingsSvc.Settings.Enabled)
+                            {
+                                _momoGateway = new MomoSandboxPaymentGateway(settingsSvc);
+                                gateway = _momoGateway;
+                            }
+                        }
+
+                        if (gateway == null) return;
+                    }
+
                     string description = $"{student?.StudentCode ?? "—"} HP {sem?.Name ?? _fee.SemesterId.ToString()}";
-                    var session = _qrGateway.CreateSession(new QrPaymentRequest(provider, _fee.Id,
-                        _fee.StudentId, _fee.SemesterId, amount, description));
-                    using var qrForm = new FormQrPayment(_qrGateway, session);
-                    if (qrForm.ShowDialog(this) != DialogResult.OK || qrForm.Confirmation?.IsSuccessful != true) return;
-                    method = session.ProviderName;
+                    string orderId = $"EDUFEE-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid():N}";
+                    var request = new PaymentGatewayRequest(orderId, amount, description,
+                        student?.StudentCode ?? "—", student?.FullName ?? $"SV #{_fee.StudentId}");
+                    _gatewayPersistence?.PersistIntent(_fee.Id, gateway.Provider, request);
+                    var session = await gateway.CreatePaymentAsync(request);
+                    using var qrForm = new FormQrPayment(gateway, session);
+                    if (qrForm.ShowDialog(this) != DialogResult.OK || qrForm.PaymentStatus?.Status != GatewayPaymentStatus.Success) return;
+                    var confirmation = qrForm.PaymentStatus with { Provider = gateway.Provider };
+                    if (_gatewayPersistence != null)
+                    {
+                        var gatewayReceipt = _gatewayPersistence.RecordConfirmedSuccess(confirmation, payer, sem?.DueDate);
+                        if (gatewayReceipt == null)
+                        {
+                            UiFeedback.ShowWarning("Giao dịch này đã được ghi nhận trước đó.");
+                            DialogResult = DialogResult.OK;
+                            Close();
+                            return;
+                        }
+                        await CompleteRecordedPaymentAsync(gatewayReceipt, student, sem);
+                        return;
+                    }
+                    method = gateway.Provider;
                     note = string.IsNullOrWhiteSpace(note)
-                        ? $"Mã QR: {session.TransactionId}"
-                        : $"{note} | Mã QR: {session.TransactionId}";
+                        ? $"Mã đơn: {session.OrderId}"
+                        : $"{note} | Mã đơn: {session.OrderId}";
                 }
 
                 // Record the balance update and receipt in one SQLite transaction.
@@ -315,5 +379,47 @@ namespace _26K1_DotNet
         }
 
         private bool IsQrMethod() => cmbMethod.SelectedIndex == 0;
+
+        private IPaymentGateway? SelectedGateway()
+        {
+            if (cmbGateway.SelectedIndex == 1)
+            {
+                if (_momoGateway != null) return _momoGateway;
+                if (_momoSettings != null && _momoSettings.Settings.Enabled)
+                {
+                    _momoGateway = new MomoSandboxPaymentGateway(_momoSettings);
+                    return _momoGateway;
+                }
+                return null;
+            }
+            return _mockGateway;
+        }
+
+        private async Task CompleteRecordedPaymentAsync(PaymentReceipt receipt, Student? student, Semester? sem)
+        {
+            _paymentRecorded = true;
+            var savedFee = _tuiSvc.GetById(_fee.Id);
+            if (savedFee != null)
+            {
+                _fee.PaidAmount = savedFee.PaidAmount;
+                _fee.PaidDate = savedFee.PaidDate;
+                _fee.Status = savedFee.Status;
+            }
+            if (chkSendEmail.Checked && student != null && sem != null)
+            {
+                using (UiFeedback.BusyScope(this, "Đang gửi email..."))
+                {
+                    var result = await _emailSvc.SendReceiptEmailAsync(student, sem, _fee, receipt);
+                    if (!result.Success) UiFeedback.ShowWarning($"Thanh toán đã lưu, nhưng chưa gửi được email. Có thể gửi lại từ biên lai.\n{result.Message}");
+                }
+            }
+            if (student != null && sem != null)
+            {
+                using var receiptForm = new FormReceipt(receipt, student, sem, _fee, _emailSvc);
+                receiptForm.ShowDialog();
+            }
+            DialogResult = DialogResult.OK;
+            Close();
+        }
     }
 }

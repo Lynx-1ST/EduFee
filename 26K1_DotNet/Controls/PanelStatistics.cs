@@ -949,7 +949,8 @@ namespace _26K1_DotNet
             if (fee == null) return;
 
             // Direct link: Open payment dialog right here
-            using var payForm = new FormPayment(fee, _tuiSvc, _semSvc, _svSvc, _receiptSvc, _mainForm.EmailService);
+            using var payForm = new FormPayment(fee, _tuiSvc, _semSvc, _svSvc, _receiptSvc, _mainForm.EmailService,
+                _mainForm.MomoGateway, _mainForm.GatewayPaymentPersistence, _mainForm.MomoSettingsService);
             if (payForm.ShowDialog() == DialogResult.OK)
             {
                 LoadStats();
@@ -972,7 +973,8 @@ namespace _26K1_DotNet
             var sem = _semSvc.GetById(fee.SemesterId);
             if (sv == null || sem == null) return;
 
-            using var f = new FormDebtNotice(fee, sv, sem, _tuiSvc, _semSvc, _svSvc, _receiptSvc, _mainForm.EmailService);
+            using var f = new FormDebtNotice(fee, sv, sem, _tuiSvc, _semSvc, _svSvc, _receiptSvc, _mainForm.EmailService,
+                _mainForm.MomoGateway, _mainForm.GatewayPaymentPersistence, _mainForm.MomoSettingsService);
             if (f.ShowDialog() == DialogResult.OK)
             {
                 LoadStats();

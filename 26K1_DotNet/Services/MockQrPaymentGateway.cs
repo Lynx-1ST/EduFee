@@ -6,13 +6,18 @@ namespace K26_DotNet.Services;
 /// Cổng QR tại chỗ phục vụ trình diễn. Nó không gọi MoMo, VietQR hoặc ngân hàng nào.
 /// Việc thu tiền thật vẫn phải đi qua nghiệp vụ lập biên lai của ứng dụng.
 /// </summary>
-public sealed class MockQrPaymentGateway : IQrPaymentGateway
+public sealed class MockQrPaymentGateway : IQrPaymentGateway, IPaymentGateway
 {
     private static readonly TimeSpan SessionLifetime = TimeSpan.FromMinutes(15);
     private readonly Func<DateTime> _clock;
     private readonly object _sync = new();
     private readonly Dictionary<string, QrPaymentSession> _sessions = new(StringComparer.Ordinal);
     private readonly Dictionary<string, QrPaymentConfirmation> _confirmations = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, PaymentSession> _paymentSessions = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, GatewayPaymentStatus> _paymentStatuses = new(StringComparer.Ordinal);
+
+    public const string ProviderName = "VietQR";
+    public string Provider => ProviderName;
 
     public MockQrPaymentGateway(Func<DateTime>? clock = null)
     {
@@ -73,6 +78,59 @@ public sealed class MockQrPaymentGateway : IQrPaymentGateway
         }
     }
 
+    public Task<PaymentSession> CreatePaymentAsync(PaymentGatewayRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        cancellationToken.ThrowIfCancellationRequested();
+        ValidateGatewayRequest(request);
+
+        var now = _clock();
+        var requestId = "VQR-" + Guid.NewGuid().ToString("N").ToUpperInvariant();
+        var session = new PaymentSession(
+            request.OrderId.Trim(), requestId, Provider, string.Empty, string.Empty, now, GatewayPaymentStatus.Pending)
+        {
+            Amount = request.Amount,
+            ExpiresAt = now.Add(SessionLifetime),
+            IsSimulation = true,
+            QrPayload = string.Create(CultureInfo.InvariantCulture,
+                $"edufee-sim://vietqr/pay?orderId={Uri.EscapeDataString(request.OrderId.Trim())}&requestId={requestId}&amount={request.Amount:0}")
+        };
+        lock (_sync)
+        {
+            if (!_paymentSessions.TryAdd(session.OrderId, session))
+                throw new InvalidOperationException("Mã đơn thanh toán mô phỏng đã tồn tại.");
+            _paymentStatuses[session.OrderId] = GatewayPaymentStatus.Pending;
+        }
+        return Task.FromResult(session);
+    }
+
+    public Task<PaymentGatewayStatus> QueryPaymentAsync(string orderId, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(orderId)) throw new ArgumentException("Mã đơn thanh toán không được để trống.", nameof(orderId));
+        lock (_sync)
+        {
+            if (!_paymentSessions.TryGetValue(orderId.Trim(), out var session))
+                return Task.FromResult(new PaymentGatewayStatus(orderId.Trim(), string.Empty, 0, GatewayPaymentStatus.Unknown, "NOT_FOUND", "Không tìm thấy giao dịch mô phỏng.") { Provider = Provider });
+            var status = _paymentStatuses[session.OrderId];
+            if (status == GatewayPaymentStatus.Pending && session.ExpiresAt <= _clock()) status = GatewayPaymentStatus.Expired;
+            return Task.FromResult(new PaymentGatewayStatus(session.OrderId,
+                status == GatewayPaymentStatus.Success ? session.RequestId : string.Empty,
+                session.Amount, status, ToResultCode(status), ToMessage(status)) { Provider = Provider });
+        }
+    }
+
+    public void SimulatePayment(string orderId, GatewayPaymentStatus status = GatewayPaymentStatus.Success)
+    {
+        if (string.IsNullOrWhiteSpace(orderId)) throw new ArgumentException("Mã đơn thanh toán không được để trống.", nameof(orderId));
+        if (status is GatewayPaymentStatus.Unknown) throw new ArgumentOutOfRangeException(nameof(status));
+        lock (_sync)
+        {
+            if (!_paymentSessions.ContainsKey(orderId.Trim())) throw new InvalidOperationException("Không tìm thấy giao dịch mô phỏng.");
+            _paymentStatuses[orderId.Trim()] = status;
+        }
+    }
+
     private static void Validate(QrPaymentRequest request)
     {
         if (!Enum.IsDefined(request.Provider)) throw new ArgumentOutOfRangeException(nameof(request.Provider));
@@ -84,6 +142,31 @@ public sealed class MockQrPaymentGateway : IQrPaymentGateway
         if (string.IsNullOrWhiteSpace(request.Description))
             throw new ArgumentException("Nội dung thanh toán không được để trống.", nameof(request.Description));
     }
+
+    private static void ValidateGatewayRequest(PaymentGatewayRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.OrderId)) throw new ArgumentException("Mã đơn thanh toán không được để trống.", nameof(request));
+        if (request.Amount <= 0 || decimal.Truncate(request.Amount) != request.Amount) throw new ArgumentOutOfRangeException(nameof(request), "Số tiền phải là VND nguyên dương.");
+        if (string.IsNullOrWhiteSpace(request.Description)) throw new ArgumentException("Nội dung thanh toán không được để trống.", nameof(request));
+    }
+
+    private static string ToResultCode(GatewayPaymentStatus status) => status switch
+    {
+        GatewayPaymentStatus.Success => "0",
+        GatewayPaymentStatus.Pending => "PENDING",
+        GatewayPaymentStatus.Cancelled => "CANCELLED",
+        GatewayPaymentStatus.Expired => "EXPIRED",
+        _ => "FAILED"
+    };
+
+    private static string ToMessage(GatewayPaymentStatus status) => status switch
+    {
+        GatewayPaymentStatus.Success => "Thanh toán mô phỏng thành công.",
+        GatewayPaymentStatus.Pending => "Đang chờ thanh toán mô phỏng.",
+        GatewayPaymentStatus.Cancelled => "Thanh toán mô phỏng đã bị hủy.",
+        GatewayPaymentStatus.Expired => "Thanh toán mô phỏng đã hết hạn.",
+        _ => "Thanh toán mô phỏng không thành công."
+    };
 
     private static string BuildPayload(string transactionId, QrPaymentRequest request, string description)
     {

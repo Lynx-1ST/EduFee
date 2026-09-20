@@ -7,10 +7,10 @@ namespace K26_DotNet.Data
 {
     public class SqlDatabaseContext
     {
-        private const int CurrentSchemaVersion = 4;
+        private const int CurrentSchemaVersion = 5;
         private static readonly string[] ApplicationTables =
         {
-            "Students", "Semesters", "TuitionFees", "PaymentReceipts"
+            "Students", "Semesters", "TuitionFees", "PaymentReceipts", "PaymentGatewayTransactions"
         };
 
         private readonly string _connectionString;
@@ -58,6 +58,7 @@ namespace K26_DotNet.Data
                 MigrateV1ToV2(conn);
                 MigrateV2ToV3(conn);
                 MigrateV3ToV4(conn);
+                MigrateV4ToV5(conn);
                 return;
             }
 
@@ -66,6 +67,7 @@ namespace K26_DotNet.Data
                 EnsureSchemaMatchesVersion(conn, version);
                 MigrateV2ToV3(conn);
                 MigrateV3ToV4(conn);
+                MigrateV4ToV5(conn);
                 return;
             }
 
@@ -73,6 +75,14 @@ namespace K26_DotNet.Data
             {
                 EnsureSchemaMatchesVersion(conn, version);
                 MigrateV3ToV4(conn);
+                MigrateV4ToV5(conn);
+                return;
+            }
+
+            if (version == 4)
+            {
+                EnsureSchemaMatchesVersion(conn, version);
+                MigrateV4ToV5(conn);
                 return;
             }
 
@@ -83,7 +93,7 @@ namespace K26_DotNet.Data
                 return;
             }
 
-            if (existingTables.Count == ApplicationTables.Length)
+            if (existingTables.Count == ApplicationTables.Length - 1)
             {
                 MigrateLegacySchema(conn);
                 return;
@@ -108,7 +118,7 @@ namespace K26_DotNet.Data
                 SELECT name
                 FROM sqlite_master
                 WHERE type = 'table'
-                  AND name IN ('Students', 'Semesters', 'TuitionFees', 'PaymentReceipts');";
+                  AND name IN ('Students', 'Semesters', 'TuitionFees', 'PaymentReceipts', 'PaymentGatewayTransactions');";
 
             using var reader = cmd.ExecuteReader();
             while (reader.Read())
@@ -119,10 +129,11 @@ namespace K26_DotNet.Data
             return tables;
         }
 
-        private static void EnsureExpectedTables(SqliteConnection conn)
+        private static void EnsureExpectedTables(SqliteConnection conn, long version = CurrentSchemaVersion)
         {
             var existingTables = GetExistingApplicationTables(conn);
-            if (existingTables.Count != ApplicationTables.Length)
+            int expectedTableCount = version >= 5 ? ApplicationTables.Length : ApplicationTables.Length - 1;
+            if (existingTables.Count != expectedTableCount)
             {
                 throw new InvalidOperationException(
                     $"Cơ sở dữ liệu '{conn.DataSource}' khai báo schema phiên bản {CurrentSchemaVersion} nhưng thiếu bảng ứng dụng. Dữ liệu không bị thay đổi; hãy khôi phục từ bản sao lưu.");
@@ -131,7 +142,7 @@ namespace K26_DotNet.Data
 
         private static void EnsureSchemaMatchesVersion(SqliteConnection conn, long version)
         {
-            EnsureExpectedTables(conn);
+            EnsureExpectedTables(conn, version);
             if (version >= 2)
             {
                 using var receiptColumns = conn.CreateCommand();
@@ -173,6 +184,18 @@ namespace K26_DotNet.Data
                 if (!hasStudentCode || !requiresTrimmedCode || !HasUniqueIndex(conn, "Students", "StudentCode"))
                     throw new InvalidOperationException("Schema version 4 thiếu mã sinh viên duy nhất.");
             }
+
+            if (version >= 5)
+            {
+                using var transactionColumns = conn.CreateCommand();
+                transactionColumns.CommandText = "PRAGMA table_info('PaymentGatewayTransactions');";
+                var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                using (var reader = transactionColumns.ExecuteReader())
+                    while (reader.Read()) names.Add(reader.GetString(1));
+                string[] required = ["Provider", "OrderId", "ProviderTransactionId", "TuitionFeeId", "ReceiptId", "Amount", "Status", "CreatedAt", "CompletedAt", "RawResultCode"];
+                if (required.Any(name => !names.Contains(name)) || !HasUniqueIndex(conn, "PaymentGatewayTransactions", "OrderId"))
+                    throw new InvalidOperationException("Schema version 5 thiếu bảng hoặc ràng buộc giao dịch cổng thanh toán.");
+            }
         }
 
         private static void CreateCurrentSchema(SqliteConnection conn)
@@ -181,6 +204,7 @@ namespace K26_DotNet.Data
             try
             {
                 ExecuteNonQuery(conn, tx, CreateTablesSql("Students", "Semesters", "TuitionFees", "PaymentReceipts"));
+                ExecuteNonQuery(conn, tx, CreateGatewayTransactionsSql());
                 SetSchemaVersion(conn, tx, CurrentSchemaVersion);
                 tx.Commit();
             }
@@ -227,6 +251,7 @@ namespace K26_DotNet.Data
                     ALTER TABLE PaymentReceipts_v1 RENAME TO PaymentReceipts;");
 
                 PopulateLegacyReceiptSnapshots(conn, tx);
+                ExecuteNonQuery(conn, tx, CreateGatewayTransactionsSql());
 
                 SetSchemaVersion(conn, tx, CurrentSchemaVersion);
                 tx.Commit();
@@ -379,7 +404,7 @@ namespace K26_DotNet.Data
                     if (reader.Read()) throw new InvalidOperationException("Dữ liệu có liên kết khóa ngoại không hợp lệ.");
                 }
 
-                SetSchemaVersion(conn, tx, CurrentSchemaVersion);
+                SetSchemaVersion(conn, tx, 4);
                 tx.Commit();
             }
             catch (Exception ex)
@@ -392,6 +417,26 @@ namespace K26_DotNet.Data
                 using var enableForeignKeys = conn.CreateCommand();
                 enableForeignKeys.CommandText = "PRAGMA foreign_keys = ON;";
                 enableForeignKeys.ExecuteNonQuery();
+            }
+
+            EnsureSchemaMatchesVersion(conn, 4);
+        }
+
+        private static void MigrateV4ToV5(SqliteConnection conn)
+        {
+            EnsureSchemaMatchesVersion(conn, 4);
+            using var tx = conn.BeginTransaction();
+            try
+            {
+                ExecuteNonQuery(conn, tx, CreateGatewayTransactionsSql());
+                MigrationCheckpointForTests?.Invoke("V4ToV5.BeforeVersion");
+                SetSchemaVersion(conn, tx, CurrentSchemaVersion);
+                tx.Commit();
+            }
+            catch (Exception ex)
+            {
+                tx.Rollback();
+                throw new InvalidOperationException("Không thể bổ sung lưu vết giao dịch cổng thanh toán. Dữ liệu gốc không bị thay đổi.", ex);
             }
 
             EnsureSchemaMatchesVersion(conn, CurrentSchemaVersion);
@@ -542,6 +587,26 @@ namespace K26_DotNet.Data
             CREATE INDEX IX_{students}_ClassName ON {students}(ClassName);
             CREATE INDEX IX_{receipts}_FeeId ON {receipts}(FeeId);
             CREATE INDEX IX_{receipts}_Student_Semester ON {receipts}(StudentId, SemesterId);";
+
+        private static string CreateGatewayTransactionsSql() => @"
+            CREATE TABLE PaymentGatewayTransactions (
+                Id INTEGER PRIMARY KEY,
+                Provider TEXT NOT NULL CHECK (length(trim(Provider)) > 0),
+                OrderId TEXT NOT NULL UNIQUE CHECK (length(trim(OrderId)) > 0),
+                ProviderTransactionId TEXT,
+                TuitionFeeId INTEGER NOT NULL,
+                ReceiptId INTEGER,
+                Amount INTEGER NOT NULL CHECK (typeof(Amount) = 'integer' AND Amount > 0),
+                Status INTEGER NOT NULL CHECK (Status IN (0, 1, 2, 3, 4, 5)),
+                CreatedAt TEXT NOT NULL,
+                CompletedAt TEXT,
+                RawResultCode TEXT,
+                CONSTRAINT FK_PaymentGatewayTransactions_Fee FOREIGN KEY (TuitionFeeId) REFERENCES TuitionFees(Id) ON DELETE RESTRICT,
+                CONSTRAINT FK_PaymentGatewayTransactions_Receipt FOREIGN KEY (ReceiptId) REFERENCES PaymentReceipts(Id) ON DELETE RESTRICT
+            );
+            CREATE UNIQUE INDEX UX_PaymentGatewayTransactions_Provider_TransactionId
+                ON PaymentGatewayTransactions(Provider, ProviderTransactionId)
+                WHERE ProviderTransactionId IS NOT NULL;";
 
         public (int Students, int Semesters, int Fees, int Receipts) GetRecordCounts()
         {

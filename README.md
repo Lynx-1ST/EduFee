@@ -31,7 +31,7 @@ EduFee is a .NET 10 Windows Forms desktop application for managing student recor
 - Update tuition balances and create receipts within a single atomic SQLite transaction.
 - Reject overpayments and prevent direct modification of receipt-backed paid amounts.
 - Store immutable receipt snapshots so historical documents remain stable after student or tuition data changes.
-- Support simulated VietQR payment sessions for demonstration and functional testing.
+- Support simulated VietQR sessions and optional MoMo Sandbox payments through a shared gateway interface.
 
 ### 4. Reports and Statistics
 
@@ -44,11 +44,11 @@ EduFee is a .NET 10 Windows Forms desktop application for managing student recor
 ### 5. Data Safety and Administration
 
 - Store operational data in SQLite with foreign keys and financial constraints.
-- Manage schema upgrades through `PRAGMA user_version` with sequential migrations through schema v4.
+- Manage schema upgrades through `PRAGMA user_version` with sequential migrations through schema v5, including persisted gateway transactions.
 - Keep payment updates and receipt creation ACID-compliant.
 - Validate database integrity and schema compatibility during restore operations.
 - Create safety backups before database replacement.
-- Protect SMTP credentials using Windows DPAPI.
+- Protect SMTP and MoMo Sandbox secrets using Windows DPAPI.
 - Restrict the desktop application to a single running instance.
 
 ---
@@ -94,7 +94,23 @@ Demo mode uses temporary, isolated data and does not modify the main runtime dat
 
 ---
 
+## MoMo Sandbox
+
+This integration is for **test payments only**. It uses MoMo's `captureWallet` create API and transaction query API on `https://test-payment.momo.vn`; it cannot switch to Production.
+
+- Configure your own Sandbox Partner Code, Access Key and Secret Key in the MoMo settings dialog. The secret stays masked and is saved with Windows DPAPI for the current Windows user. Do not copy credentials into source code or CI secrets.
+- A new order is persisted before the network request. Creating or scanning a QR code does not record tuition. Only a matching, successful query response can update tuition, create a receipt and mark the gateway transaction complete in one SQLite transaction.
+- The payment dialog queries every four seconds. Closing it stops polling; it does not cancel a remote MoMo payment. Network failures do not mark a payment failed.
+- `RedirectUrl` and `IpnUrl` default to `https://localhost/` for the query-only desktop flow. No callback listener is provided; the local return page will not load. Supply URLs you control if needed for your Sandbox account. A redirect or IPN is never treated as proof of payment.
+- Demo mode always uses the internal mock. Automated tests use fake HTTP responses and require no MoMo credentials or Internet access to the provider.
+
+The implementation is verified offline. An end-to-end Sandbox payment still requires your valid Sandbox credentials and MoMo test wallet. Production payments, public webhooks, refunds and recurring payments are outside this integration.
+
+Provider references: [wallet create API](https://developers.momo.vn/v3/vi/docs/payment/api/wallet/onetime/) and [result codes](https://developers.momo.vn/v3/docs/payment/api/result-handling/resultcode/). See the [integration plan](26K1_DotNet/Docs/MOMO_SANDBOX_INTEGRATION_PLAN.md).
+
 ## Testing
+
+MoMo Sandbox tests use a custom HTTP handler; CI never calls MoMo and requires no payment credentials. Demo mode always selects the internal mock gateway.
 
 Run the application self-test:
 
@@ -119,6 +135,7 @@ The regression suite covers areas including:
 - backup/restore validation
 - PDF/report generation
 - simulated VietQR flows
+- MoMo signatures, response validation, duplicate-payment protection and schema v5 rollback/retry
 - startup and selected UI behaviors
 
 GitHub Actions also runs Release build, regression tests, and the application self-test for pushes and pull requests targeting `main`.
@@ -224,7 +241,7 @@ The current project intentionally remains a local Windows desktop application. T
 - Web API or web frontend
 - mobile application
 - cloud synchronization
-- real banking/payment-gateway integration
+- production banking/payment-gateway integration or real-money acceptance
 - microservices
 - AI features
 - WPF/WinUI rewrite

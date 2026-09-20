@@ -31,7 +31,9 @@ public static class QrPaymentAcceptance
         check(!gateway.Confirm(expiring).IsSuccessful,
             "QR sessions cannot be confirmed at the exact expiry boundary");
 
-        using var form = new _26K1_DotNet.FormQrPayment(gateway, second);
+        var generic = gateway.CreatePaymentAsync(new PaymentGatewayRequest(
+            "EDUFEE-QR-RENDER", 750_000m, "Nộp học phí SV20", "SV20", "Sinh viên kiểm thử")).GetAwaiter().GetResult();
+        using var form = new _26K1_DotNet.FormQrPayment(gateway, generic);
         form.ShowInTaskbar = false;
         form.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
         form.Location = new System.Drawing.Point(-10000, -10000);

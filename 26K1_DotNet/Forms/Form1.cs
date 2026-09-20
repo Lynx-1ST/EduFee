@@ -10,10 +10,16 @@ namespace _26K1_DotNet
         private TuitionService _tuitionService = null!;
         private ReceiptService _receiptService = null!;
         private EmailService _emailService = null!;
+        private MomoSettingsService _momoSettingsService = null!;
+        private GatewayPaymentPersistenceService _gatewayPaymentPersistence = null!;
         private SqlDatabaseContext _dbContext = null!;
 
         public EmailService EmailService => _emailService;
         public SqlDatabaseContext DbContext => _dbContext;
+        public MomoSettingsService MomoSettingsService => _momoSettingsService;
+        public GatewayPaymentPersistenceService GatewayPaymentPersistence => _gatewayPaymentPersistence;
+        public IPaymentGateway? MomoGateway => !_demoMode && _momoSettingsService.Settings.Enabled
+            ? new MomoSandboxPaymentGateway(_momoSettingsService) : null;
 
         private PanelStudents? _panelStudents;
         private PanelTuition? _panelTuition;
@@ -44,6 +50,9 @@ namespace _26K1_DotNet
                 _tuitionService  = new TuitionService(_dbContext);
                 _receiptService  = new ReceiptService(_dbContext);
                 _emailService    = new EmailService(DatabaseBootstrapper.GetEmailSettingsPath(_dataDirectory ?? (_demoMode ? DatabaseBootstrapper.GetDemoDataDirectory() : null)));
+                var settingsDirectory = _dataDirectory ?? (_demoMode ? DatabaseBootstrapper.GetDemoDataDirectory() : DatabaseBootstrapper.GetDefaultDataDirectory());
+                _momoSettingsService = new MomoSettingsService(Path.Combine(settingsDirectory, "momo-settings.json"));
+                _gatewayPaymentPersistence = new GatewayPaymentPersistenceService(_dbContext, _tuitionService, _receiptService);
                 if (_demoMode) _emailService.Settings.IsSimulationMode = true;
 
                 UpdateHeaderActiveSemester();
@@ -191,10 +200,11 @@ namespace _26K1_DotNet
             var cm = new ContextMenuStrip();
             cm.Font = UITheme.FontBody;
             var itemEmail = new ToolStripMenuItem("Cấu hình gửi Email SMTP...", null, (s, e) => OpenEmailSettings());
+            var itemMomo = new ToolStripMenuItem("Cấu hình thanh toán MoMo Sandbox...", null, (s, e) => OpenMomoSettings());
             var itemDb = new ToolStripMenuItem("Quản trị cơ sở dữ liệu SQL...", null, (s, e) => OpenDatabaseConfig());
             var itemSem = new ToolStripMenuItem("Quản lý danh sách học kỳ...", null, (s, e) => OpenSemesterManager());
 
-            cm.Items.AddRange(new ToolStripItem[] { itemEmail, itemDb, new ToolStripSeparator(), itemSem });
+            cm.Items.AddRange(new ToolStripItem[] { itemEmail, itemMomo, itemDb, new ToolStripSeparator(), itemSem });
             cm.Show(btnNavSettings, new Point(0, btnNavSettings.Height));
         }
 
@@ -208,6 +218,17 @@ namespace _26K1_DotNet
             }
             using var form = new FormEmailSettings(_emailService);
             form.ShowDialog();
+        }
+
+        public void OpenMomoSettings()
+        {
+            if (_demoMode)
+            {
+                UiFeedback.ShowInfo("Chế độ demo luôn dùng cổng mô phỏng nội bộ và không gọi MoMo Sandbox.");
+                return;
+            }
+            using var form = new FormMomoSettings(_momoSettingsService);
+            form.ShowDialog(this);
         }
 
         public void OpenDatabaseConfig()

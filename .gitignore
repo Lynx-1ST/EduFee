@@ -23,3 +23,7 @@ tmp/
 
 # Local email settings (contains personal DPAPI credentials)
 email_settings.json
+
+# Local MoMo settings (DPAPI-protected sandbox credentials)
+momo-settings.json
+momo_settings.json

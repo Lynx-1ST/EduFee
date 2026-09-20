@@ -134,6 +134,8 @@ internal static class Program
             MigrationAcceptance.Run(root, Check);
             ReportAcceptance.Run(root, Check);
             QrPaymentAcceptance.Run(Check);
+            PaymentGatewayAcceptance.Run(root, Check);
+            GatewayUiAcceptance.Run(root, Check);
 
             Console.WriteLine($"All {passed} regression checks passed.");
             return 0;

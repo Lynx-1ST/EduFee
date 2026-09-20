@@ -288,16 +288,40 @@ namespace K26_DotNet.Services
                 throw new InvalidOperationException($"Số tiền vượt quá số còn lại ({fee.RemainingAmount:N0} VNĐ).");
 
             var receipt = _repository.RecordPayment(id, amount, paymentMethod, payerName, note, dueDate);
+            AcceptCommittedPayment(fee, receipt, receiptService);
+            return receipt;
+        }
+
+        /// <summary>Records a verified gateway success and its financial receipt in one SQLite transaction.</summary>
+        public PaymentReceipt? RecordGatewayPaymentWithReceipt(string provider, string orderId, string providerTransactionId,
+            decimal amount, string? resultCode, string payerName, ReceiptService receiptService, DateTime? dueDate = null)
+        {
+            ArgumentNullException.ThrowIfNull(receiptService);
+            if (_repository == null || receiptService.Repository == null)
+                throw new InvalidOperationException("Xác nhận thanh toán cổng yêu cầu SQLite để bảo đảm giao dịch nguyên tử.");
+            if (!ReferenceEquals(_repository, receiptService.Repository) && receiptService.DatabasePath != DatabasePath)
+                throw new InvalidOperationException("Dịch vụ học phí và biên lai phải dùng cùng một cơ sở dữ liệu.");
+
+            var receipt = _repository.RecordGatewayPayment(provider, orderId, providerTransactionId, amount,
+                successStatus: 1, rawResultCode: resultCode, payerName: payerName, semesterDueDate: dueDate);
+            if (receipt == null) return null;
+            var fee = _fees.FirstOrDefault(current => current.Id == receipt.TuitionFeeId)
+                ?? throw new InvalidOperationException($"Không tìm thấy học phí ID {receipt.TuitionFeeId} trong dữ liệu hiện tại.");
+            AcceptCommittedPayment(fee, receipt, receiptService);
+            return receipt;
+        }
+
+        internal string? DatabasePath => _repository == null ? null : _repository.DatabasePath;
+
+        private static void AcceptCommittedPayment(TuitionFee fee, PaymentReceipt receipt, ReceiptService receiptService)
+        {
             // The database transaction is already committed.  Only use the receipt's
             // ledger snapshot, so a stale input amount cannot make the cache diverge.
             fee.PaidAmount = receipt.TotalPaidAfterSnapshot;
             fee.PaidDate = receipt.PaymentDate;
             fee.UpdateStatus(receipt.DueDateSnapshot);
             receiptService.AcceptCommittedReceipt(receipt);
-            return receipt;
         }
-
-        internal string? DatabasePath => _repository == null ? null : _repository.DatabasePath;
 
         private static TuitionFee Clone(TuitionFee source) => new()
         {

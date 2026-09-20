@@ -16,6 +16,7 @@
 | Thanh toán | Thu một phần/đủ, chặn thu vượt số dư |
 | Biên lai | Snapshot lịch sử, Print Preview, PDF, email |
 | VietQR | Luồng mô phỏng, không kết nối ngân hàng thật |
+| MoMo Sandbox | Gateway thử nghiệm, ký HMAC-SHA256, truy vấn trạng thái, lưu giao dịch trong schema v5; không nhận tiền thật |
 | SQLite | Nguồn dữ liệu vận hành, khóa ngoại, constraints, schema versioning |
 | Transaction | Cập nhật học phí và tạo biên lai trong cùng transaction |
 | Backup/Restore | Kiểm tra integrity/schema và tạo safety backup |

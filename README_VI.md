@@ -31,7 +31,7 @@ EduFee là ứng dụng desktop Windows Forms xây dựng trên .NET 10, phục 
 - Cập nhật số dư học phí và tạo biên lai trong cùng một SQLite transaction nguyên tử.
 - Chặn thu vượt số còn lại và ngăn sửa trực tiếp số tiền đã được chứng minh bằng biên lai.
 - Lưu snapshot lịch sử bất biến trên biên lai để chứng từ không thay đổi khi hồ sơ sinh viên hoặc học phí được cập nhật sau này.
-- Hỗ trợ phiên thanh toán VietQR mô phỏng phục vụ kiểm thử và trình diễn chức năng.
+- Hỗ trợ VietQR mô phỏng và MoMo Sandbox tùy chọn qua interface gateway chung.
 
 ### 4. Báo cáo và thống kê
 
@@ -44,7 +44,7 @@ EduFee là ứng dụng desktop Windows Forms xây dựng trên .NET 10, phục 
 ### 5. An toàn dữ liệu và quản trị
 
 - Lưu dữ liệu vận hành bằng SQLite với khóa ngoại và các ràng buộc tài chính.
-- Quản lý schema bằng `PRAGMA user_version` với migration tuần tự đến schema v4.
+- Quản lý schema bằng `PRAGMA user_version` với migration tuần tự đến schema v5, lưu vòng đời giao dịch gateway.
 - Bảo đảm cập nhật thanh toán và tạo biên lai tuân thủ transaction ACID.
 - Kiểm tra integrity và schema compatibility khi phục hồi dữ liệu.
 - Tự động tạo safety backup trước khi thay thế database.
@@ -94,6 +94,20 @@ Demo mode sử dụng dữ liệu tạm, tách biệt và không tác động da
 
 ---
 
+## MoMo Sandbox
+
+Tích hợp này **chỉ dùng thanh toán thử nghiệm**, gọi API `captureWallet` và API truy vấn giao dịch tại `https://test-payment.momo.vn`. Không hỗ trợ chuyển sang Production.
+
+- Nhập Partner Code, Access Key và Secret Key của tài khoản Sandbox trong cửa sổ cấu hình MoMo. Secret luôn được che, lưu bằng Windows DPAPI theo tài khoản Windows hiện tại; không đưa credential vào source code hoặc CI.
+- Mã đơn được lưu trước khi gọi mạng. Tạo hoặc quét QR chưa làm tăng số học phí đã thu. Chỉ phản hồi truy vấn thành công, khớp giao dịch mới cập nhật học phí, tạo biên lai và đánh dấu hoàn tất trong cùng một transaction SQLite.
+- Cửa sổ thanh toán kiểm tra trạng thái mỗi bốn giây. Đóng cửa sổ sẽ dừng polling, không hủy giao dịch phía MoMo. Lỗi mạng không tự đánh dấu thanh toán thất bại.
+- `RedirectUrl` và `IpnUrl` mặc định là `https://localhost/` cho luồng desktop chỉ dùng query. Ứng dụng không cung cấp callback listener; trang quay về localhost sẽ không tải được. Có thể dùng URL do bạn quản lý nếu tài khoản Sandbox yêu cầu. Redirect/IPN không được dùng làm bằng chứng thanh toán.
+- `--demo` luôn dùng mock. Kiểm thử tự động dùng HTTP giả lập, không cần credential hoặc kết nối MoMo.
+
+Phần triển khai được kiểm thử offline. Kiểm chứng thanh toán Sandbox xuyên suốt vẫn cần credential hợp lệ và ví thử nghiệm MoMo của bạn. Production, tiền thật, webhook public, refund và thanh toán định kỳ nằm ngoài phạm vi.
+
+Tài liệu provider: [API tạo thanh toán](https://developers.momo.vn/v3/vi/docs/payment/api/wallet/onetime/), [mã kết quả](https://developers.momo.vn/v3/docs/payment/api/result-handling/resultcode/), [kế hoạch tích hợp](26K1_DotNet/Docs/MOMO_SANDBOX_INTEGRATION_PLAN.md).
+
 ## Kiểm thử
 
 Chạy self-test của ứng dụng:
@@ -119,6 +133,7 @@ Bộ regression kiểm tra các nhóm chính:
 - backup/restore validation
 - PDF/report generation
 - VietQR mô phỏng
+- Chữ ký MoMo, xác thực phản hồi, chống ghi nhận trùng và rollback/retry migration v5
 - startup và một số hành vi UI
 
 GitHub Actions cũng chạy Release build, regression suite và application self-test cho push và pull request hướng vào `main`.
@@ -224,7 +239,7 @@ Phạm vi lõi hiện tại duy trì EduFee như một ứng dụng desktop Wind
 - Web API hoặc giao diện web
 - ứng dụng mobile
 - cloud synchronization
-- tích hợp cổng thanh toán/ngân hàng thật
+- tích hợp cổng thanh toán/ngân hàng Production hoặc chấp nhận tiền thật
 - microservices
 - tính năng AI
 - rewrite sang WPF/WinUI

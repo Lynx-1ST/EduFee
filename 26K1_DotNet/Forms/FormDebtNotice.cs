@@ -21,6 +21,9 @@ namespace _26K1_DotNet
         private readonly StudentService? _svSvc;
         private readonly ReceiptService? _receiptSvc;
         private readonly EmailService _emailSvc;
+        private readonly IPaymentGateway? _momoGateway;
+        private readonly GatewayPaymentPersistenceService? _gatewayPersistence;
+        private readonly MomoSettingsService? _momoSettings;
 
         private Panel paper = null!;
         private PictureBox pbQr = null!;
@@ -29,7 +32,9 @@ namespace _26K1_DotNet
         public FormDebtNotice(TuitionFee fee, Student student, Semester semester,
             TuitionService tuiSvc, SemesterService? semSvc = null,
             StudentService? svSvc = null, ReceiptService? receiptSvc = null,
-            EmailService? emailSvc = null)
+            EmailService? emailSvc = null, IPaymentGateway? momoGateway = null,
+            GatewayPaymentPersistenceService? gatewayPersistence = null,
+            MomoSettingsService? momoSettings = null)
         {
             _fee = fee;
             _student = student;
@@ -39,6 +44,9 @@ namespace _26K1_DotNet
             _svSvc = svSvc;
             _receiptSvc = receiptSvc;
             _emailSvc = emailSvc ?? new EmailService();
+            _momoGateway = momoGateway;
+            _gatewayPersistence = gatewayPersistence;
+            _momoSettings = momoSettings;
 
             BuildUI();
             _ = LoadVietQrAsync();
@@ -421,7 +429,8 @@ namespace _26K1_DotNet
                 return;
             }
 
-            using var payForm = new FormPayment(_fee, _tuiSvc, _semSvc, _svSvc, _receiptSvc, _emailSvc);
+            using var payForm = new FormPayment(_fee, _tuiSvc, _semSvc, _svSvc, _receiptSvc, _emailSvc,
+                _momoGateway, _gatewayPersistence, _momoSettings);
             if (payForm.ShowDialog() == DialogResult.OK)
             {
                 DialogResult = DialogResult.OK;

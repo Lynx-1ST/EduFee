@@ -141,12 +141,12 @@ UI và nghiệp vụ thanh toán không phụ thuộc trực tiếp vào một g
 
 ### Regression
 
-- [ ] Mock Create Payment hoạt động.
-- [ ] Mock Query Status hoạt động.
-- [ ] Mock Success tạo đúng một receipt.
-- [ ] Mock Failed không tạo receipt.
-- [ ] Demo Mode không gọi dịch vụ bên ngoài.
-- [ ] CI không phụ thuộc Internet.
+- [x] Mock Create Payment hoạt động.
+- [x] Mock Query Status hoạt động.
+- [x] Mock Success tạo đúng một receipt.
+- [x] Mock Failed không tạo receipt.
+- [x] Demo Mode không gọi dịch vụ bên ngoài.
+- [x] CI không phụ thuộc Internet.
 
 ---
 
@@ -197,10 +197,10 @@ momo-settings.json
 
 ### Yêu cầu
 
-- [ ] Không commit credential.
-- [ ] Không log `SecretKey`.
-- [ ] Không hiển thị secret hiện tại dưới dạng plaintext.
-- [ ] Demo Mode không yêu cầu MoMo credential.
+- [x] Không commit credential.
+- [x] Không log `SecretKey`.
+- [x] Không hiển thị secret hiện tại dưới dạng plaintext.
+- [x] Demo Mode không yêu cầu MoMo credential.
 
 ---
 
@@ -224,11 +224,11 @@ Service chịu trách nhiệm:
 
 ### Tests
 
-- [ ] Raw signature đúng thứ tự.
-- [ ] UTF-8 encoding ổn định.
-- [ ] HMAC-SHA256 deterministic.
-- [ ] Không đưa secret vào exception message.
-- [ ] Không ghi secret vào log.
+- [x] Raw signature đúng thứ tự.
+- [x] UTF-8 encoding ổn định.
+- [x] HMAC-SHA256 deterministic.
+- [x] Không đưa secret vào exception message.
+- [x] Không ghi secret vào log.
 
 ---
 
@@ -273,11 +273,11 @@ EDUFEE-20260920-A7B3C9
 
 ### Yêu cầu
 
-- [ ] `OrderId` unique.
-- [ ] `RequestId` unique.
-- [ ] Amount là số nguyên VND.
-- [ ] Request được ký đúng.
-- [ ] Response được validate trước khi sử dụng.
+- [x] `OrderId` unique.
+- [x] `RequestId` unique.
+- [x] Amount là số nguyên VND.
+- [x] Request được ký đúng.
+- [x] Response được validate trước khi sử dụng.
 
 ## 5.3. Query Payment
 
@@ -345,11 +345,11 @@ v4 → v5
 
 ### Yêu cầu
 
-- [ ] Migration chạy trong transaction.
-- [ ] Failure rollback về schema v4.
-- [ ] Retry migration thành công.
-- [ ] Không thay đổi dữ liệu tài chính cũ.
-- [ ] Regression test failure/retry.
+- [x] Migration chạy trong transaction.
+- [x] Failure rollback về schema v4.
+- [x] Retry migration thành công.
+- [x] Không thay đổi dữ liệu tài chính cũ.
+- [x] Regression test failure/retry.
 
 ---
 
@@ -418,11 +418,11 @@ Khoảng thời gian đề xuất:
 
 ### Yêu cầu
 
-- [ ] Dùng `CancellationToken`.
-- [ ] Đóng form phải dừng polling.
-- [ ] Không tạo nhiều query loop cho cùng một session.
-- [ ] Timeout mạng không làm ứng dụng crash.
-- [ ] Không coi lỗi mạng là thanh toán thất bại ngay lập tức.
+- [x] Dùng `CancellationToken`.
+- [x] Đóng form phải dừng polling.
+- [x] Không tạo nhiều query loop cho cùng một session.
+- [x] Timeout mạng không làm ứng dụng crash.
+- [x] Không coi lỗi mạng là thanh toán thất bại ngay lập tức.
 
 ---
 
@@ -503,10 +503,10 @@ Không được tạo receipt thứ hai.
 
 ### Regression
 
-- [ ] Success lặp lại chỉ tạo một receipt.
-- [ ] App restart không làm ghi nhận lại transaction đã hoàn tất.
-- [ ] Amount mismatch không tạo receipt.
-- [ ] Transaction ID không hợp lệ không tạo receipt.
+- [x] Success lặp lại chỉ tạo một receipt.
+- [x] App restart không làm ghi nhận lại transaction đã hoàn tất.
+- [x] Amount mismatch không tạo receipt.
+- [x] Transaction ID không hợp lệ không tạo receipt.
 
 ---
 
@@ -539,10 +539,10 @@ Secret Key
 
 ### Yêu cầu
 
-- [ ] Secret field luôn masked.
-- [ ] Không tự động bật Sandbox khi cấu hình chưa hợp lệ.
-- [ ] Không lưu secret plaintext.
-- [ ] Có thông báo rõ khi thiếu cấu hình.
+- [x] Secret field luôn masked.
+- [x] Không tự động bật Sandbox khi cấu hình chưa hợp lệ.
+- [x] Không lưu secret plaintext.
+- [x] Có thông báo rõ khi thiếu cấu hình.
 
 ---
 
@@ -570,32 +570,32 @@ Mục tiêu:
 
 ## Gateway
 
-- [ ] Signature đúng.
-- [ ] OrderId generation.
-- [ ] RequestId uniqueness.
-- [ ] Create Payment response mapping.
-- [ ] Query response mapping.
-- [ ] Pending mapping.
-- [ ] Failure mapping.
+- [x] Signature đúng.
+- [x] OrderId generation.
+- [x] RequestId uniqueness.
+- [x] Create Payment response mapping.
+- [x] Query response mapping.
+- [x] Pending mapping.
+- [x] Failure mapping.
 
 ## Nghiệp vụ
 
-- [ ] Success tạo receipt.
-- [ ] Pending không tạo receipt.
-- [ ] Failed không tạo receipt.
-- [ ] Cancelled không tạo receipt.
-- [ ] Amount mismatch không tạo receipt.
-- [ ] Duplicate Success chỉ tạo một receipt.
-- [ ] Receipt insert failure rollback đúng.
-- [ ] App restart không duplicate payment.
-- [ ] Demo Mode không gọi network.
+- [x] Success tạo receipt.
+- [x] Pending không tạo receipt.
+- [x] Failed không tạo receipt.
+- [x] Cancelled không tạo receipt.
+- [x] Amount mismatch không tạo receipt.
+- [x] Duplicate Success chỉ tạo một receipt.
+- [x] Receipt insert failure rollback đúng.
+- [x] App restart không duplicate payment.
+- [x] Demo Mode không gọi network.
 
 ## Migration
 
-- [ ] v4 → v5 thành công.
-- [ ] v4 → v5 failure rollback.
-- [ ] Retry migration thành công.
-- [ ] Financial data không thay đổi.
+- [x] v4 → v5 thành công.
+- [x] v4 → v5 failure rollback.
+- [x] Retry migration thành công.
+- [x] Financial data không thay đổi.
 
 ---
 
@@ -752,25 +752,25 @@ Không mô tả Sandbox như hệ thống thanh toán Production.
 
 ## P0 — Bắt buộc
 
-- [ ] Payment gateway abstraction.
-- [ ] MoMo request signing.
-- [ ] Create Payment.
-- [ ] Query Payment.
-- [ ] Schema v5.
-- [ ] Transaction persistence.
-- [ ] Duplicate protection.
-- [ ] Chỉ tạo receipt sau Success.
-- [ ] Regression tests.
+- [x] Payment gateway abstraction.
+- [x] MoMo request signing.
+- [x] Create Payment.
+- [x] Query Payment.
+- [x] Schema v5.
+- [x] Transaction persistence.
+- [x] Duplicate protection.
+- [x] Chỉ tạo receipt sau Success.
+- [x] Regression tests.
 
 ## P1 — Khuyến nghị
 
-- [ ] Settings UI.
-- [ ] DPAPI credential storage.
-- [ ] Generic QR payment form.
-- [ ] Polling cancellation.
-- [ ] Network/error handling.
-- [ ] Logging an toàn.
-- [ ] Cập nhật documentation.
+- [x] Settings UI.
+- [x] DPAPI credential storage.
+- [x] Generic QR payment form.
+- [x] Polling cancellation.
+- [x] Network/error handling.
+- [x] Logging an toàn.
+- [x] Cập nhật documentation.
 
 ## P2 — Sau khi integration cơ bản ổn định
 
@@ -800,19 +800,19 @@ Không triển khai trong giai đoạn này:
 
 Integration được coi là hoàn thành khi:
 
-- [ ] Mock và MoMo Sandbox cùng triển khai `IPaymentGateway`.
-- [ ] MoMo request signing có regression test.
-- [ ] Create Payment hoạt động với cấu hình Sandbox hợp lệ.
-- [ ] Query Status hoạt động.
-- [ ] Pending/Failed/Cancelled không thay đổi học phí.
-- [ ] Success hợp lệ tạo đúng một receipt.
-- [ ] Duplicate Success không tạo receipt thứ hai.
-- [ ] Payment transaction được lưu trong SQLite.
-- [ ] Migration v4 → v5 có rollback/retry test.
-- [ ] Demo Mode không gọi MoMo.
-- [ ] CI không yêu cầu Internet hoặc MoMo credential.
-- [ ] SecretKey không xuất hiện trong repository hoặc log.
-- [ ] Build, regression suite và self-test đều pass.
+- [x] Mock và MoMo Sandbox cùng triển khai `IPaymentGateway`.
+- [x] MoMo request signing có regression test.
+- [x] Create Payment hoạt động với cấu hình Sandbox hợp lệ.
+- [x] Query Status hoạt động.
+- [x] Pending/Failed/Cancelled không thay đổi học phí.
+- [x] Success hợp lệ tạo đúng một receipt.
+- [x] Duplicate Success không tạo receipt thứ hai.
+- [x] Payment transaction được lưu trong SQLite.
+- [x] Migration v4 → v5 có rollback/retry test.
+- [x] Demo Mode không gọi MoMo.
+- [x] CI không yêu cầu Internet hoặc MoMo credential.
+- [x] SecretKey không xuất hiện trong repository hoặc log.
+- [x] Build, regression suite và self-test đều pass.
 
 ---
 

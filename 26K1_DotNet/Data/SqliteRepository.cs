@@ -15,6 +15,119 @@ public sealed class SqliteRepository
     public SqliteRepository(SqlDatabaseContext db) => _db = db;
     public string DatabasePath => _db.DbPath;
 
+    public GatewayTransactionRow CreateGatewayTransaction(string provider, string orderId, int tuitionFeeId,
+        decimal amount, int status, DateTime createdAt)
+    {
+        if (string.IsNullOrWhiteSpace(provider)) throw new ArgumentException("Thiếu nhà cung cấp thanh toán.", nameof(provider));
+        if (string.IsNullOrWhiteSpace(orderId)) throw new ArgumentException("Thiếu mã đơn thanh toán.", nameof(orderId));
+        long amountVnd = ToVnd(amount);
+        if (amountVnd <= 0) throw new ArgumentOutOfRangeException(nameof(amount), "Số tiền thanh toán phải lớn hơn 0.");
+
+        using var connection = _db.CreateConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = @"INSERT INTO PaymentGatewayTransactions
+            (Provider, OrderId, TuitionFeeId, Amount, Status, CreatedAt)
+            VALUES (@provider, @orderId, @feeId, @amount, @status, @createdAt)
+            RETURNING Id;";
+        command.Parameters.AddWithValue("@provider", provider.Trim());
+        command.Parameters.AddWithValue("@orderId", orderId.Trim());
+        command.Parameters.AddWithValue("@feeId", tuitionFeeId);
+        command.Parameters.AddWithValue("@amount", amountVnd);
+        command.Parameters.AddWithValue("@status", status);
+        command.Parameters.AddWithValue("@createdAt", FormatDate(createdAt));
+        var id = Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture);
+        return new GatewayTransactionRow(id, provider.Trim(), orderId.Trim(), null, tuitionFeeId, null, amountVnd,
+            status, createdAt, null, null);
+    }
+
+    public GatewayTransactionRow? GetGatewayTransaction(string orderId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(orderId);
+        using var connection = _db.CreateConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = @"SELECT Id, Provider, OrderId, ProviderTransactionId, TuitionFeeId, ReceiptId, Amount, Status,
+            CreatedAt, CompletedAt, RawResultCode FROM PaymentGatewayTransactions WHERE OrderId=@orderId;";
+        command.Parameters.AddWithValue("@orderId", orderId.Trim());
+        using var reader = command.ExecuteReader();
+        return reader.Read() ? ReadGatewayTransaction(reader) : null;
+    }
+
+    /// <summary>Records the receipt and marks its matching gateway transaction completed in one SQLite transaction.</summary>
+    public PaymentReceipt? RecordGatewayPayment(string provider, string orderId, string providerTransactionId,
+        decimal amount, int successStatus, string? rawResultCode, string payerName, DateTime? semesterDueDate = null)
+    {
+        if (string.IsNullOrWhiteSpace(provider)) throw new ArgumentException("Thiếu nhà cung cấp thanh toán.", nameof(provider));
+        if (string.IsNullOrWhiteSpace(orderId)) throw new ArgumentException("Thiếu mã đơn thanh toán.", nameof(orderId));
+        if (string.IsNullOrWhiteSpace(providerTransactionId)) throw new ArgumentException("Thiếu mã giao dịch nhà cung cấp.", nameof(providerTransactionId));
+        if (string.IsNullOrWhiteSpace(payerName)) throw new ArgumentException("Thiếu người nộp tiền.", nameof(payerName));
+        long amountVnd = ToVnd(amount);
+        if (amountVnd <= 0) throw new ArgumentOutOfRangeException(nameof(amount), "Số tiền thanh toán phải lớn hơn 0.");
+
+        using var connection = _db.CreateConnection();
+        using var transaction = connection.BeginTransaction();
+        GatewayTransactionRow gateway;
+        using (var query = connection.CreateCommand())
+        {
+            query.Transaction = transaction;
+            query.CommandText = @"SELECT Id, Provider, OrderId, ProviderTransactionId, TuitionFeeId, ReceiptId, Amount, Status,
+                CreatedAt, CompletedAt, RawResultCode FROM PaymentGatewayTransactions WHERE OrderId=@orderId;";
+            query.Parameters.AddWithValue("@orderId", orderId.Trim());
+            using var reader = query.ExecuteReader();
+            if (!reader.Read()) throw new InvalidOperationException("Không tìm thấy giao dịch cổng thanh toán.");
+            gateway = ReadGatewayTransaction(reader);
+        }
+
+        if (!string.Equals(gateway.Provider, provider.Trim(), StringComparison.Ordinal) || gateway.Amount != amountVnd)
+            throw new InvalidOperationException("Thông tin xác nhận thanh toán không khớp với giao dịch đã tạo.");
+        if (gateway.Status == successStatus)
+        {
+            if (!string.Equals(gateway.ProviderTransactionId, providerTransactionId.Trim(), StringComparison.Ordinal))
+                throw new InvalidOperationException("Mã giao dịch nhà cung cấp không khớp với giao dịch đã hoàn tất.");
+            transaction.Commit();
+            return null;
+        }
+
+        var receipt = RecordPayment(connection, transaction, gateway.TuitionFeeId, amountVnd,
+            provider.Trim(), payerName, $"Gateway order: {gateway.OrderId}; transaction: {providerTransactionId.Trim()}", semesterDueDate);
+        using (var complete = connection.CreateCommand())
+        {
+            complete.Transaction = transaction;
+            complete.CommandText = @"UPDATE PaymentGatewayTransactions
+                SET ProviderTransactionId=@transactionId, ReceiptId=@receiptId, Status=@status, CompletedAt=@completedAt, RawResultCode=@resultCode
+                WHERE Id=@id AND Status<>@status;";
+            complete.Parameters.AddWithValue("@transactionId", providerTransactionId.Trim());
+            complete.Parameters.AddWithValue("@receiptId", receipt.Id);
+            complete.Parameters.AddWithValue("@status", successStatus);
+            complete.Parameters.AddWithValue("@completedAt", FormatDate(DateTime.Now));
+            complete.Parameters.AddWithValue("@resultCode", (object?)rawResultCode ?? DBNull.Value);
+            complete.Parameters.AddWithValue("@id", gateway.Id);
+            RequireOne(complete.ExecuteNonQuery(), "Giao dịch cổng thanh toán đã được ghi nhận trước đó.");
+        }
+        transaction.Commit();
+        return receipt;
+    }
+
+    public void UpdateGatewayTransactionStatus(string provider, string orderId, string? providerTransactionId,
+        int status, string? rawResultCode, int successStatus)
+    {
+        if (string.IsNullOrWhiteSpace(provider)) throw new ArgumentException("Thiếu nhà cung cấp thanh toán.", nameof(provider));
+        ArgumentException.ThrowIfNullOrWhiteSpace(orderId);
+        using var connection = _db.CreateConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = @"UPDATE PaymentGatewayTransactions
+            SET ProviderTransactionId=COALESCE(NULLIF(@transactionId, ''), ProviderTransactionId),
+                Status=@status, RawResultCode=@resultCode
+            WHERE OrderId=@orderId AND Provider=@provider AND Status<>@successStatus;";
+        command.Parameters.AddWithValue("@transactionId", providerTransactionId?.Trim() ?? string.Empty);
+        command.Parameters.AddWithValue("@status", status);
+        command.Parameters.AddWithValue("@resultCode", (object?)rawResultCode ?? DBNull.Value);
+        command.Parameters.AddWithValue("@orderId", orderId.Trim());
+        command.Parameters.AddWithValue("@provider", provider.Trim());
+        command.Parameters.AddWithValue("@successStatus", successStatus);
+        if (command.ExecuteNonQuery() != 1)
+            throw new InvalidOperationException("Không tìm thấy giao dịch đang chờ của nhà cung cấp thanh toán.");
+    }
+
     public (List<Student> Students, List<Semester> Semesters, List<TuitionFee> Fees, List<PaymentReceipt> Receipts) LoadAll() =>
         new SqlDataMigrator(_db).LoadAllFromSql();
 
@@ -166,12 +279,19 @@ public sealed class SqliteRepository
     public PaymentReceipt RecordPayment(int feeId, decimal amount, string paymentMethod, string payerName,
         string note, DateTime? semesterDueDate = null)
     {
+        using var connection = _db.CreateConnection();
+        using var transaction = connection.BeginTransaction();
+        var receipt = RecordPayment(connection, transaction, feeId, amount, paymentMethod, payerName, note, semesterDueDate);
+        transaction.Commit();
+        return receipt;
+    }
+
+    private static PaymentReceipt RecordPayment(SqliteConnection connection, SqliteTransaction transaction,
+        int feeId, decimal amount, string paymentMethod, string payerName, string note, DateTime? semesterDueDate)
+    {
         if (amount <= 0) throw new ArgumentOutOfRangeException(nameof(amount), "Số tiền thanh toán phải lớn hơn 0.");
         if (string.IsNullOrWhiteSpace(payerName)) throw new ArgumentException("Thiếu người nộp tiền.", nameof(payerName));
         long amountVnd = ToVnd(amount);
-
-        using var connection = _db.CreateConnection();
-        using var transaction = connection.BeginTransaction();
 
         int studentId;
         int semesterId;
@@ -270,7 +390,6 @@ public sealed class SqliteRepository
             insert.ExecuteNonQuery();
         }
 
-        transaction.Commit();
         return new PaymentReceipt(nextId, receiptCode, feeId, studentId, semesterId, amountVnd,
             paymentMethod ?? string.Empty, payerName, note ?? string.Empty)
         {
@@ -361,8 +480,17 @@ public sealed class SqliteRepository
     private static DateTime? ParseDate(string value) =>
         DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsed) ? parsed : null;
 
+    private static GatewayTransactionRow ReadGatewayTransaction(SqliteDataReader reader) => new(
+        reader.GetInt32(0), reader.GetString(1), reader.GetString(2),
+        reader.IsDBNull(3) ? null : reader.GetString(3), reader.GetInt32(4), reader.IsDBNull(5) ? null : reader.GetInt32(5), reader.GetInt64(6), reader.GetInt32(7),
+        ParseDate(reader.GetString(8)) ?? throw new InvalidDataException("Ngày tạo giao dịch cổng thanh toán không hợp lệ."),
+        reader.IsDBNull(9) ? null : ParseDate(reader.GetString(9)), reader.IsDBNull(10) ? null : reader.GetString(10));
+
     private static void RequireOne(int affected, string message)
     {
         if (affected != 1) throw new InvalidOperationException(message);
     }
 }
+
+public sealed record GatewayTransactionRow(int Id, string Provider, string OrderId, string? ProviderTransactionId,
+    int TuitionFeeId, int? ReceiptId, decimal Amount, int Status, DateTime CreatedAt, DateTime? CompletedAt, string? RawResultCode);

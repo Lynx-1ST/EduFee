@@ -738,7 +738,8 @@ namespace _26K1_DotNet
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
-            using var f = new FormPayment(fee, _tuiSvc, _semSvc, _svSvc, _receiptSvc, _mainForm.EmailService);
+            using var f = new FormPayment(fee, _tuiSvc, _semSvc, _svSvc, _receiptSvc, _mainForm.EmailService,
+                _mainForm.MomoGateway, _mainForm.GatewayPaymentPersistence, _mainForm.MomoSettingsService);
             if (f.ShowDialog() == DialogResult.OK) LoadData();
         }
 
@@ -755,7 +756,8 @@ namespace _26K1_DotNet
                 return;
             }
 
-            using var f = new FormDebtNotice(fee, sv, sem, _tuiSvc, _semSvc, _svSvc, _receiptSvc, _mainForm.EmailService);
+            using var f = new FormDebtNotice(fee, sv, sem, _tuiSvc, _semSvc, _svSvc, _receiptSvc, _mainForm.EmailService,
+                _mainForm.MomoGateway, _mainForm.GatewayPaymentPersistence, _mainForm.MomoSettingsService);
             if (f.ShowDialog() == DialogResult.OK)
             {
                 LoadData();
