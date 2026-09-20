@@ -1,104 +1,230 @@
-# EduFee — Hệ thống quản lý sinh viên và học phí
+# EduFee — Student Tuition Management System
 
-EduFee là ứng dụng desktop Windows Forms xây dựng trên nền tảng .NET 10, phục vụ công tác quản lý hồ sơ sinh viên, biểu phí học kỳ, theo dõi công nợ, thu tiền và phát hành biên lai tài chính. Dữ liệu vận hành được lưu trữ cục bộ bằng cơ sở dữ liệu SQLite tại `%LocalAppData%\EduFee\edufee.db`.
+[English](README.md) | [Tiếng Việt](README_VI.md)
 
----
+![CI](https://github.com/Lynx-1ST/EduFee/actions/workflows/ci.yml/badge.svg)
 
-## Tính năng chính
-
-### 1. Quản lý sinh viên
-- Quản lý danh sách sinh viên: Thêm mới, chỉnh sửa, xóa hồ sơ sinh viên với đầy đủ thông tin (Mã SV, Họ tên, Ngày sinh, Lớp, Email, Số điện thoại).
-- Tìm kiếm nhanh theo mã sinh viên, họ tên hoặc lọc theo lớp học.
-- Nhập và xuất dữ liệu danh sách sinh viên qua tệp CSV chuẩn Unicode UTF-8.
-
-### 2. Quản lý học kỳ và học phí
-- Quản lý danh mục học kỳ, cấu hình ngày bắt đầu, kết thúc, hạn nộp học phí và kích hoạt học kỳ hiện tại.
-- Lập học phí theo số lượng tín chỉ với đơn giá hiện hành của hệ thống, hỗ trợ các chính sách miễn giảm học phí.
-- Tự động xác định và cập nhật trạng thái thanh toán: *Chưa nộp*, *Nộp 1 phần*, *Đã nộp đủ*, *Quá hạn*, *Nộp muộn* (hoàn thành sau hạn nộp).
-- Hỗ trợ lập học phí hàng loạt cho toàn bộ sinh viên thuộc cùng một lớp.
-
-### 3. Thu phí và phát hành biên lai
-- Ghi nhận thanh toán học phí theo từng lần nộp (nộp một phần hoặc thanh toán toàn bộ).
-- Cơ chế giao dịch nguyên tử (ACID Transaction): Cập nhật trạng thái công nợ và tạo bản ghi biên lai thu tiền đồng thời trong một transaction SQLite duy nhất.
-- Lưu trữ snapshot lịch sử: Mỗi biên lai lưu cố định thông tin sinh viên và số dư tại thời điểm thu tiền, đảm bảo tính toàn vẹn chứng từ khi hồ sơ sinh viên hoặc biểu phí thay đổi sau này.
-- Mô phỏng thanh toán VietQR: Sinh mã QR động chuẩn hóa theo phiên giao dịch, hiển thị mã thanh toán và hỗ trợ quét mã kiểm tra trước khi xác nhận lập biên lai.
-
-### 4. Báo cáo và thống kê
-- Bảng điều khiển thống kê tổng quan theo từng học kỳ: Tổng học phí, đã thu, còn nợ, tỷ lệ hoàn thành.
-- Báo cáo công nợ chi tiết theo sinh viên hoặc tổng hợp theo lớp học.
-- Xuất báo cáo công nợ và biên lai thu tiền ra định dạng CSV và PDF trực tiếp bằng engine GDI+ thuần.
-
-### 5. Quản trị và an toàn dữ liệu
-- Cơ chế kiểm soát phiên bản cơ sở dữ liệu (`PRAGMA user_version`), tự động nâng cấp cấu trúc bảng khi có thay đổi.
-- Sao lưu và phục hồi cơ sở dữ liệu nguyên tử: Kiểm tra tính toàn vẹn và cấu trúc bảng trước khi hoán đổi dữ liệu.
-- Bảo mật thông tin cấu hình gửi mail SMTP bằng cơ chế mã hóa Windows DPAPI.
+EduFee is a .NET 10 Windows Forms desktop application for managing student records, semesters, tuition fees, outstanding balances, payments, and financial receipts. Runtime data is stored locally in SQLite at `%LocalAppData%\EduFee\edufee.db`.
 
 ---
 
-## Kiến trúc công nghệ
+## Features
 
-- **Ngôn ngữ & Nền tảng**: C# 14 / .NET 10.0 Windows Forms
-- **Cơ sở dữ liệu**: SQLite (`Microsoft.Data.Sqlite 10.0`)
-- **Đồ họa & Hiển thị**: GDI+ Vector Rendering, hỗ trợ High-DPI (`PerMonitorV2`)
-- **Tạo mã QR**: `QRCoder 1.8.0`
+### 1. Student Management
+
+- Create, edit, and delete student records with student code, full name, date of birth, class name, email, and phone number.
+- Search by student code or full name and filter by class name.
+- Import and export student data using UTF-8 CSV files.
+- Keep `StudentCode` separate from the internal SQLite primary key.
+
+### 2. Semester and Tuition Management
+
+- Manage semesters with start date, end date, tuition due date, and active-semester state.
+- Create tuition fees based on credit count using the current system tuition rate.
+- Apply tuition discounts and scholarship policies.
+- Automatically calculate payment status: *Unpaid*, *Partially Paid*, *Paid*, *Overdue*, and *Late Paid*.
+- Create tuition records in batch for students sharing the same class name.
+
+### 3. Payments and Receipts
+
+- Record partial or full tuition payments.
+- Update tuition balances and create receipts within a single atomic SQLite transaction.
+- Reject overpayments and prevent direct modification of receipt-backed paid amounts.
+- Store immutable receipt snapshots so historical documents remain stable after student or tuition data changes.
+- Support simulated VietQR payment sessions for demonstration and functional testing.
+
+### 4. Reports and Statistics
+
+- Display semester-level totals for tuition, collected amount, outstanding debt, and completion rate.
+- View debt details by student and aggregate statistics by class name.
+- Export student/debt data to CSV.
+- Generate tuition receipts and multi-page debt reports as PDF using the built-in GDI+ rendering pipeline.
+- Preview and print receipts through Windows printing APIs.
+
+### 5. Data Safety and Administration
+
+- Store operational data in SQLite with foreign keys and financial constraints.
+- Manage schema upgrades through `PRAGMA user_version` with sequential migrations through schema v4.
+- Keep payment updates and receipt creation ACID-compliant.
+- Validate database integrity and schema compatibility during restore operations.
+- Create safety backups before database replacement.
+- Protect SMTP credentials using Windows DPAPI.
+- Restrict the desktop application to a single running instance.
 
 ---
 
-## Cài đặt và Khởi chạy
+## Technology Stack
 
-### Yêu cầu môi trường
-- Hệ điều hành: Windows 10 / Windows 11 (64-bit)
-- Bộ phát triển: .NET 10.0 SDK
+- **Language / Platform:** C# 14, .NET 10, Windows Forms
+- **Database:** SQLite with `Microsoft.Data.Sqlite 10.0`
+- **UI / Graphics:** WinForms, GDI+, Per-Monitor V2 High DPI
+- **QR Generation:** `QRCoder 1.8.0`
+- **CI:** GitHub Actions on `windows-latest`
 
-### 1. Biên dịch và chạy ứng dụng
-Tại thư mục gốc của repository:
+---
+
+## Requirements
+
+- Windows 10 or Windows 11 (64-bit)
+- .NET 10 SDK for development
+- .NET Desktop Runtime 10 for framework-dependent published builds
+
+---
+
+## Build and Run
+
+From the repository root:
 
 ```powershell
 dotnet build 26K1_DotNet.slnx
 dotnet run --project 26K1_DotNet
 ```
 
-### 2. Chạy với dữ liệu mẫu (Demo Mode)
-Để khởi chạy ứng dụng trong môi trường thử nghiệm độc lập, sử dụng tham số `--demo`:
+---
+
+## Demo Mode
+
+Run EduFee with an isolated demo database:
 
 ```powershell
 dotnet run --project 26K1_DotNet -- --demo
 ```
 
-Hệ thống sẽ tự động khởi tạo cơ sở dữ liệu thử nghiệm độc lập tại thư mục tạm (không tác động đến cơ sở dữ liệu vận hành chính) với dữ liệu mẫu gồm 3 sinh viên, 1 học kỳ, 3 khoản học phí và 1 biên lai thanh toán.
+Demo mode uses temporary, isolated data and does not modify the main runtime database. The current fixture contains 3 students, 1 semester, 3 tuition records, and 1 payment receipt.
 
-### 3. Chạy kiểm thử hệ thống
-Kiểm tra tính tương thích và toàn vẹn cơ sở dữ liệu:
+---
+
+## Testing
+
+Run the application self-test:
 
 ```powershell
 dotnet run --project 26K1_DotNet -- --test
 ```
 
-Chạy toàn bộ bộ kiểm thử hồi quy và nghiệm thu tính năng:
+Run the regression and acceptance suite:
 
 ```powershell
 dotnet run --project 26K1_DotNet.RegressionTests
 ```
 
-### 4. Đóng gói phân phối (Release Publish)
-Đóng gói phiên bản thực thi không nhúng kèm runtime (yêu cầu máy đích đã cài .NET Desktop Runtime):
+The regression suite covers areas including:
+
+- SQLite persistence and constraints
+- schema migration and rollback/retry behavior
+- StudentCode migration and uniqueness
+- financial transaction atomicity
+- receipt snapshots
+- CSV import/export
+- backup/restore validation
+- PDF/report generation
+- simulated VietQR flows
+- startup and selected UI behaviors
+
+GitHub Actions also runs Release build, regression tests, and the application self-test for pushes and pull requests targeting `main`.
+
+---
+
+## Release Publish
+
+Create a framework-dependent Release build:
 
 ```powershell
 dotnet publish 26K1_DotNet -c Release -o output/publish --self-contained false
 ```
 
----
-
-## Quản lý dữ liệu và cấu hình
-
-- **Cơ sở dữ liệu SQLite**: Mặc định đặt tại `%LocalAppData%\EduFee\edufee.db`. Ứng dụng thực thi duy nhất một tiến trình tại một thời điểm để đảm bảo an toàn truy cập file SQLite.
-- **Nhập dữ liệu cũ**: Hỗ trợ chuyển đổi từ các file JSON cấu trúc cũ sang SQLite. Giao diện cho phép chọn thư mục nguồn; chế độ dòng lệnh `--migrate` đọc bộ bốn tệp JSON từ thư mục làm việc hiện tại.
-- **Cấu hình SMTP**: Thiết lập máy chủ gửi mail thông báo trong màn hình cài đặt. Mật khẩu kết nối được bảo vệ bởi Windows DPAPI.
+The target machine must have the compatible .NET Desktop Runtime installed.
 
 ---
 
-## Tài liệu liên quan
+## Data and Configuration
 
-- [Kế hoạch phát triển và Roadmap kỹ thuật](KE_HOACH_PHAT_TRIEN.md)
-- [Ghi chú cải tiến kỹ thuật](IMPROVEMENTS.md)
-- [Đặc tả thiết kế giao diện UI/UX](UI_Plan.md)
+### SQLite Database
+
+Default runtime path:
+
+```text
+%LocalAppData%\EduFee\edufee.db
+```
+
+### Legacy JSON Migration
+
+Legacy JSON data can be imported through the database configuration UI.
+
+The command-line migration mode:
+
+```powershell
+dotnet run --project 26K1_DotNet -- --migrate
+```
+
+reads the legacy JSON files from the current working directory.
+
+Expected files:
+
+```text
+students.json
+semesters.json
+tuitionfees.json
+receipts.json
+```
+
+### SMTP
+
+SMTP settings are configured from the application settings screen. Stored passwords are protected with Windows DPAPI.
+
+---
+
+## Architecture
+
+```text
+WinForms UI
+    ↓
+Service Layer
+    ↓
+SqliteRepository
+    ↓
+SQLite
+```
+
+Payment flow:
+
+```text
+FormPayment
+    ↓
+TuitionService
+    ↓
+SqliteRepository
+    ↓
+BEGIN TRANSACTION
+    ├── UPDATE TuitionFees
+    └── INSERT PaymentReceipts
+    ↓
+COMMIT
+```
+
+Any failure during the transaction results in a rollback.
+
+---
+
+## Project Documentation
+
+- [Development Roadmap](KE_HOACH_PHAT_TRIEN.md)
+- [Technical Improvements and Design Notes](IMPROVEMENTS.md)
+- [UI/UX Design Specification](UI_Plan.md)
+- [Vietnamese README](README_VI.md)
+
+---
+
+## Scope Notes
+
+The current project intentionally remains a local Windows desktop application. The core scope does not include:
+
+- a standalone class-management module
+- multi-role authentication
+- Web API or web frontend
+- mobile application
+- cloud synchronization
+- real banking/payment-gateway integration
+- microservices
+- AI features
+- WPF/WinUI rewrite
