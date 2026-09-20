@@ -13,7 +13,7 @@ EduFee là ứng dụng desktop Windows Forms xây dựng trên nền tảng .NE
 
 ### 2. Quản lý học kỳ và học phí
 - Quản lý danh mục học kỳ, cấu hình ngày bắt đầu, kết thúc, hạn nộp học phí và kích hoạt học kỳ hiện tại.
-- Lập biểu phí theo số lượng tín chỉ, đơn giá tín chỉ linh hoạt, hỗ trợ tỷ lệ miễn giảm học phí.
+- Lập học phí theo số lượng tín chỉ với đơn giá hiện hành của hệ thống, hỗ trợ các chính sách miễn giảm học phí.
 - Tự động xác định và cập nhật trạng thái thanh toán: *Chưa nộp*, *Nộp 1 phần*, *Đã nộp đủ*, *Quá hạn*, *Nộp muộn* (hoàn thành sau hạn nộp).
 - Hỗ trợ lập học phí hàng loạt cho toàn bộ sinh viên thuộc cùng một lớp.
 
@@ -92,7 +92,7 @@ dotnet publish 26K1_DotNet -c Release -o output/publish --self-contained false
 ## Quản lý dữ liệu và cấu hình
 
 - **Cơ sở dữ liệu SQLite**: Mặc định đặt tại `%LocalAppData%\EduFee\edufee.db`. Ứng dụng thực thi duy nhất một tiến trình tại một thời điểm để đảm bảo an toàn truy cập file SQLite.
-- **Nhập dữ liệu cũ**: Hỗ trợ chuyển đổi từ các file JSON cấu trúc cũ sang SQLite thông qua chức năng chuyển đổi trong giao diện hoặc tham số `--migrate <đường_dẫn_thư_mục>`.
+- **Nhập dữ liệu cũ**: Hỗ trợ chuyển đổi từ các file JSON cấu trúc cũ sang SQLite. Giao diện cho phép chọn thư mục nguồn; chế độ dòng lệnh `--migrate` đọc bộ bốn tệp JSON từ thư mục làm việc hiện tại.
 - **Cấu hình SMTP**: Thiết lập máy chủ gửi mail thông báo trong màn hình cài đặt. Mật khẩu kết nối được bảo vệ bởi Windows DPAPI.
 
 ---
