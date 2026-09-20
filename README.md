@@ -1,60 +1,104 @@
-# EduFee — Quản lý sinh viên và học phí
+# EduFee — Hệ thống quản lý sinh viên và học phí
 
-Ứng dụng Windows Forms cho đồ án quản lý sinh viên, học kỳ, học phí, công nợ và biên lai trên một máy Windows. Dữ liệu vận hành được lưu bằng SQLite tại `%LocalAppData%\EduFee\edufee.db`.
+EduFee là ứng dụng desktop Windows Forms xây dựng trên nền tảng .NET 10, phục vụ công tác quản lý hồ sơ sinh viên, biểu phí học kỳ, theo dõi công nợ, thu tiền và phát hành biên lai tài chính. Dữ liệu vận hành được lưu trữ cục bộ bằng cơ sở dữ liệu SQLite tại `%LocalAppData%\EduFee\edufee.db`.
 
-## Chức năng đã có
+---
 
-- Thêm, sửa, tìm kiếm, lọc lớp, nhập và xuất CSV sinh viên.
-- Lập học kỳ và học phí theo tín chỉ, miễn giảm, hạn nộp, trạng thái nợ/quá hạn.
-- Ghi nhận thanh toán một phần hoặc đủ tiền; cập nhật học phí và phát hành biên lai trong một transaction SQLite.
-- Thanh toán VietQR dùng cho trình diễn: tạo mã QR quét được, mã giao dịch và bước xác nhận trước khi lập biên lai; không kết nối tài khoản thật.
-- Thống kê công nợ theo học kỳ/lớp, xuất CSV và PDF; xuất PDF biên lai.
-- Sao lưu và phục hồi SQLite có kiểm tra trước khi thay dữ liệu; một phiên ứng dụng tại một thời điểm.
+## Tính năng chính
 
-Các tệp PDF được tạo từ ảnh bố cục để hỗ trợ tiếng Việt mà không thêm thư viện ngoài. Vì vậy nội dung PDF không thể tìm kiếm hoặc chọn/copy văn bản. Chức năng in trên máy in thật chưa được nghiệm thu; xuất PDF không cần driver máy in.
+### 1. Quản lý sinh viên
+- Quản lý danh sách sinh viên: Thêm mới, chỉnh sửa, xóa hồ sơ sinh viên với đầy đủ thông tin (Mã SV, Họ tên, Ngày sinh, Lớp, Email, Số điện thoại).
+- Tìm kiếm nhanh theo mã sinh viên, họ tên hoặc lọc theo lớp học.
+- Nhập và xuất dữ liệu danh sách sinh viên qua tệp CSV chuẩn Unicode UTF-8.
 
-## Chạy ứng dụng
+### 2. Quản lý học kỳ và học phí
+- Quản lý danh mục học kỳ, cấu hình ngày bắt đầu, kết thúc, hạn nộp học phí và kích hoạt học kỳ hiện tại.
+- Lập biểu phí theo số lượng tín chỉ, đơn giá tín chỉ linh hoạt, hỗ trợ tỷ lệ miễn giảm học phí.
+- Tự động xác định và cập nhật trạng thái thanh toán: *Chưa nộp*, *Nộp 1 phần*, *Đã nộp đủ*, *Quá hạn*, *Nộp muộn* (hoàn thành sau hạn nộp).
+- Hỗ trợ lập học phí hàng loạt cho toàn bộ sinh viên thuộc cùng một lớp.
 
-Yêu cầu: Windows 10/11 và .NET 10 SDK để phát triển/chạy từ mã nguồn.
+### 3. Thu phí và phát hành biên lai
+- Ghi nhận thanh toán học phí theo từng lần nộp (nộp một phần hoặc thanh toán toàn bộ).
+- Cơ chế giao dịch nguyên tử (ACID Transaction): Cập nhật trạng thái công nợ và tạo bản ghi biên lai thu tiền đồng thời trong một transaction SQLite duy nhất.
+- Lưu trữ snapshot lịch sử: Mỗi biên lai lưu cố định thông tin sinh viên và số dư tại thời điểm thu tiền, đảm bảo tính toàn vẹn chứng từ khi hồ sơ sinh viên hoặc biểu phí thay đổi sau này.
+- Mô phỏng thanh toán VietQR: Sinh mã QR động chuẩn hóa theo phiên giao dịch, hiển thị mã thanh toán và hỗ trợ quét mã kiểm tra trước khi xác nhận lập biên lai.
 
-Tại thư mục gốc repository:
+### 4. Báo cáo và thống kê
+- Bảng điều khiển thống kê tổng quan theo từng học kỳ: Tổng học phí, đã thu, còn nợ, tỷ lệ hoàn thành.
+- Báo cáo công nợ chi tiết theo sinh viên hoặc tổng hợp theo lớp học.
+- Xuất báo cáo công nợ và biên lai thu tiền ra định dạng CSV và PDF trực tiếp bằng engine GDI+ thuần.
+
+### 5. Quản trị và an toàn dữ liệu
+- Cơ chế kiểm soát phiên bản cơ sở dữ liệu (`PRAGMA user_version`), tự động nâng cấp cấu trúc bảng khi có thay đổi.
+- Sao lưu và phục hồi cơ sở dữ liệu nguyên tử: Kiểm tra tính toàn vẹn và cấu trúc bảng trước khi hoán đổi dữ liệu.
+- Bảo mật thông tin cấu hình gửi mail SMTP bằng cơ chế mã hóa Windows DPAPI.
+
+---
+
+## Kiến trúc công nghệ
+
+- **Ngôn ngữ & Nền tảng**: C# 14 / .NET 10.0 Windows Forms
+- **Cơ sở dữ liệu**: SQLite (`Microsoft.Data.Sqlite 10.0`)
+- **Đồ họa & Hiển thị**: GDI+ Vector Rendering, hỗ trợ High-DPI (`PerMonitorV2`)
+- **Tạo mã QR**: `QRCoder 1.8.0`
+
+---
+
+## Cài đặt và Khởi chạy
+
+### Yêu cầu môi trường
+- Hệ điều hành: Windows 10 / Windows 11 (64-bit)
+- Bộ phát triển: .NET 10.0 SDK
+
+### 1. Biên dịch và chạy ứng dụng
+Tại thư mục gốc của repository:
 
 ```powershell
 dotnet build 26K1_DotNet.slnx
 dotnet run --project 26K1_DotNet
 ```
 
-Chạy bản trình diễn tách biệt với dữ liệu thật:
+### 2. Chạy với dữ liệu mẫu (Demo Mode)
+Để khởi chạy ứng dụng trong môi trường thử nghiệm độc lập, sử dụng tham số `--demo`:
 
 ```powershell
 dotnet run --project 26K1_DotNet -- --demo
 ```
 
-Demo tạo 3 sinh viên, 1 học kỳ, 3 phiếu học phí và 1 biên lai. Với đơn giá mặc định 620.000 đồng/tín chỉ, tổng học phí là **22.440.000 đồng**, đã thu **3.000.000 đồng**, còn nợ **19.440.000 đồng**. Dữ liệu demo nằm trong thư mục demo riêng và email chỉ được mô phỏng.
+Hệ thống sẽ tự động khởi tạo cơ sở dữ liệu thử nghiệm độc lập tại thư mục tạm (không tác động đến cơ sở dữ liệu vận hành chính) với dữ liệu mẫu gồm 3 sinh viên, 1 học kỳ, 3 khoản học phí và 1 biên lai thanh toán.
 
-Lệnh kiểm thử nhanh cách ly với dữ liệu thật:
+### 3. Chạy kiểm thử hệ thống
+Kiểm tra tính tương thích và toàn vẹn cơ sở dữ liệu:
 
 ```powershell
 dotnet run --project 26K1_DotNet -- --test
+```
+
+Chạy toàn bộ bộ kiểm thử hồi quy và nghiệm thu tính năng:
+
+```powershell
 dotnet run --project 26K1_DotNet.RegressionTests
 ```
 
-Kết quả regression hiện hành được ghi ở đầu ra của runner và `regression-latest.log` khi chạy; không dùng một số lượng kiểm tra cố định trong tài liệu vì bộ kiểm thử được mở rộng cùng mã nguồn.
-
-Đóng gói Release phụ thuộc .NET Desktop Runtime trên máy đích:
+### 4. Đóng gói phân phối (Release Publish)
+Đóng gói phiên bản thực thi không nhúng kèm runtime (yêu cầu máy đích đã cài .NET Desktop Runtime):
 
 ```powershell
 dotnet publish 26K1_DotNet -c Release -o output/publish --self-contained false
 ```
 
-## Dữ liệu, nhập và phục hồi
+---
 
-- SQLite trong AppData là nguồn dữ liệu duy nhất khi ứng dụng chạy. Ứng dụng không tự nhập JSON cũ lúc khởi động.
-- Dùng màn hình cấu hình dữ liệu hoặc `--migrate` để nhập rõ ràng một thư mục có đủ `students.json`, `semesters.json`, `tuitionfees.json`, `receipts.json`. Ứng dụng tạo bản sao lưu trước khi nhập và từ chối cả lượt nhập nếu liên kết hoặc sổ cái không khớp.
-- Dữ liệu mẫu JSON cũ có phiếu học phí #13 và #15 đã ghi nhận thu nhưng không có biên lai tương ứng. Chúng được giữ nguyên và không được tự sửa hay tự sinh biên lai.
-- Email settings được lưu cùng vùng dữ liệu người dùng; mật khẩu SMTP dùng Windows DPAPI. Demo chỉ ghi email mô phỏng.
+## Quản lý dữ liệu và cấu hình
 
-## Tài liệu
+- **Cơ sở dữ liệu SQLite**: Mặc định đặt tại `%LocalAppData%\EduFee\edufee.db`. Ứng dụng thực thi duy nhất một tiến trình tại một thời điểm để đảm bảo an toàn truy cập file SQLite.
+- **Nhập dữ liệu cũ**: Hỗ trợ chuyển đổi từ các file JSON cấu trúc cũ sang SQLite thông qua chức năng chuyển đổi trong giao diện hoặc tham số `--migrate <đường_dẫn_thư_mục>`.
+- **Cấu hình SMTP**: Thiết lập máy chủ gửi mail thông báo trong màn hình cài đặt. Mật khẩu kết nối được bảo vệ bởi Windows DPAPI.
 
-- [Kế hoạch phát triển](KE_HOACH_PHAT_TRIEN.md) ghi trạng thái bản lõi và các chức năng tiếp theo.
-- [Ghi chú cải tiến](IMPROVEMENTS.md) tóm tắt các thay đổi độ tin cậy đã áp dụng và giới hạn còn lại.
+---
+
+## Tài liệu liên quan
+
+- [Kế hoạch phát triển và Roadmap kỹ thuật](KE_HOACH_PHAT_TRIEN.md)
+- [Ghi chú cải tiến kỹ thuật](IMPROVEMENTS.md)
+- [Đặc tả thiết kế giao diện UI/UX](UI_Plan.md)

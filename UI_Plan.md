@@ -10,7 +10,7 @@ Nâng cấp giao diện EduFee theo hướng:
 - Không thay đổi business logic hiện tại.
 - Không thêm UI framework nặng.
 - Không over-engineer.
-- Ưu tiên giao diện đẹp khi demo bài tập lớn trước giảng viên.
+- Tối ưu hóa trải nghiệm trực quan và khả năng trình diễn dữ liệu rõ ràng.
 - Đảm bảo UI vẫn hoạt động ổn ở nhiều độ phân giải và DPI khác nhau.
 
 ### Style mục tiêu
@@ -64,7 +64,7 @@ Các file chính cần tác động:
     └── FormEmailSettings.cs
 ```
 
-Không chỉnh logic trong:
+Bảo toàn kiến trúc và logic nghiệp vụ lõi:
 
 ```text
 Services/
@@ -73,7 +73,7 @@ Models/
 Reports/
 ```
 
-trừ khi UI hiện tại buộc phải thay đổi API nhỏ để hiển thị dữ liệu.
+Chỉ mở rộng các API hoặc phương thức đọc khi cần thiết để hỗ trợ hiển thị dữ liệu lên giao diện.
 
 ---
 
@@ -1153,9 +1153,9 @@ Không cần animation phức tạp.
 
 ---
 
-# 31. Những thứ không làm
+# 31. Các ràng buộc và giới hạn kỹ thuật
 
-Để tránh biến bài tập lớn thành project UI quá phức tạp:
+Để duy trì kiến trúc gọn nhẹ và kiểm soát độ phức tạp:
 
 - Không chuyển sang WPF.
 - Không chuyển WinUI.
@@ -1316,4 +1316,4 @@ Form
 + ComboBox
 ```
 
-Điểm quan trọng nhất là **đẹp nhưng vẫn đúng tinh thần bài tập lớn .NET**, dễ đọc code, dễ giải thích khi bảo vệ và không phụ thuộc vào framework UI bên ngoài.
+Mục tiêu cốt lõi là **giao diện hiện đại trên nền .NET WinForms thuần**, kiến trúc code sáng sủa, dễ bảo trì và không phụ thuộc vào các thư viện UI bên ngoài.

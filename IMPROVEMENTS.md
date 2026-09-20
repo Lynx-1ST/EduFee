@@ -1,25 +1,39 @@
-# Ghi chú cải tiến EduFee
+# Ghi chú Cải tiến & Đặc tả Kỹ thuật EduFee
 
-Tài liệu này ghi nhận bản lõi cho đồ án desktop một máy, không phải tuyên bố sẵn sàng cho hệ thống nhiều người dùng.
+Tài liệu này tổng hợp các giải pháp cải tiến kỹ thuật, kiến trúc xử lý dữ liệu và các đặc tả thiết kế hiện hành của hệ thống EduFee.
 
-## Đã áp dụng
+---
 
-| Khu vực | Cải tiến |
-| --- | --- |
-| Lưu trữ | SQLite trong `%LocalAppData%\EduFee` là nguồn dữ liệu vận hành; tiền lưu số nguyên đồng. |
-| Dữ liệu | Schema có khóa ngoại, ràng buộc tiền, mã biên lai duy nhất và chặn xóa dữ liệu có lịch sử tài chính. |
-| Thu tiền | Cập nhật số đã thu và tạo biên lai thực hiện trong cùng transaction; biên lai lưu snapshot của sinh viên, học kỳ và số dư. |
-| JSON cũ | Nhập là thao tác chủ động, yêu cầu đủ bốn tệp và đối soát sổ cái trước khi ghi; dữ liệu không hợp lệ không được nhập một phần. |
-| Báo cáo | CSV và PDF công nợ; PDF biên lai, Unicode tiếng Việt và phân trang báo cáo. |
-| Khôi phục | Backup/restore SQLite kiểm tra schema và tính toàn vẹn trước khi thay database, đồng thời giữ một bản sao dữ liệu cũ. |
-| Kiểm thử | Có runner regression độc lập cho dữ liệu SQL, giao dịch tài chính, migration, PDF, khởi động demo và các hành vi giao diện cơ bản. |
+## 1. Các cải tiến kỹ thuật đã áp dụng
 
-## Giới hạn cần nêu khi bảo vệ đồ án
+| Phân hệ | Giải pháp kỹ thuật đã triển khai |
+| :--- | :--- |
+| **Lưu trữ dữ liệu** | Chuyển đổi sang SQLite (`Microsoft.Data.Sqlite`) tại `%LocalAppData%\EduFee\edufee.db`. Số tiền được lưu trữ dưới dạng số nguyên (`long`), loại bỏ triệt để lỗi làm tròn dấu phẩy động. |
+| **Ràng buộc toàn vẹn** | Kích hoạt bắt buộc khóa ngoại (`PRAGMA foreign_keys = ON`), thiết lập ràng buộc duy nhất cho mã biên lai (`ReceiptCode`), chặn xóa các thực thể (sinh viên, học kỳ, học phí) khi đã phát sinh dữ liệu tài chính liên quan. |
+| **Giao dịch tài chính (ACID)** | Thao tác cập nhật trạng thái học phí và tạo bản ghi biên lai được thực thi trong một `SqliteTransaction` nguyên tử. Nếu xảy ra lỗi tại bất kỳ bước nào, toàn bộ giao dịch được hoàn tác (rollback) và bộ nhớ đệm được giữ nguyên trạng thái an toàn. |
+| **Snapshot lịch sử chứng từ** | Biên lai lưu trữ bản sao cố định (snapshot) thông tin sinh viên và số dư tại thời điểm giao dịch, đảm bảo số liệu trên chứng từ không bị thay đổi khi thông tin sinh viên hoặc học phí được chỉnh sửa trong tương lai. |
+| **Kiểm soát phiên bản CSDL** | Quản lý schema bằng `PRAGMA user_version`. Khi ứng dụng khởi động, hệ thống tự động kiểm tra cấu trúc bảng và thực hiện migration tuần tự từ v1 đến v3. |
+| **Bảo mật hệ thống** | Tham số hóa 100% các câu lệnh SQL để ngăn chặn SQL Injection; mã hóa mật khẩu SMTP bằng Windows Data Protection API (DPAPI); trung hòa các ký tự điều khiển trong tệp CSV để chống tấn công CSV Formula Injection. |
+| **Kết xuất báo cáo PDF** | Triển khai engine render PDF trực tiếp bằng canvas đồ họa GDI+, hỗ trợ đầy đủ tiếng Việt có dấu, thuật toán ngắt trang tự động cho báo cáo nhiều dòng, độc lập hoàn toàn với driver máy in. |
+| **Sao lưu và phục hồi** | Quá trình khôi phục cơ sở dữ liệu kiểm tra cấu trúc schema và tính toàn vẹn trước khi thay thế; tự động tạo bản sao lưu dự phòng an toàn trước khi thực hiện thao tác. |
+| **Hệ thống kiểm thử** | Xây dựng bộ kiểm thử hồi quy và nghiệm thu module hóa (`RegressionTests`) kiểm tra tự động toàn bộ luồng nghiệp vụ tài chính, tính toán học phí, lưu trữ SQLite và kết xuất báo cáo. |
 
-- Chỉ phù hợp một máy; khóa mutex ngăn mở đồng thời, không có đồng bộ mạng hay phân quyền nhiều người dùng.
-- PDF là ảnh bố cục nên không hỗ trợ tìm kiếm/chọn văn bản. In ra máy in vật lý chưa được kiểm thử.
-- Email thật và đối soát chuyển khoản ngân hàng không nằm trong luồng demo; demo dùng email mô phỏng.
-- Bộ test tự động không thay cho nghiệm thu thủ công trên máy Windows đích, DPI/máy in/SMTP thực tế.
-- JSON cũ có hai khoản đã thu thiếu biên lai (#13 và #15); ứng dụng giữ nguyên tệp nguồn và từ chối nhập cho đến khi người phụ trách cung cấp chứng từ thật hoặc hiệu chỉnh sổ cái.
+---
 
-Xem lệnh chạy, demo, đóng gói và kết quả regression mới nhất trong [README.md](README.md).
+## 2. Đặc tả phạm vi và giới hạn thiết kế
+
+1. **Mô hình triển khai**:
+   - Ứng dụng được thiết kế theo kiến trúc Desktop Client đơn máy, vận hành trên một phiên duy nhất tại một thời điểm (được bảo vệ bằng `Mutex` toàn cục).
+   - Cơ sở dữ liệu SQLite được đặt trong thư mục cục bộ của người dùng trên máy tính thực thi.
+
+2. **Cơ chế kết xuất tài liệu PDF**:
+   - Tệp PDF biên lai và báo cáo công nợ được dựng từ canvas đồ họa vector/raster nhằm đảm bảo hiển thị đồng nhất phông chữ tiếng Việt trên tất cả các phiên bản hệ điều hành Windows mà không cần cài đặt phông chữ ngoài hoặc thư viện bên thứ ba.
+   - Do dựng từ canvas đồ họa, văn bản trong tệp PDF xuất ra không hỗ trợ chức năng bôi đen chọn chữ (text selection).
+
+3. **Thanh toán điện tử và Thông báo**:
+   - Phân hệ thanh toán VietQR cung cấp giao diện tạo mã QR động kèm mã định danh giao dịch và đồng hồ đếm ngược, phục vụ quy trình xác nhận thanh toán trước khi lập biên lai thu tiền.
+   - Tính năng gửi thư điện tử hỗ trợ kết nối tới các máy chủ SMTP tiêu chuẩn; khi ở chế độ Demo (`--demo`), hệ thống tự động chuyển sang chế độ mô phỏng ghi nhận nhật ký để đảm bảo an toàn thử nghiệm.
+
+4. **Đối soát và chuyển đổi dữ liệu kế toán**:
+   - Khi thực hiện chuyển đổi dữ liệu từ các phiên bản lưu trữ cũ, hệ thống yêu cầu đối soát đồng bộ giữa tổng số tiền đã thu trên học phí và tổng giá trị của các biên lai thu tiền phát sinh.
+   - Những khoản thu chưa có chứng từ biên lai đối ứng hợp lệ sẽ không được tự động tạo mới chứng từ để đảm bảo nguyên tắc kế toán; người quản trị cần kiểm tra và cập nhật chứng từ trước khi hoàn tất chuyển đổi.

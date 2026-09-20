@@ -1,6 +1,6 @@
 namespace K26_DotNet.Services;
 
-/// <summary>Nhà cung cấp mã QR được mô phỏng trong bản đồ án.</summary>
+/// <summary>Nhà cung cấp mã QR được mô phỏng trong hệ thống.</summary>
 public enum QrPaymentProvider
 {
     VietQr
