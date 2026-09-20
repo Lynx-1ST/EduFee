@@ -1,8 +1,8 @@
-# EduFee — Roadmap Hoàn thiện Dự án
+# EduFee — Roadmap Hoàn thiện Hệ thống
 
-> **Phạm vi:** Đồ án .NET 10 Windows Forms quản lý sinh viên, học kỳ, học phí, công nợ và biên lai trên một máy Windows.  
-> **Mục tiêu:** Ưu tiên độ tin cậy dữ liệu, mô hình sinh viên rõ ràng, kiểm thử tự động, cấu hình học phí, dữ liệu demo và chất lượng bản Release trước khi nộp/bảo vệ.  
-> **Không phát triển module quản lý lớp riêng.** `ClassName` tiếp tục được dùng để nhập liệu, lọc và thống kê trong phạm vi đồ án.
+> **Phạm vi:** Ứng dụng .NET 10 Windows Forms quản lý sinh viên, học kỳ, học phí, công nợ và biên lai trên một máy Windows.  
+> **Mục tiêu:** Nâng cao độ tin cậy dữ liệu, chuẩn hóa mô hình sinh viên, tự động hóa kiểm thử, hoàn thiện cấu hình học phí, dữ liệu demo và chất lượng bản Release.  
+> **Ngoài phạm vi:** Không phát triển module quản lý lớp riêng. Trường `ClassName` tiếp tục được sử dụng cho nhập liệu, lọc và thống kê.
 
 ---
 
@@ -15,48 +15,48 @@
 | Học phí | Tính theo tín chỉ, miễn giảm, công nợ, trạng thái thanh toán |
 | Thanh toán | Thu một phần/đủ, chặn thu vượt số dư |
 | Biên lai | Snapshot lịch sử, Print Preview, PDF, email |
-| VietQR | Luồng mô phỏng phục vụ demo, không kết nối ngân hàng thật |
-| SQLite | Source of truth, FK, constraints, schema versioning |
-| Transaction | Update học phí + tạo biên lai trong cùng transaction |
-| Backup/Restore | Có integrity/schema validation và safety backup |
+| VietQR | Luồng mô phỏng, không kết nối ngân hàng thật |
+| SQLite | Nguồn dữ liệu vận hành, khóa ngoại, constraints, schema versioning |
+| Transaction | Cập nhật học phí và tạo biên lai trong cùng transaction |
+| Backup/Restore | Kiểm tra integrity/schema và tạo safety backup |
 | Báo cáo | CSV, PDF biên lai, PDF công nợ đa trang |
-| Demo mode | `--demo` tách biệt dữ liệu thật |
-| Regression | Có acceptance/regression runner cho finance, DB, migration, PDF, report, QR, startup và UI |
+| Demo mode | `--demo` sử dụng dữ liệu độc lập |
+| Regression | Acceptance/regression runner cho finance, database, migration, PDF, report, QR, startup và UI |
 | UI/UX | Design system Indigo + Slate, High-DPI, HUMG branding |
 
 ---
 
 ## 2. Nguyên tắc phát triển
 
-Các thay đổi tiếp theo phải giữ các invariant sau:
+Mọi thay đổi tiếp theo phải duy trì các invariant sau:
 
 - Giữ **.NET 10 WinForms**.
 - Giữ **SQLite** là nguồn dữ liệu vận hành.
-- Tiền tiếp tục lưu dưới dạng **INTEGER VND** trong SQLite.
+- Tiền được lưu dưới dạng **INTEGER VND** trong SQLite.
 - Không sửa trực tiếp `PaidAmount` ngoài luồng thanh toán có biên lai.
-- Payment + Receipt luôn phải **atomic**.
+- Payment và Receipt phải được ghi nhận **atomic**.
 - Receipt lịch sử phải giữ **snapshot bất biến**.
-- Migration phải có rollback và regression test.
+- Migration phải hỗ trợ rollback và có regression test.
 - Không thêm Web API, cloud database, WPF/WinUI hoặc framework UI nặng.
 - Không phát triển module quản lý lớp riêng.
-- VietQR chỉ là mô phỏng trong phạm vi đồ án.
+- VietQR chỉ là mô phỏng trong phạm vi hệ thống hiện tại.
 
 ---
 
-# Phase 1 — Sửa độ tin cậy Schema Migration
+# Phase 1 — Củng cố Schema Migration
 
-## 1.1. Sửa version transition v1 → v2 → v3
+## 1.1. Chuẩn hóa version transition v1 → v2 → v3
 
-### Vấn đề cần xử lý
+### Vấn đề
 
-`MigrateV1ToV2()` không được ghi thẳng `CurrentSchemaVersion` nếu vẫn còn bước v2 → v3 phía sau.
+`MigrateV1ToV2()` không được ghi trực tiếp `CurrentSchemaVersion` nếu vẫn còn bước migration v2 → v3.
 
 ### Thực hiện
 
 - [ ] `MigrateV1ToV2()` chỉ đặt `PRAGMA user_version = 2`.
 - [ ] `MigrateV2ToV3()` chỉ đặt version 3 sau khi toàn bộ migration thành công.
-- [ ] Version không thay đổi nếu transaction rollback.
-- [ ] Kiểm tra schema thực tế tương ứng với version khai báo.
+- [ ] Schema version không thay đổi nếu transaction rollback.
+- [ ] Xác thực schema thực tế tương ứng với version khai báo.
 
 ### Regression
 
@@ -64,13 +64,13 @@ Các thay đổi tiếp theo phải giữ các invariant sau:
 - [ ] v2 → v3 thành công.
 - [ ] Inject failure giữa migration v2 → v3.
 - [ ] Sau failure database vẫn ở version 2.
-- [ ] Lần chạy tiếp có thể retry.
-- [ ] Record count và tổng tiền không đổi sau retry.
+- [ ] Lần khởi tạo tiếp theo có thể retry migration.
+- [ ] Record count và tổng tiền không thay đổi sau retry.
 
 ### Definition of Done
 
-- [ ] Không còn trường hợp `user_version` và schema thực tế lệch nhau.
-- [ ] Regression pass.
+- [ ] Không tồn tại trạng thái `user_version` và schema thực tế không đồng nhất.
+- [ ] Regression suite pass.
 - [ ] Self-test pass.
 
 ---
@@ -81,13 +81,13 @@ Các thay đổi tiếp theo phải giữ các invariant sau:
 
 ### Mục tiêu
 
-Không sử dụng khóa chính database làm mã sinh viên nghiệp vụ.
+Tách định danh nghiệp vụ của sinh viên khỏi khóa chính nội bộ của cơ sở dữ liệu.
 
 Thiết kế:
 
 ```text
 Id          = khóa chính nội bộ
-StudentCode = mã sinh viên hiển thị cho người dùng
+StudentCode = mã sinh viên nghiệp vụ
 ```
 
 Ví dụ:
@@ -114,7 +114,7 @@ StudentCode TEXT NOT NULL UNIQUE
 ### Phạm vi cập nhật
 
 - [ ] `Student.cs`
-- [ ] SQLite schema + migration
+- [ ] SQLite schema và migration
 - [ ] `SqliteRepository`
 - [ ] `SqlDataMigrator`
 - [ ] `StudentService`
@@ -136,13 +136,13 @@ StudentCode TEXT NOT NULL UNIQUE
 - [ ] StudentCode bắt buộc.
 - [ ] StudentCode unique.
 - [ ] Trim trước khi lưu.
-- [ ] Foreign key vẫn dùng `StudentId`, không dùng StudentCode.
-- [ ] Receipt cũ giữ snapshot cũ.
-- [ ] Receipt mới lưu StudentCode thật.
+- [ ] Foreign key tiếp tục sử dụng `StudentId`.
+- [ ] Receipt cũ giữ nguyên snapshot hiện có.
+- [ ] Receipt mới lưu StudentCode thực tế.
 
 ### Migration dữ liệu cũ
 
-Nếu dữ liệu cũ chưa có mã sinh viên:
+Đối với dữ liệu chưa có StudentCode riêng, sinh mã legacy theo quy tắc xác định:
 
 ```text
 SV0001
@@ -150,17 +150,15 @@ SV0002
 ...
 ```
 
-được dùng làm mã legacy tạm thời.
-
-Không đổi `Id`, không phá foreign key.
+Không thay đổi `Id` và không phá vỡ foreign key.
 
 ### Definition of Done
 
-- [ ] UI không còn suy ra mã SV từ database Id.
+- [ ] UI không còn suy ra mã sinh viên trực tiếp từ database Id.
 - [ ] Duplicate StudentCode bị từ chối.
 - [ ] CSV round-trip giữ đúng StudentCode.
-- [ ] Receipt/PDF/email hiển thị StudentCode thật.
-- [ ] Migration + regression pass.
+- [ ] Receipt, PDF và email hiển thị StudentCode nhất quán.
+- [ ] Migration và regression pass.
 
 ---
 
@@ -170,7 +168,7 @@ Không đổi `Id`, không phá foreign key.
 
 ### Mục tiêu
 
-Không hard-code 620.000 VNĐ/tín chỉ trong domain chính.
+Loại bỏ hard-code đơn giá 620.000 VNĐ/tín chỉ khỏi domain chính.
 
 Bổ sung:
 
@@ -196,18 +194,18 @@ TotalAmount    = OriginalAmount - DiscountAmount
 ### Thực hiện
 
 - [ ] Thêm `TuitionPerCredit` vào `Semester`.
-- [ ] Migration schema.
+- [ ] Bổ sung migration schema.
 - [ ] Validation `TuitionPerCredit > 0`.
-- [ ] Form quản lý học kỳ cho nhập đơn giá.
-- [ ] Form lập học phí dùng đơn giá học kỳ.
-- [ ] Batch tuition dùng đúng đơn giá học kỳ.
+- [ ] Form quản lý học kỳ cho phép nhập đơn giá.
+- [ ] Form lập học phí sử dụng đơn giá học kỳ.
+- [ ] Batch tuition sử dụng đơn giá học kỳ.
 - [ ] Demo data cập nhật.
 - [ ] Regression tests.
 
 ### Quy tắc lịch sử
 
 - Phiếu học phí đã tạo giữ nguyên `TotalAmount`.
-- Thay đổi đơn giá học kỳ không tự sửa dữ liệu lịch sử.
+- Thay đổi đơn giá học kỳ không tự động sửa dữ liệu lịch sử.
 - Receipt snapshot không thay đổi.
 
 ---
@@ -244,26 +242,26 @@ dotnet run --project 26K1_DotNet -c Release -- --test
 
 ### Yêu cầu
 
-- [ ] Test chỉ dùng dữ liệu tạm.
+- [ ] Test chỉ sử dụng dữ liệu tạm.
 - [ ] Không truy cập database người dùng.
 - [ ] Không yêu cầu SMTP thật.
 - [ ] Không yêu cầu máy in thật.
-- [ ] Build/regression fail phải làm CI fail.
+- [ ] Build hoặc regression failure phải làm workflow fail.
 
 ### Definition of Done
 
-- [ ] Mỗi commit/PR có trạng thái CI.
+- [ ] Mỗi commit hoặc pull request có trạng thái CI.
 - [ ] Release build pass.
 - [ ] Regression pass.
 - [ ] Self-test pass.
 
 ---
 
-# Phase 5 — Nâng Demo Mode
+# Phase 5 — Nâng cấp Demo Mode
 
 ## 5.1. Mở rộng dataset của `--demo`
 
-### Hiện tại
+### Hiện trạng
 
 ```text
 3 sinh viên
@@ -282,7 +280,7 @@ dotnet run --project 26K1_DotNet -c Release -- --test
 nhiều biên lai
 ```
 
-### Cần có đầy đủ trạng thái
+### Trạng thái dữ liệu cần có
 
 - [ ] Chưa nộp.
 - [ ] Nộp một phần.
@@ -294,11 +292,11 @@ nhiều biên lai
 
 ### Yêu cầu
 
-- [ ] Demo luôn dùng database riêng.
+- [ ] Demo luôn sử dụng database riêng.
 - [ ] Không gửi email thật.
-- [ ] Không tác động dữ liệu chính.
+- [ ] Không tác động dữ liệu vận hành.
 - [ ] Tổng tiền deterministic để regression test được.
-- [ ] Dashboard/Statistics có dữ liệu đủ đẹp khi trình chiếu.
+- [ ] Dashboard và Statistics có dữ liệu đủ đa dạng để kiểm thử các trạng thái.
 
 ---
 
@@ -312,7 +310,7 @@ Tạo:
 Helpers/AppLogger.cs
 ```
 
-Log tại:
+Đường dẫn log:
 
 ```text
 %LocalAppData%\EduFee\Logs\
@@ -331,11 +329,11 @@ Ghi log cho:
 - QR demo.
 - Unhandled exceptions.
 
-Không log:
+Không ghi:
 
 - SMTP password.
 - Credential plaintext.
-- Thông tin nhạy cảm không cần thiết.
+- Dữ liệu nhạy cảm không cần thiết.
 
 ## 6.2. Global exception handling
 
@@ -346,7 +344,7 @@ Application.ThreadException += ...
 AppDomain.CurrentDomain.UnhandledException += ...
 ```
 
-Thông báo UI chỉ nên cho biết:
+Thông báo UI:
 
 ```text
 EduFee gặp lỗi khi xử lý yêu cầu.
@@ -357,9 +355,7 @@ Chi tiết đã được ghi vào nhật ký.
 
 # Phase 7 — Củng cố Regression Suite
 
-Không đặt mục tiêu bằng một con số test cố định.
-
-Ưu tiên coverage các invariant quan trọng.
+Không đặt mục tiêu bằng số lượng test cố định. Ưu tiên coverage các invariant quan trọng.
 
 ## Test cần bổ sung
 
@@ -371,36 +367,36 @@ Không đặt mục tiêu bằng một con số test cố định.
 - [ ] Semester tuition rate.
 - [ ] Historical fee không đổi khi rate đổi.
 - [ ] Demo totals deterministic.
-- [ ] Logger failure không làm app crash.
+- [ ] Logger failure không làm ứng dụng crash.
 
 ## Invariant phải luôn được bảo vệ
 
-- [ ] Payment update + receipt insert atomic.
+- [ ] Payment update và receipt insert atomic.
 - [ ] Receipt insert failure rollback payment.
 - [ ] PaidAmount không được sửa trực tiếp.
 - [ ] Không thu vượt số còn lại.
-- [ ] Financial history không bị xóa qua FK.
+- [ ] Financial history không bị xóa qua foreign key.
 - [ ] SQLite chỉ nhận số tiền nguyên VND.
 - [ ] Backup/Restore từ chối ledger không hợp lệ.
 - [ ] Historical receipt snapshot không thay đổi sau khi sửa hồ sơ sinh viên.
 
 ---
 
-# Phase 8 — UI Cleanup nhỏ
+# Phase 8 — UI Cleanup
 
-UI hiện tại đã đủ tốt; không redesign lớn nữa.
+UI hiện tại đã có design system ổn định. Phase này chỉ thực hiện cleanup nhỏ, không redesign toàn bộ.
 
-Chỉ cleanup:
+### Thực hiện
 
 - [ ] Xóa dead constants/fonts trong `UITheme`.
 - [ ] Kiểm tra TextBox/ComboBox còn lệch style.
 - [ ] Kiểm tra tab order.
 - [ ] Kiểm tra Enter/Escape trong dialog.
-- [ ] Kiểm tra action nguy hiểm.
+- [ ] Kiểm tra action destructive.
 - [ ] Kiểm tra text tiếng Việt bị cắt.
-- [ ] Giảm emoji còn sót nếu không cần.
+- [ ] Giảm emoji còn sót nếu không cần thiết.
 
-Không làm:
+### Ngoài phạm vi
 
 - Dark mode.
 - Animation framework.
@@ -411,11 +407,11 @@ Không làm:
 
 ---
 
-# Phase 9 — Windows / DPI / Print QA
+# Phase 9 — Windows, DPI và Print QA
 
-## Resolution
+## 9.1. Resolution
 
-Test tối thiểu:
+Kiểm thử tối thiểu:
 
 ```text
 1160 × 680
@@ -424,7 +420,7 @@ Test tối thiểu:
 1920 × 1080
 ```
 
-## DPI
+## 9.2. DPI
 
 ```text
 100%
@@ -441,14 +437,14 @@ Test tối thiểu:
 - [ ] Sidebar không overlap.
 - [ ] Header semester badge không đè title.
 - [ ] QR dialog hiển thị đúng.
-- [ ] FormPayment xử lý số tiền lớn.
+- [ ] FormPayment xử lý đúng các giá trị tiền lớn.
 - [ ] Print Preview biên lai hoạt động.
 - [ ] Microsoft Print to PDF hoạt động.
-- [ ] Nếu có điều kiện, thử máy in vật lý.
+- [ ] Kiểm thử trên máy in vật lý khi môi trường kiểm thử hỗ trợ.
 
 ---
 
-# Phase 10 — Release và Tài liệu bảo vệ
+# Phase 10 — Release và Tài liệu kỹ thuật
 
 ## 10.1. Release build
 
@@ -456,11 +452,11 @@ Test tối thiểu:
 dotnet publish 26K1_DotNet -c Release -o output/publish --self-contained false
 ```
 
-Sau đó chạy trực tiếp từ thư mục publish trên máy Windows đích.
+Bản publish phải được kiểm tra trực tiếp trên máy Windows mục tiêu.
 
 ## 10.2. README
 
-README cuối phải mô tả đúng:
+README phải phản ánh đúng trạng thái hệ thống:
 
 - Build/run.
 - Demo mode.
@@ -468,13 +464,13 @@ README cuối phải mô tả đúng:
 - Database path.
 - Backup/Restore.
 - VietQR là mô phỏng.
-- PDF là raster.
+- PDF sử dụng raster rendering.
 - Print Preview.
 - Windows/.NET Runtime requirements.
 
 ## 10.3. Tài liệu kỹ thuật
 
-Nên có:
+Cấu trúc khuyến nghị:
 
 ```text
 Docs/
@@ -514,7 +510,7 @@ BEGIN TRANSACTION
 COMMIT
 ```
 
-Nếu lỗi:
+Khi có lỗi:
 
 ```text
 ROLLBACK
@@ -522,35 +518,35 @@ ROLLBACK
 
 ---
 
-# Phase 11 — Kịch bản Demo
+# Phase 11 — Kịch bản nghiệm thu chức năng
 
-Luồng trình diễn khuyến nghị:
+Luồng kiểm thử end-to-end:
 
-1. Chạy `--demo`.
-2. Xem dashboard/thống kê.
+1. Khởi chạy `--demo`.
+2. Kiểm tra dashboard và thống kê.
 3. Tìm kiếm sinh viên.
 4. Thêm hoặc sửa sinh viên.
 5. Lập học phí theo tín chỉ.
 6. Áp dụng miễn giảm.
 7. Thu một phần bằng tiền mặt.
-8. Xem biên lai.
+8. Kiểm tra biên lai.
 9. Xuất biên lai PDF.
-10. Thu khoản tiếp theo bằng VietQR mô phỏng.
+10. Thực hiện thanh toán VietQR mô phỏng.
 11. Kiểm tra trạng thái thanh toán.
 12. Lọc công nợ theo học kỳ/lớp.
 13. Xuất báo cáo PDF.
 14. Backup database.
-15. Trình bày transaction + receipt snapshot + rollback test.
+15. Xác nhận transaction, receipt snapshot và rollback behavior.
 
 ---
 
-# Phase 12 — Tính năng tùy chọn sau bản nộp
+# Phase 12 — Tính năng tùy chọn sau bản lõi
 
-Chỉ thực hiện khi toàn bộ roadmap bắt buộc đã ổn định.
+Chỉ triển khai khi toàn bộ roadmap bắt buộc đã ổn định.
 
-## Hồ sơ tài chính sinh viên
+## 12.1. Hồ sơ tài chính sinh viên
 
-Một màn hình tổng hợp:
+Màn hình tổng hợp:
 
 - Học kỳ.
 - Phiếu học phí.
@@ -558,7 +554,7 @@ Một màn hình tổng hợp:
 - Tổng đã nộp.
 - Tổng còn nợ.
 
-## Điều chỉnh / hủy khoản thu
+## 12.2. Điều chỉnh / hủy khoản thu
 
 Không xóa biên lai gốc.
 
@@ -574,7 +570,7 @@ CreatedAt
 ReferenceReceiptId
 ```
 
-## Aging công nợ
+## 12.3. Aging công nợ
 
 ```text
 Chưa đến hạn
@@ -583,11 +579,11 @@ Chưa đến hạn
 > 60 ngày
 ```
 
-## Cấu hình tổ chức
+## 12.4. Cấu hình tổ chức
 
 Cho phép cấu hình:
 
-- Tên trường.
+- Tên đơn vị.
 - Logo.
 - Thông tin tài khoản hiển thị.
 - Nội dung nhắc nợ.
@@ -612,38 +608,38 @@ Cho phép cấu hình:
         ↓
 7. Logging + global exception handling
         ↓
-8. UI cleanup nhỏ
+8. UI cleanup
         ↓
 9. Windows / DPI / Print QA
         ↓
-10. Documentation + Demo Script
+10. Documentation
         ↓
 11. Final Release
 ```
 
 ---
 
-# Ưu tiên
+# Mức ưu tiên
 
-## P0 — Trước khi nộp
+## P0 — Bắt buộc
 
 - [ ] Fix migration version.
 - [ ] Regression test migration failure/retry.
 - [ ] Tách StudentCode khỏi Id.
 - [ ] Regression StudentCode.
-- [ ] Build + regression + self-test pass.
+- [ ] Build, regression và self-test pass.
 - [ ] Release QA trên Windows.
 
-## P1 — Rất nên làm
+## P1 — Khuyến nghị
 
 - [ ] GitHub Actions CI.
 - [ ] TuitionPerCredit theo Semester.
 - [ ] Demo dataset lớn hơn.
 - [ ] DPI QA.
 - [ ] Print Preview / Print to PDF QA.
-- [ ] README + demo script cuối.
+- [ ] README và tài liệu kỹ thuật cuối.
 
-## P2 — Nếu còn thời gian
+## P2 — Tùy chọn
 
 - [ ] Persistent logging.
 - [ ] Global exception handling.
@@ -656,29 +652,27 @@ Cho phép cấu hình:
 
 # Definition of Done
 
-EduFee được coi là sẵn sàng nộp khi:
+Một bản Release được coi là hoàn thiện khi:
 
 - [ ] Release build thành công.
 - [ ] Regression suite pass.
 - [ ] Self-test pass.
 - [ ] CI pass.
-- [ ] Migration schema cũ được test.
+- [ ] Migration schema cũ được kiểm thử.
 - [ ] StudentCode hoạt động xuyên suốt hệ thống.
-- [ ] Payment/Receipt vẫn atomic.
-- [ ] Receipt snapshot đúng.
-- [ ] Demo không chạm dữ liệu thật.
+- [ ] Payment/Receipt giữ tính atomic.
+- [ ] Receipt snapshot chính xác.
+- [ ] Demo không tác động dữ liệu vận hành.
 - [ ] PDF receipt/debt report hoạt động.
 - [ ] Print Preview hoạt động.
 - [ ] Backup/Restore hoạt động.
-- [ ] UI không vỡ ở DPI phổ biến.
+- [ ] UI ổn định ở các DPI mục tiêu.
 - [ ] README phản ánh đúng chức năng.
-- [ ] Demo script chạy liền mạch.
+- [ ] Kịch bản nghiệm thu end-to-end chạy thành công.
 
 ---
 
 ## Ngoài phạm vi bắt buộc
-
-Không đưa các hạng mục sau vào roadmap bắt buộc:
 
 - Module quản lý lớp riêng.
 - Đăng nhập/phân quyền nhiều vai trò.
@@ -692,4 +686,4 @@ Không đưa các hạng mục sau vào roadmap bắt buộc:
 - Dark mode.
 - Rewrite sang WPF/WinUI.
 
-> **Mục tiêu cuối:** một ứng dụng WinForms quản lý học phí hoàn chỉnh, dữ liệu tài chính đáng tin cậy, UI đủ đẹp, có kiểm thử tốt và dễ bảo vệ trước giảng viên.
+> **Mục tiêu cuối:** duy trì EduFee như một ứng dụng WinForms quản lý học phí ổn định, có dữ liệu tài chính đáng tin cậy, giao diện nhất quán, kiểm thử tự động và quy trình phát hành rõ ràng.
