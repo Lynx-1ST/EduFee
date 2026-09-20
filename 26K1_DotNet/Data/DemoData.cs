@@ -17,9 +17,9 @@ public static class DemoData
         var fees = new TuitionService(database);
         var receipts = new ReceiptService(database);
         students.AddStudents([
-            new Student(1001, "Nguyễn Minh Anh", "anh.nguyen@example.edu.vn", "0901000001", new DateTime(2005, 3, 12), "K26-CNTT-01"),
-            new Student(1002, "Trần Quốc Bảo", "bao.tran@example.edu.vn", "0901000002", new DateTime(2005, 7, 21), "K26-CNTT-01"),
-            new Student(1003, "Lê Thu Hà", "ha.le@example.edu.vn", "0901000003", new DateTime(2005, 11, 8), "K26-KT-02")
+            new Student(1001, "2121050001", "Nguyễn Minh Anh", "anh.nguyen@example.edu.vn", "0901000001", new DateTime(2005, 3, 12), "K26-CNTT-01"),
+            new Student(1002, "2121050002", "Trần Quốc Bảo", "bao.tran@example.edu.vn", "0901000002", new DateTime(2005, 7, 21), "K26-CNTT-01"),
+            new Student(1003, "2121050003", "Lê Thu Hà", "ha.le@example.edu.vn", "0901000003", new DateTime(2005, 11, 8), "K26-KT-02")
         ]);
         semesters.Add(new Semester(0, "HK1 2026-2027 (Demo)",
             new DateTime(2026, 9, 1), new DateTime(2027, 1, 20), new DateTime(2026, 9, 30), true));

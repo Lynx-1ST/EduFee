@@ -16,7 +16,7 @@ namespace _26K1_DotNet
         private readonly TuitionFee _fee;
         private readonly EmailService _emailSvc;
         private string ReceiptStudentName => string.IsNullOrWhiteSpace(_receipt.StudentNameSnapshot) ? _student.FullName : _receipt.StudentNameSnapshot;
-        private string ReceiptStudentCode => string.IsNullOrWhiteSpace(_receipt.StudentCodeSnapshot) ? $"SV{_student.Id:D4}" : _receipt.StudentCodeSnapshot;
+        private string ReceiptStudentCode => string.IsNullOrWhiteSpace(_receipt.StudentCodeSnapshot) ? _student.StudentCode : _receipt.StudentCodeSnapshot;
         private string ReceiptClassName => string.IsNullOrWhiteSpace(_receipt.ClassNameSnapshot) ? _student.ClassName : _receipt.ClassNameSnapshot;
         private string ReceiptSemesterName => string.IsNullOrWhiteSpace(_receipt.SemesterNameSnapshot) ? _semester.Name : _receipt.SemesterNameSnapshot;
         private decimal ReceiptTotal => _receipt.TotalTuitionSnapshot > 0 ? _receipt.TotalTuitionSnapshot : _fee.TotalAmount;

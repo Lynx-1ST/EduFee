@@ -38,6 +38,9 @@ internal static class Program
     fee.PaidAmount = fee.TotalAmount;
     fee.UpdateStatus(today: day.AddDays(1));
     Check(fee.Status == PaymentStatus.Paid, "Paid takes precedence over overdue");
+    fee.PaidDate = day.AddDays(1);
+    fee.UpdateStatus(today: day.AddDays(1));
+    Check(fee.Status == PaymentStatus.LatePaid, "A full payment after the due date is marked as late paid");
 
     string atomic = Path.Combine(root, "atomic.json");
     AtomicFile.WriteAllText(atomic, "old");
@@ -62,18 +65,34 @@ internal static class Program
         "Duplicate batch is rejected without partial import");
     students.AddStudents([ValidStudent(1), ValidStudent(2)]);
     Check(new StudentService(Path.Combine(root, "students.json")).GetAllStudents().Count == 2, "Student batch persists together");
+    Check(Throws(() => students.AddStudent(new Student(3, "   ", "Thiếu mã", "", "", new DateTime(2005, 1, 1), "K26"))),
+        "StudentCode is required instead of being inferred from the internal ID");
+    students.AddStudent(new Student(3, "  2121050003  ", "Sinh viên 3", "", "", new DateTime(2005, 1, 1), "K26"));
+    Check(students.GetStudentById(3)?.StudentCode == "2121050003" &&
+          Throws(() => students.AddStudent(new Student(4, "2121050003", "Trùng mã", "", "", new DateTime(2005, 1, 1), "K26"))),
+        "StudentCode is trimmed and unique regardless of letter case");
 
     string csv = Path.Combine(root, "students.csv");
-    File.WriteAllText(csv, "MaSV,HoTen,Lop,NgaySinh,DienThoai,Email\n1,\"Nguyễn, An\",K1,15/08/2004,0912345678,a@example.com\n2,B,K1,invalid,,\n3,too few\n");
-    var rows = StudentCsvImporter.Read(csv, []);
-    Check(rows.Count == 3 && rows[0].IsValid && rows[0].FullName == "Nguyễn, An", "Quoted CSV names parse correctly");
+    File.WriteAllText(csv, "MaSV,HoTen,Lop,NgaySinh,DienThoai,Email\n00123,\"Nguyễn, An\",K1,15/08/2004,0912345678,a@example.com\nSV-2,B,K1,invalid,,\nSV-3,too few\n");
+    var rows = StudentCsvImporter.Read(csv, Array.Empty<string>(), 100);
+    Check(rows.Count == 3 && rows[0].IsValid && rows[0].Id == 100 && rows[0].StudentCode == "00123" && rows[0].FullName == "Nguyễn, An",
+        "CSV preserves StudentCode text and assigns an independent internal ID");
     Check(!rows[1].IsValid && rows[1].Email == "" && rows[1].PhoneNumber == "", "Missing details are rejected, never fabricated");
     Check(!rows[2].IsValid, "Short CSV rows are shown as errors");
-    File.WriteAllText(csv, "MaSV;HoTen;Lop;NgaySinh;DienThoai;Email\n4;\"An\nBình\";K1;2004-08-15;0912345678;a@example.com\n");
-    rows = StudentCsvImporter.Read(csv, []);
+    File.WriteAllText(csv, "MaSV;HoTen;Lop;NgaySinh;DienThoai;Email\nSV-4;\"An\nBình\";K1;2004-08-15;0912345678;a@example.com\n");
+    rows = StudentCsvImporter.Read(csv, Array.Empty<string>(), 200);
     Check(rows.Count == 1 && rows[0].IsValid && rows[0].FullName.Contains('\n'), "Semicolon CSV and multiline quoted fields parse");
     File.WriteAllText(csv, "wrong,header\n1,A\n");
-    Check(Throws(() => StudentCsvImporter.Read(csv, [])), "Wrong CSV headers are rejected");
+    Check(Throws(() => StudentCsvImporter.Read(csv, Array.Empty<string>(), 1)), "Wrong CSV headers are rejected");
+    var roundTripStudent = new Student(17, "2121050123", "Nguyễn Văn A", "a@example.com", "0912345678", new DateTime(2004, 8, 15), "K26");
+    CsvWriter.WriteCsv([roundTripStudent],
+        [
+            ("MaSV", s => (object)s.StudentCode), ("HoTen", s => s.FullName), ("Lop", s => s.ClassName),
+            ("NgaySinh", s => s.DateOfBirth.ToString("dd/MM/yyyy")), ("DienThoai", s => s.PhoneNumber), ("Email", s => s.Email)
+        ], csv);
+    rows = StudentCsvImporter.Read(csv, Array.Empty<string>(), 900);
+    Check(rows.Single().StudentCode == "2121050123" && rows.Single().Id == 900,
+        "Student CSV round-trip keeps StudentCode separate from the internal ID");
     CsvWriter.WriteCsv(new[] { "=1+1", "  @SUM(A1)", "Nguyễn, An" }, [("Name", x => x)], csv);
     var exported = File.ReadAllText(csv);
     Check(exported.Contains("\"'=1+1\"") && exported.Contains("\"'  @SUM(A1)\"") && exported.Contains("\"Nguyễn, An\""), "CSV exports neutralize formulas and retain Unicode");
@@ -138,8 +157,8 @@ internal static class Program
         Directory.CreateDirectory(uiRoot);
         var students = new StudentService(Path.Combine(uiRoot, "students.json"));
         students.AddStudents([
-            new Student(101, "Nguyễn Trùng Tên", "one@example.com", "0900000001", new DateTime(2004, 1, 1), "K26A"),
-            new Student(202, "Nguyễn Trùng Tên", "two@example.com", "0900000002", new DateTime(2004, 1, 2), "K26B")
+            new Student(101, "CODE-A", "Nguyễn Trùng Tên", "one@example.com", "0900000001", new DateTime(2004, 1, 1), "K26A"),
+            new Student(202, "CODE-B", "Nguyễn Trùng Tên", "two@example.com", "0900000002", new DateTime(2004, 1, 2), "K26B")
         ]);
 
         var semesters = new SemesterService(Path.Combine(uiRoot, "semesters.json"));
@@ -165,11 +184,12 @@ internal static class Program
         var semesterCombo = GetPrivateField<ComboBox>(panel, "cmbSem");
         var grid = GetPrivateField<DataGridView>(panel, "dgv");
         panel.FilterByStudent(101);
-        var displayedStudentIds = grid.Rows.Cast<DataGridViewRow>()
+        var displayedStudentCodes = grid.Rows.Cast<DataGridViewRow>()
             .Where(row => !row.IsNewRow)
-            .Select(row => (int)row.Cells["_SvId"].Value!)
+            .Select(row => Convert.ToString(row.Cells["MaSV"].Value))
             .ToArray();
-        check(displayedStudentIds.SequenceEqual([101]), "Tuition student filter uses the selected student ID when names collide");
+        check(displayedStudentCodes.SequenceEqual(["CODE-A"]),
+            "Tuition filters by internal relation while displaying the selected StudentCode when names collide");
 
         var oldSemester = semesters.GetAll().Single(s => s.Name == "Học kỳ cũ");
         panel.RefreshData(oldSemester.Id);
@@ -185,7 +205,7 @@ internal static class Program
         var path = Path.Combine(root, "runtime-sqlite.db");
         var database = new SqlDatabaseContext(path);
         var repository = new SqliteRepository(database);
-        repository.AddStudents([new Student(101, "Nguyễn Văn An", "an@example.com", "0901", new DateTime(2005, 1, 2), "K26")]);
+        repository.AddStudents([new Student(101, "2121050101", "Nguyễn Văn An", "an@example.com", "0901", new DateTime(2005, 1, 2), "K26")]);
         repository.AddSemester(new Semester(201, "HK kiểm thử", new DateTime(2026, 9, 1), new DateTime(2027, 1, 15), new DateTime(2026, 9, 30), true));
         repository.AddTuitionFees([new TuitionFee(301, 101, 201, 2, 500_000m, dueDate: new DateTime(2026, 9, 30))]);
 
@@ -198,10 +218,11 @@ internal static class Program
         check(after.Fees.Single().PaidAmount == 400_000m && after.Receipts.Single().Id == receipt.Id && after.Receipts.Single().Amount == 400_000m,
             "SQLite commits payment and receipt together");
         check(after.Receipts.Single().StudentNameSnapshot == "Nguyễn Văn An" &&
+              after.Receipts.Single().StudentCodeSnapshot == "2121050101" &&
               after.Receipts.Single().TotalPaidAfterSnapshot == 400_000m && after.Receipts.Single().RemainingAfterSnapshot == 600_000m,
-            "Receipt stores the student and balance snapshot at payment time");
+            "Receipt stores the actual student code and balance snapshot at payment time");
 
-        repository.UpdateStudent(new Student(101, "Tên đã thay đổi", "new@example.com", "0909", new DateTime(2005, 1, 2), "K27"));
+        repository.UpdateStudent(new Student(101, "2121050199", "Tên đã thay đổi", "new@example.com", "0909", new DateTime(2005, 1, 2), "K27"));
         var sqliteTuition = new TuitionService(database);
         var tuitionDraft = sqliteTuition.GetById(301) ?? throw new InvalidOperationException("Missing tuition fixture.");
         tuitionDraft.TotalAmount = 1_500_000m;
@@ -209,8 +230,16 @@ internal static class Program
             "Tuition query returns a safe copy instead of mutable service state");
         sqliteTuition.Update(tuitionDraft);
         var unchangedReceipt = repository.LoadAll().Receipts.Single();
-        check(unchangedReceipt.StudentNameSnapshot == "Nguyễn Văn An" && unchangedReceipt.TotalTuitionSnapshot == 1_000_000m,
-            "Historical receipt snapshot is unchanged after profile and tuition edits");
+        check(unchangedReceipt.StudentNameSnapshot == "Nguyễn Văn An" &&
+              unchangedReceipt.StudentCodeSnapshot == "2121050101" &&
+              unchangedReceipt.TotalTuitionSnapshot == 1_000_000m,
+            "Historical receipt snapshot is unchanged after student code, profile and tuition edits");
+
+        check(throws(() => repository.AddStudents([
+                new Student(102, "abc-01", "Mã thứ nhất", "", "", new DateTime(2005, 1, 1), "K26"),
+                new Student(103, "ABC-01", "Mã trùng", "", "", new DateTime(2005, 1, 1), "K26")
+            ])),
+            "SQLite rejects duplicate StudentCode case-insensitively");
 
         check(throws(() => repository.RecordPayment(301, 1_200_000m, "Tiền mặt", "Nguyễn Văn An", "Vượt nợ")),
             "SQLite rejects payment above remaining balance");
@@ -240,6 +269,14 @@ internal static class Program
             "Restore rejects a database that only imitates EduFee table names");
 
         using var connection = database.CreateConnection();
+        using (var untrimmedCode = connection.CreateCommand())
+        {
+            untrimmedCode.CommandText = @"
+                INSERT INTO Students(Id, StudentCode, FullName, DateOfBirth, ClassName)
+                VALUES(999, 'TRAILING-CODE ', 'Mã có khoảng trắng', '2005-01-01', 'K26');";
+            check(throws(() => untrimmedCode.ExecuteNonQuery()),
+                "SQLite rejects an untrimmed StudentCode at the storage boundary");
+        }
         using var fk = connection.CreateCommand();
         fk.CommandText = "PRAGMA foreign_keys;";
         check(Convert.ToInt32(fk.ExecuteScalar()) == 1, "SQLite enables foreign keys on every connection");

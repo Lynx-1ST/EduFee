@@ -57,10 +57,11 @@ namespace K26_DotNet.Data
                 {
                     cmd.Transaction = tx;
                     cmd.CommandText = @"
-                        INSERT INTO Students (Id, FullName, Email, PhoneNumber, DateOfBirth, ClassName)
-                        VALUES (@id, @name, @email, @phone, @dob, @class);";
+                        INSERT INTO Students (Id, StudentCode, FullName, Email, PhoneNumber, DateOfBirth, ClassName)
+                        VALUES (@id, @code, @name, @email, @phone, @dob, @class);";
 
                     var pId = cmd.Parameters.Add("@id", SqliteType.Integer);
+                    var pCode = cmd.Parameters.Add("@code", SqliteType.Text);
                     var pName = cmd.Parameters.Add("@name", SqliteType.Text);
                     var pEmail = cmd.Parameters.Add("@email", SqliteType.Text);
                     var pPhone = cmd.Parameters.Add("@phone", SqliteType.Text);
@@ -70,6 +71,7 @@ namespace K26_DotNet.Data
                     foreach (var s in students)
                     {
                         pId.Value = s.Id;
+                        pCode.Value = s.StudentCode;
                         pName.Value = s.FullName ?? "";
                         pEmail.Value = s.Email ?? "";
                         pPhone.Value = s.PhoneNumber ?? "";
@@ -197,7 +199,7 @@ namespace K26_DotNet.Data
                             r.TotalTuitionSnapshot != r.TotalPaidAfterSnapshot + r.RemainingAfterSnapshot))
                             throw new InvalidOperationException($"Biên lai {r.ReceiptCode} có snapshot số tiền không hợp lệ.");
                         pStudentName.Value = hasSnapshot ? r.StudentNameSnapshot : student.FullName;
-                        pStudentCode.Value = hasSnapshot ? r.StudentCodeSnapshot : $"SV{student.Id:D4}";
+                        pStudentCode.Value = hasSnapshot ? r.StudentCodeSnapshot : student.StudentCode;
                         pClassName.Value = hasSnapshot ? r.ClassNameSnapshot : student.ClassName;
                         pSemesterName.Value = hasSnapshot ? r.SemesterNameSnapshot : semester.Name;
                         pTotalSnapshot.Value = ToVnd(hasSnapshot ? r.TotalTuitionSnapshot : fee.TotalAmount);
@@ -232,19 +234,20 @@ namespace K26_DotNet.Data
             // 1. Read Students
             using (var cmd = conn.CreateCommand())
             {
-                cmd.CommandText = "SELECT Id, FullName, Email, PhoneNumber, DateOfBirth, ClassName FROM Students ORDER BY Id;";
+                cmd.CommandText = "SELECT Id, StudentCode, FullName, Email, PhoneNumber, DateOfBirth, ClassName FROM Students ORDER BY Id;";
                 using var reader = cmd.ExecuteReader();
                 while (reader.Read())
                 {
-                    DateTime dob = DateTime.TryParse(reader.GetString(4), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var d) ? d : DateTime.MinValue;
+                    DateTime dob = DateTime.TryParse(reader.GetString(5), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var d) ? d : DateTime.MinValue;
                     students.Add(new Student
                     {
                         Id = reader.GetInt32(0),
-                        FullName = reader.IsDBNull(1) ? "" : reader.GetString(1),
-                        Email = reader.IsDBNull(2) ? "" : reader.GetString(2),
-                        PhoneNumber = reader.IsDBNull(3) ? "" : reader.GetString(3),
+                        StudentCode = reader.IsDBNull(1) ? "" : reader.GetString(1).Trim(),
+                        FullName = reader.IsDBNull(2) ? "" : reader.GetString(2),
+                        Email = reader.IsDBNull(3) ? "" : reader.GetString(3),
+                        PhoneNumber = reader.IsDBNull(4) ? "" : reader.GetString(4),
                         DateOfBirth = dob,
-                        ClassName = reader.IsDBNull(5) ? "" : reader.GetString(5)
+                        ClassName = reader.IsDBNull(6) ? "" : reader.GetString(6)
                     });
                 }
             }

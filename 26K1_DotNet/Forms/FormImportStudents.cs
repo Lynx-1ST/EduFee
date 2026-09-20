@@ -171,7 +171,10 @@ namespace _26K1_DotNet
             BindGrid();
             try
             {
-                _rows = StudentCsvImporter.Read(filePath, _svc.GetAllStudents().Select(s => s.Id));
+                _rows = StudentCsvImporter.Read(
+                    filePath,
+                    _svc.GetAllStudents().Select(s => s.StudentCode),
+                    _svc.GetMaxStudentId() + 1);
                 BindGrid();
             }
             catch (Exception ex)
@@ -184,7 +187,7 @@ namespace _26K1_DotNet
             var display = _rows.Select(r => new
             {
                 TrangThai = r.Status,
-                MaSV = r.Id,
+                MaSV = r.StudentCode,
                 HoTen = r.FullName,
                 Lop = r.ClassName,
                 NgaySinh = r.DateOfBirth.ToString("dd/MM/yyyy"),
@@ -198,7 +201,7 @@ namespace _26K1_DotNet
             if (dgv.Columns.Count > 0)
             {
                 if (dgv.Columns["TrangThai"] is { } c0) { c0.HeaderText = "Trạng Thái"; c0.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; c0.Width = 120; }
-                if (dgv.Columns["MaSV"] is { } c1) { c1.HeaderText = "Mã SV"; c1.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; c1.Width = 75; }
+                if (dgv.Columns["MaSV"] is { } c1) { c1.HeaderText = "Mã SV"; c1.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; c1.Width = 105; }
                 if (dgv.Columns["HoTen"] is { } c2) c2.HeaderText = "Họ và Tên";
                 if (dgv.Columns["Lop"] is { } c3) { c3.HeaderText = "Lớp"; c3.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; c3.Width = 110; }
                 if (dgv.Columns["NgaySinh"] is { } c4) { c4.HeaderText = "Ngày sinh"; c4.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; c4.Width = 100; c4.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter; }
@@ -237,7 +240,7 @@ namespace _26K1_DotNet
 
             try
             {
-                _svc.AddStudents(valid.Select(r => new Student(r.Id, r.FullName, r.Email, r.PhoneNumber, r.DateOfBirth, r.ClassName)));
+                _svc.AddStudents(valid.Select(r => new Student(r.Id, r.StudentCode, r.FullName, r.Email, r.PhoneNumber, r.DateOfBirth, r.ClassName)));
 
                 UiFeedback.ShowSuccess($"Đã nhập thành công {valid.Count} sinh viên vào hệ thống!");
                 DialogResult = DialogResult.OK;
@@ -262,9 +265,9 @@ namespace _26K1_DotNet
             {
                 var sb = new StringBuilder();
                 sb.AppendLine("MaSV,HoTen,Lop,NgaySinh,DienThoai,Email");
-                sb.AppendLine("2601,Nguyễn Văn An,26K1_CNTT,15/08/2004,0912345678,an.nv@edu.vn");
-                sb.AppendLine("2602,Trần Thị Mai,26K1_CNTT,20/11/2004,0987654321,mai.tt@edu.vn");
-                sb.AppendLine("2603,Lê Hoàng Nam,26K1_KTPM,05/03/2004,0905123456,nam.lh@edu.vn");
+                sb.AppendLine("SV2601,Nguyễn Văn An,26K1_CNTT,15/08/2004,0912345678,an.nv@edu.vn");
+                sb.AppendLine("SV2602,Trần Thị Mai,26K1_CNTT,20/11/2004,0987654321,mai.tt@edu.vn");
+                sb.AppendLine("SV2603,Lê Hoàng Nam,26K1_KTPM,05/03/2004,0905123456,nam.lh@edu.vn");
                 File.WriteAllText(sfd.FileName, sb.ToString(), Encoding.UTF8);
                 UiFeedback.ShowSuccess($"Đã lưu file mẫu tại:\n{sfd.FileName}");
             }

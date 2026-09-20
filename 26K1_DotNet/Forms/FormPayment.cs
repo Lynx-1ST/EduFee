@@ -41,6 +41,7 @@ namespace _26K1_DotNet
         {
             var student = _studentSvc.GetStudentById(_fee.StudentId);
             string studentName = student?.FullName ?? $"SV #{_fee.StudentId}";
+            string studentCode = student?.StudentCode ?? "—";
 
             Text = $"Ghi Nhận Thanh Toán - {studentName}";
             ClientSize = new Size(520, 620);
@@ -55,7 +56,7 @@ namespace _26K1_DotNet
 
             // ── Header ────────────────────────────────────────────────────
             var semester = _semSvc.GetById(_fee.SemesterId);
-            string sub = $"{studentName} · SV{_fee.StudentId:D4}" + (semester != null ? $" · {semester.Name}" : "");
+            string sub = $"{studentName} · {studentCode}" + (semester != null ? $" · {semester.Name}" : "");
             var header = UITheme.CreateDialogHeader("", "Thu học phí", sub, UITheme.PrimaryDark, 64);
 
             // ── Footer with action buttons (Always pinned and visible) ───
@@ -255,7 +256,7 @@ namespace _26K1_DotNet
                 if (IsQrMethod())
                 {
                     var provider = QrPaymentProvider.VietQr;
-                    string description = $"SV{_fee.StudentId:D4} HP {sem?.Name ?? _fee.SemesterId.ToString()}";
+                    string description = $"{student?.StudentCode ?? "—"} HP {sem?.Name ?? _fee.SemesterId.ToString()}";
                     var session = _qrGateway.CreateSession(new QrPaymentRequest(provider, _fee.Id,
                         _fee.StudentId, _fee.SemesterId, amount, description));
                     using var qrForm = new FormQrPayment(_qrGateway, session);

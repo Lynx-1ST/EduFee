@@ -536,7 +536,7 @@ namespace _26K1_DotNet
             {
                 f.Id,
                 _HidId = f.StudentId,
-                MaSV     = $"SV{f.StudentId:D4}",
+                MaSV     = svDict.TryGetValue(f.StudentId, out var studentCode) ? studentCode.StudentCode : "—",
                 HoTen    = svDict.TryGetValue(f.StudentId, out var sv) ? sv.FullName : $"#{f.StudentId}",
                 Lop      = svDict.TryGetValue(f.StudentId, out var sv2) ? sv2.ClassName : "",
                 PhaiNop  = f.TotalAmount,
@@ -629,13 +629,14 @@ namespace _26K1_DotNet
             return fees.Where(fee => fee.RemainingAmount > 0)
                 .Where(fee => !onlyOverdue || fee.Status == PaymentStatus.Overdue)
                 .Where(fee => selectedClass == "— Tất cả lớp —" ||
-                    (students.TryGetValue(fee.StudentId, out var student) &&
-                     string.Equals(student.ClassName, selectedClass, StringComparison.CurrentCultureIgnoreCase)))
+                    (students.TryGetValue(fee.StudentId, out var studentForClass) &&
+                     string.Equals(studentForClass.ClassName, selectedClass, StringComparison.CurrentCultureIgnoreCase)))
                 .Where(fee => string.IsNullOrWhiteSpace(search) ||
-                    $"SV{fee.StudentId:D4}".Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
-                    (students.TryGetValue(fee.StudentId, out var student) &&
-                     (student.FullName.Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
-                      student.ClassName.Contains(search, StringComparison.CurrentCultureIgnoreCase))))
+                    (students.TryGetValue(fee.StudentId, out var studentForCode) &&
+                     studentForCode.StudentCode.Contains(search, StringComparison.CurrentCultureIgnoreCase)) ||
+                    (students.TryGetValue(fee.StudentId, out var studentForSearch) &&
+                     (studentForSearch.FullName.Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
+                      studentForSearch.ClassName.Contains(search, StringComparison.CurrentCultureIgnoreCase))))
                 .OrderByDescending(fee => fee.RemainingAmount)
                 .ToList();
         }
@@ -736,7 +737,7 @@ namespace _26K1_DotNet
             {
                 f.Id,
                 _HidId = f.StudentId,
-                MaSV     = $"SV{f.StudentId:D4}",
+                MaSV     = svDict.TryGetValue(f.StudentId, out var studentCode) ? studentCode.StudentCode : "—",
                 HoTen    = svDict.TryGetValue(f.StudentId, out var sv) ? sv.FullName : $"#{f.StudentId}",
                 Lop      = svDict.TryGetValue(f.StudentId, out var sv2) ? sv2.ClassName : "",
                 PhaiNop  = f.TotalAmount,
@@ -871,7 +872,8 @@ namespace _26K1_DotNet
 
             return _sortColumn switch
             {
-                "MaSV" => SortBy(fees, fee => fee.StudentId),
+                "MaSV" => SortBy(fees, fee => students.TryGetValue(fee.StudentId, out var student) ? student.StudentCode : string.Empty,
+                    StringComparer.CurrentCultureIgnoreCase),
                 "Lop" => SortBy(fees, defaultKey, StringComparer.CurrentCultureIgnoreCase),
                 "PhaiNop" => SortBy(fees, fee => fee.TotalAmount),
                 "DaNop" => SortBy(fees, fee => fee.PaidAmount),
@@ -1045,7 +1047,7 @@ namespace _26K1_DotNet
             var cols2 = new List<(string Header, Func<TuitionFee, object> ValueGetter)>
             {
                 ("Mã HP", f => f.Id),
-                ("Mã SV", f => $"SV{f.StudentId:D4}"),
+                ("Mã SV", f => svDict2.TryGetValue(f.StudentId, out var sv) ? sv.StudentCode : ""),
                 ("Họ và Tên", f => svDict2.TryGetValue(f.StudentId, out var sv) ? sv.FullName : ""),
                 ("Lớp", f => svDict2.TryGetValue(f.StudentId, out var sv) ? sv.ClassName : ""),
                 ("Số tín chỉ", f => f.Credits),
@@ -1081,7 +1083,7 @@ namespace _26K1_DotNet
                 {
                     students.TryGetValue(fee.StudentId, out var student);
                     return new DebtReportRow(
-                        $"SV{fee.StudentId:D4}", student?.FullName ?? "Không tìm thấy hồ sơ",
+                        student?.StudentCode ?? "—", student?.FullName ?? "Không tìm thấy hồ sơ",
                         student?.ClassName ?? string.Empty, fee.TotalAmount, fee.PaidAmount,
                         fee.RemainingAmount, fee.DueDate ?? semester?.DueDate, fee.StatusDisplayText);
                 }).ToList();

@@ -136,7 +136,7 @@ namespace _26K1_DotNet
             };
 
             // Mã SV
-            textBoxId = new TextBox { ReadOnly = true, BackColor = UITheme.SurfaceAlt, AccessibleName = "Mã sinh viên", TabIndex = 0, Font = UITheme.FontBody, Dock = DockStyle.Fill };
+            textBoxId = new TextBox { AccessibleName = "Mã sinh viên", TabIndex = 0, Font = UITheme.FontBody, Dock = DockStyle.Fill };
             labelId = CreateLabel("Mã SV:");
             table.Controls.Add(labelId, 0, 0);
             table.Controls.Add(textBoxId, 1, 0);

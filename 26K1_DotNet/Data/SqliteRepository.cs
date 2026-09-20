@@ -27,8 +27,8 @@ public sealed class SqliteRepository
             using var command = connection.CreateCommand();
             command.Transaction = transaction;
             command.CommandText = """
-                INSERT INTO Students (Id, FullName, Email, PhoneNumber, DateOfBirth, ClassName)
-                VALUES (@id, @name, @email, @phone, @dob, @class);
+                INSERT INTO Students (Id, StudentCode, FullName, Email, PhoneNumber, DateOfBirth, ClassName)
+                VALUES (@id, @code, @name, @email, @phone, @dob, @class);
                 """;
             AddStudentParameters(command, student);
             command.ExecuteNonQuery();
@@ -41,7 +41,7 @@ public sealed class SqliteRepository
         using var connection = _db.CreateConnection();
         using var command = connection.CreateCommand();
         command.CommandText = """
-            UPDATE Students SET FullName=@name, Email=@email, PhoneNumber=@phone,
+            UPDATE Students SET StudentCode=@code, FullName=@name, Email=@email, PhoneNumber=@phone,
                 DateOfBirth=@dob, ClassName=@class WHERE Id=@id;
             """;
         AddStudentParameters(command, student);
@@ -179,6 +179,7 @@ public sealed class SqliteRepository
         long paid;
         DateTime? feeDueDate;
         string studentName;
+        string studentCode;
         string className;
         string semesterName;
         using (var query = connection.CreateCommand())
@@ -186,7 +187,7 @@ public sealed class SqliteRepository
             query.Transaction = transaction;
             query.CommandText = @"
                 SELECT f.StudentId, f.SemesterId, f.TotalAmount, f.PaidAmount, COALESCE(f.DueDate, sem.DueDate),
-                       st.FullName, st.ClassName, sem.Name
+                       st.FullName, st.StudentCode, st.ClassName, sem.Name
                 FROM TuitionFees f
                 JOIN Students st ON st.Id=f.StudentId
                 JOIN Semesters sem ON sem.Id=f.SemesterId
@@ -200,8 +201,9 @@ public sealed class SqliteRepository
             paid = reader.GetInt64(3);
             feeDueDate = reader.IsDBNull(4) ? null : ParseDate(reader.GetString(4));
             studentName = reader.GetString(5);
-            className = reader.IsDBNull(6) ? string.Empty : reader.GetString(6);
-            semesterName = reader.GetString(7);
+            studentCode = reader.GetString(6);
+            className = reader.IsDBNull(7) ? string.Empty : reader.GetString(7);
+            semesterName = reader.GetString(8);
         }
 
         if (paid + amountVnd > total)
@@ -258,7 +260,7 @@ public sealed class SqliteRepository
             insert.Parameters.AddWithValue("@payer", payerName.Trim());
             insert.Parameters.AddWithValue("@note", note?.Trim() ?? string.Empty);
             insert.Parameters.AddWithValue("@studentName", studentName);
-            insert.Parameters.AddWithValue("@studentCode", $"SV{studentId:D4}");
+            insert.Parameters.AddWithValue("@studentCode", studentCode);
             insert.Parameters.AddWithValue("@className", className);
             insert.Parameters.AddWithValue("@semesterName", semesterName);
             insert.Parameters.AddWithValue("@total", total);
@@ -274,7 +276,7 @@ public sealed class SqliteRepository
         {
             PaymentDate = paymentDate,
             StudentNameSnapshot = studentName,
-            StudentCodeSnapshot = $"SV{studentId:D4}",
+            StudentCodeSnapshot = studentCode,
             ClassNameSnapshot = className,
             SemesterNameSnapshot = semesterName,
             TotalTuitionSnapshot = total,
@@ -300,6 +302,7 @@ public sealed class SqliteRepository
     private static void AddStudentParameters(SqliteCommand command, Student student)
     {
         command.Parameters.AddWithValue("@id", student.Id);
+        command.Parameters.AddWithValue("@code", student.StudentCode.Trim());
         command.Parameters.AddWithValue("@name", student.FullName.Trim());
         command.Parameters.AddWithValue("@email", student.Email?.Trim() ?? string.Empty);
         command.Parameters.AddWithValue("@phone", student.PhoneNumber?.Trim() ?? string.Empty);

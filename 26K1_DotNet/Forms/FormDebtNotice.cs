@@ -176,7 +176,7 @@ namespace _26K1_DotNet
 
             // Student block
             AddInfoRow(paper, "Họ và tên:", _student.FullName, y, isBold: true); y += 26;
-            AddInfoRow(paper, "Mã sinh viên:", $"SV{_student.Id:D4}", y); y += 26;
+            AddInfoRow(paper, "Mã sinh viên:", _student.StudentCode, y); y += 26;
             AddInfoRow(paper, "Lớp học:", _student.ClassName, y); y += 26;
             AddInfoRow(paper, "Số tín chỉ đăng ký:", $"{_fee.Credits} tín chỉ", y); y += 26;
 
@@ -239,7 +239,7 @@ namespace _26K1_DotNet
             AddBankRow(bankCard, "Ngân hàng:", "VietinBank (Công Thương)", by); by += 22;
             AddBankRow(bankCard, "Số tài khoản:", "1028-8888-9999", by, isCopyable: true); by += 22;
             AddBankRow(bankCard, "Chủ tài khoản:", "TRUONG DAI HOC MO DIA CHAT", by); by += 22;
-            string transferSyntax = $"SV{_student.Id:D4} {_student.FullName} HP {_semester.Name}";
+            string transferSyntax = $"{_student.StudentCode} {_student.FullName} HP {_semester.Name}";
             AddBankRow(bankCard, "Nội dung CK:", transferSyntax, by, isCopyable: true, isHighlight: true);
 
             // VietQR Box on the right
@@ -368,7 +368,7 @@ namespace _26K1_DotNet
                 string bank = "970415"; // VietinBank BIN
                 string acc = "102888889999";
                 string amount = ((long)_fee.RemainingAmount).ToString();
-                string desc = Uri.EscapeDataString($"SV{_student.Id:D4} {_student.FullName} HP {_semester.Name}");
+                string desc = Uri.EscapeDataString($"{_student.StudentCode} {_student.FullName} HP {_semester.Name}");
                 string name = Uri.EscapeDataString("TRUONG DAI HOC MO DIA CHAT");
                 string url = $"https://img.vietqr.io/image/{bank}-{acc}-compact.png?amount={amount}&addInfo={desc}&accountName={name}";
 

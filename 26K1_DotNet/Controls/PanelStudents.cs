@@ -223,11 +223,15 @@ namespace _26K1_DotNet
 
             if (dgv.Columns.Count > 0)
             {
-                if (dgv.Columns["Id"] is { } c0)
+                if (dgv.Columns["Id"] is { } idColumn)
+                {
+                    idColumn.Visible = false;
+                }
+                if (dgv.Columns["StudentCode"] is { } c0)
                 {
                     c0.HeaderText = "Mã SV";
                     c0.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
-                    c0.Width = 85;
+                    c0.Width = 105;
                     c0.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
                     c0.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter;
                 }
@@ -293,7 +297,7 @@ namespace _26K1_DotNet
             {
                 list = list.FindAll(s =>
                     (!string.IsNullOrEmpty(s.FullName) && s.FullName.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0) ||
-                    s.Id.ToString().Contains(q) ||
+                    (!string.IsNullOrEmpty(s.StudentCode) && s.StudentCode.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0) ||
                     (!string.IsNullOrEmpty(s.PhoneNumber) && s.PhoneNumber.Contains(q)) ||
                     (!string.IsNullOrEmpty(s.Email) && s.Email.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0)
                 );
@@ -378,12 +382,12 @@ namespace _26K1_DotNet
         {
             var columns = new List<(string Header, Func<Student, object> ValueGetter)>
             {
-                ("Mã SV", s => s.Id),
-                ("Họ và Tên", s => s.FullName),
-                ("Lớp", s => s.ClassName),
-                ("Email", s => s.Email),
-                ("Điện thoại", s => s.PhoneNumber),
-                ("Ngày sinh", s => s.DateOfBirth.ToString("dd/MM/yyyy"))
+                ("MaSV", s => s.StudentCode),
+                ("HoTen", s => s.FullName),
+                ("Lop", s => s.ClassName),
+                ("NgaySinh", s => s.DateOfBirth.ToString("dd/MM/yyyy")),
+                ("DienThoai", s => s.PhoneNumber),
+                ("Email", s => s.Email)
             };
 
             CsvExportHelper.ExportToCsv("DanhSachSinhVien.csv", _currentList, columns);

@@ -16,9 +16,9 @@ public static class ReportAcceptance
 
         var students = new StudentService(Path.Combine(directory, "students.json"));
         students.AddStudents([
-            new Student(101, "Nguyễn An", "an@example.com", "0900000001", new DateTime(2005, 1, 1), "K26A"),
-            new Student(202, "Trần Bình", "binh@example.com", "0900000002", new DateTime(2005, 1, 2), "K26A"),
-            new Student(303, "Lê Chi", "chi@example.com", "0900000003", new DateTime(2005, 1, 3), "K26B")
+            new Student(101, "212105-A", "Nguyễn An", "an@example.com", "0900000001", new DateTime(2005, 1, 1), "K26A"),
+            new Student(202, "212105-B", "Trần Bình", "binh@example.com", "0900000002", new DateTime(2005, 1, 2), "K26A"),
+            new Student(303, "212105-C", "Lê Chi", "chi@example.com", "0900000003", new DateTime(2005, 1, 3), "K26B")
         ]);
         var semesters = new SemesterService(Path.Combine(directory, "semesters.json"));
         semesters.Add(new Semester(0, "HK báo cáo", DateTime.Today.AddDays(-30), DateTime.Today.AddMonths(3), DateTime.Today.AddDays(-1), true));
@@ -50,7 +50,7 @@ public static class ReportAcceptance
         check(CurrentDebtFees(panel).Select(fee => fee.StudentId).OrderBy(id => id).SequenceEqual([101, 202]),
             "Debt report class filter matches the selected class exactly");
 
-        search.Text = "SV0101";
+        search.Text = "212105-A";
         Application.DoEvents();
         check(CurrentDebtFees(panel).Select(fee => fee.StudentId).SequenceEqual([101]),
             "Debt report search filters by student code");

@@ -7,13 +7,14 @@ namespace K26_DotNet.Data
 {
     public class SqlDatabaseContext
     {
-        private const int CurrentSchemaVersion = 3;
+        private const int CurrentSchemaVersion = 4;
         private static readonly string[] ApplicationTables =
         {
             "Students", "Semesters", "TuitionFees", "PaymentReceipts"
         };
 
         private readonly string _connectionString;
+        internal static Action<string>? MigrationCheckpointForTests { get; set; }
         public string DbPath { get; }
 
         public SqlDatabaseContext(string dbFileName = "edufee.db")
@@ -48,6 +49,7 @@ namespace K26_DotNet.Data
             if (version == CurrentSchemaVersion)
             {
                 EnsureExpectedTables(conn);
+                EnsureSchemaMatchesVersion(conn, version);
                 return;
             }
 
@@ -55,12 +57,22 @@ namespace K26_DotNet.Data
             {
                 MigrateV1ToV2(conn);
                 MigrateV2ToV3(conn);
+                MigrateV3ToV4(conn);
                 return;
             }
 
             if (version == 2)
             {
+                EnsureSchemaMatchesVersion(conn, version);
                 MigrateV2ToV3(conn);
+                MigrateV3ToV4(conn);
+                return;
+            }
+
+            if (version == 3)
+            {
+                EnsureSchemaMatchesVersion(conn, version);
+                MigrateV3ToV4(conn);
                 return;
             }
 
@@ -117,6 +129,52 @@ namespace K26_DotNet.Data
             }
         }
 
+        private static void EnsureSchemaMatchesVersion(SqliteConnection conn, long version)
+        {
+            EnsureExpectedTables(conn);
+            if (version >= 2)
+            {
+                using var receiptColumns = conn.CreateCommand();
+                receiptColumns.CommandText = "PRAGMA table_info('PaymentReceipts');";
+                var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                using var reader = receiptColumns.ExecuteReader();
+                while (reader.Read()) names.Add(reader.GetString(1));
+                string[] snapshots = ["StudentNameSnapshot", "StudentCodeSnapshot", "ClassNameSnapshot",
+                    "SemesterNameSnapshot", "TotalTuitionSnapshot", "TotalPaidAfterSnapshot",
+                    "RemainingAfterSnapshot", "DueDateSnapshot"];
+                if (snapshots.Any(name => !names.Contains(name)))
+                    throw new InvalidOperationException($"Schema version {version} thiếu các cột snapshot của biên lai.");
+            }
+
+            if (version >= 3)
+            {
+                using var tableSql = conn.CreateCommand();
+                tableSql.CommandText = "SELECT sql FROM sqlite_master WHERE type='table' AND name='TuitionFees';";
+                string sql = Convert.ToString(tableSql.ExecuteScalar()) ?? string.Empty;
+                string normalized = string.Concat(sql.Where(character => !char.IsWhiteSpace(character)));
+                if (!normalized.Contains("StatusIN(0,1,2,3,4)", StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException("Schema version 3 chưa cho phép trạng thái học phí 'Nộp muộn'.");
+            }
+
+            if (version >= 4)
+            {
+                using var studentColumns = conn.CreateCommand();
+                studentColumns.CommandText = "PRAGMA table_info('Students');";
+                bool hasStudentCode = false;
+                using (var reader = studentColumns.ExecuteReader())
+                    while (reader.Read())
+                        if (string.Equals(reader.GetString(1), "StudentCode", StringComparison.OrdinalIgnoreCase))
+                            hasStudentCode = true;
+                using var tableSql = conn.CreateCommand();
+                tableSql.CommandText = "SELECT sql FROM sqlite_master WHERE type='table' AND name='Students';";
+                string sql = Convert.ToString(tableSql.ExecuteScalar()) ?? string.Empty;
+                string normalized = string.Concat(sql.Where(character => !char.IsWhiteSpace(character)));
+                bool requiresTrimmedCode = normalized.Contains("StudentCode=trim(StudentCode)", StringComparison.OrdinalIgnoreCase);
+                if (!hasStudentCode || !requiresTrimmedCode || !HasUniqueIndex(conn, "Students", "StudentCode"))
+                    throw new InvalidOperationException("Schema version 4 thiếu mã sinh viên duy nhất.");
+            }
+        }
+
         private static void CreateCurrentSchema(SqliteConnection conn)
         {
             using var tx = conn.BeginTransaction();
@@ -146,8 +204,8 @@ namespace K26_DotNet.Data
 
                 ExecuteNonQuery(conn, tx, CreateTablesSql(students, semesters, fees, receipts));
                 ExecuteNonQuery(conn, tx, @"
-                    INSERT INTO Students_v1 (Id, FullName, Email, PhoneNumber, DateOfBirth, ClassName)
-                    SELECT Id, FullName, Email, PhoneNumber, DateOfBirth, ClassName FROM Students;
+                    INSERT INTO Students_v1 (Id, StudentCode, FullName, Email, PhoneNumber, DateOfBirth, ClassName)
+                    SELECT Id, printf('SV%04d', Id), FullName, Email, PhoneNumber, DateOfBirth, ClassName FROM Students;
 
                     INSERT INTO Semesters_v1 (Id, Name, StartDate, EndDate, DueDate, IsActive)
                     SELECT Id, Name, StartDate, EndDate, DueDate, IsActive FROM Semesters;
@@ -197,7 +255,7 @@ namespace K26_DotNet.Data
                     ALTER TABLE PaymentReceipts ADD COLUMN RemainingAfterSnapshot INTEGER NOT NULL DEFAULT 0;
                     ALTER TABLE PaymentReceipts ADD COLUMN DueDateSnapshot TEXT;");
                 PopulateLegacyReceiptSnapshots(conn, tx);
-                SetSchemaVersion(conn, tx, CurrentSchemaVersion);
+                SetSchemaVersion(conn, tx, 2);
                 tx.Commit();
             }
             catch (Exception ex)
@@ -209,7 +267,7 @@ namespace K26_DotNet.Data
 
         private static void MigrateV2ToV3(SqliteConnection conn)
         {
-            EnsureExpectedTables(conn);
+            EnsureSchemaMatchesVersion(conn, 2);
             using (var disableForeignKeys = conn.CreateCommand())
             {
                 disableForeignKeys.CommandText = "PRAGMA foreign_keys = OFF;";
@@ -244,7 +302,11 @@ namespace K26_DotNet.Data
                     SELECT Id, StudentId, SemesterId, Credits, TotalAmount, DiscountAmount, DiscountReason,
                            PaidAmount, PaidDate, DueDate, Status, Note
                     FROM TuitionFees;
+                    ");
 
+                MigrationCheckpointForTests?.Invoke("V2ToV3.BeforeSwap");
+
+                ExecuteNonQuery(conn, tx, @"
                     DROP TABLE TuitionFees;
                     ALTER TABLE TuitionFees_v3 RENAME TO TuitionFees;
                     CREATE INDEX IX_TuitionFees_SemesterId ON TuitionFees(SemesterId);");
@@ -258,7 +320,7 @@ namespace K26_DotNet.Data
                         throw new InvalidOperationException("Dữ liệu có liên kết khóa ngoại không hợp lệ.");
                 }
 
-                SetSchemaVersion(conn, tx, CurrentSchemaVersion);
+                SetSchemaVersion(conn, tx, 3);
                 tx.Commit();
             }
             catch (Exception ex)
@@ -273,6 +335,66 @@ namespace K26_DotNet.Data
                 enableForeignKeys.CommandText = "PRAGMA foreign_keys = ON;";
                 enableForeignKeys.ExecuteNonQuery();
             }
+
+            EnsureSchemaMatchesVersion(conn, 3);
+        }
+
+        private static void MigrateV3ToV4(SqliteConnection conn)
+        {
+            EnsureSchemaMatchesVersion(conn, 3);
+            using (var disableForeignKeys = conn.CreateCommand())
+            {
+                disableForeignKeys.CommandText = "PRAGMA foreign_keys = OFF;";
+                disableForeignKeys.ExecuteNonQuery();
+            }
+
+            using var tx = conn.BeginTransaction();
+            try
+            {
+                ExecuteNonQuery(conn, tx, @"
+                    CREATE TABLE Students_v4 (
+                        Id INTEGER PRIMARY KEY,
+                        StudentCode TEXT NOT NULL COLLATE NOCASE UNIQUE CHECK (StudentCode = trim(StudentCode) AND length(StudentCode) > 0),
+                        FullName TEXT NOT NULL CHECK (length(trim(FullName)) > 0),
+                        Email TEXT,
+                        PhoneNumber TEXT,
+                        DateOfBirth TEXT,
+                        ClassName TEXT
+                    );
+                    INSERT INTO Students_v4 (Id, StudentCode, FullName, Email, PhoneNumber, DateOfBirth, ClassName)
+                    SELECT Id, printf('SV%04d', Id), FullName, Email, PhoneNumber, DateOfBirth, ClassName FROM Students;");
+
+                MigrationCheckpointForTests?.Invoke("V3ToV4.BeforeSwap");
+
+                ExecuteNonQuery(conn, tx, @"
+                    DROP TABLE Students;
+                    ALTER TABLE Students_v4 RENAME TO Students;
+                    CREATE INDEX IX_Students_ClassName ON Students(ClassName);");
+
+                using (var foreignKeyCheck = conn.CreateCommand())
+                {
+                    foreignKeyCheck.Transaction = tx;
+                    foreignKeyCheck.CommandText = "PRAGMA foreign_key_check;";
+                    using var reader = foreignKeyCheck.ExecuteReader();
+                    if (reader.Read()) throw new InvalidOperationException("Dữ liệu có liên kết khóa ngoại không hợp lệ.");
+                }
+
+                SetSchemaVersion(conn, tx, CurrentSchemaVersion);
+                tx.Commit();
+            }
+            catch (Exception ex)
+            {
+                tx.Rollback();
+                throw new InvalidOperationException("Không thể bổ sung mã sinh viên nghiệp vụ. Dữ liệu gốc không bị thay đổi.", ex);
+            }
+            finally
+            {
+                using var enableForeignKeys = conn.CreateCommand();
+                enableForeignKeys.CommandText = "PRAGMA foreign_keys = ON;";
+                enableForeignKeys.ExecuteNonQuery();
+            }
+
+            EnsureSchemaMatchesVersion(conn, CurrentSchemaVersion);
         }
 
         private static void SetSchemaVersion(SqliteConnection conn, SqliteTransaction tx, int version)
@@ -356,6 +478,7 @@ namespace K26_DotNet.Data
         private static string CreateTablesSql(string students, string semesters, string fees, string receipts) => $@"
             CREATE TABLE {students} (
                 Id INTEGER PRIMARY KEY,
+                StudentCode TEXT NOT NULL COLLATE NOCASE UNIQUE CHECK (StudentCode = trim(StudentCode) AND length(StudentCode) > 0),
                 FullName TEXT NOT NULL CHECK (length(trim(FullName)) > 0),
                 Email TEXT,
                 PhoneNumber TEXT,
@@ -484,10 +607,11 @@ namespace K26_DotNet.Data
 
         private static void ValidateRestoreContract(SqliteConnection source)
         {
+            EnsureSchemaMatchesVersion(source, CurrentSchemaVersion);
             using (var shape = source.CreateCommand())
             {
                 shape.CommandText = @"
-                    SELECT Id, FullName, Email, PhoneNumber, DateOfBirth, ClassName FROM Students LIMIT 0;
+                    SELECT Id, StudentCode, FullName, Email, PhoneNumber, DateOfBirth, ClassName FROM Students LIMIT 0;
                     SELECT Id, Name, StartDate, EndDate, DueDate, IsActive FROM Semesters LIMIT 0;
                     SELECT Id, StudentId, SemesterId, Credits, TotalAmount, DiscountAmount, DiscountReason, PaidAmount, PaidDate, DueDate, Status, Note FROM TuitionFees LIMIT 0;
                     SELECT Id, FeeId, StudentId, SemesterId, ReceiptCode, Amount, PaymentDate, PaymentMethod, PayerName, Note,
@@ -513,7 +637,8 @@ namespace K26_DotNet.Data
                 !HasIntegerColumn(source, "PaymentReceipts", "Amount"))
                 throw new InvalidDataException("Tệp sao lưu không dùng kiểu INTEGER cho tiền VND.");
 
-            if (!HasUniqueIndex(source, "TuitionFees", "StudentId", "SemesterId") ||
+            if (!HasUniqueIndex(source, "Students", "StudentCode") ||
+                !HasUniqueIndex(source, "TuitionFees", "StudentId", "SemesterId") ||
                 !HasUniqueIndex(source, "PaymentReceipts", "ReceiptCode"))
                 throw new InvalidDataException("Tệp sao lưu thiếu ràng buộc duy nhất bắt buộc.");
 

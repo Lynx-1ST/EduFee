@@ -476,7 +476,7 @@ namespace _26K1_DotNet
                 var matchedSvIds = _svSvc.GetAllStudents()
                     .Where(s =>
                         (!string.IsNullOrEmpty(s.FullName) && s.FullName.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0) ||
-                        s.Id.ToString().Contains(q) ||
+                        (!string.IsNullOrEmpty(s.StudentCode) && s.StudentCode.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0) ||
                         (!string.IsNullOrEmpty(s.ClassName) && s.ClassName.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0) ||
                         (!string.IsNullOrEmpty(s.PhoneNumber) && s.PhoneNumber.Contains(q)) ||
                         (!string.IsNullOrEmpty(s.Email) && s.Email.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0)
@@ -505,7 +505,7 @@ namespace _26K1_DotNet
             var rows = _current.Select(f => new
             {
                 f.Id,
-                _SvId    = f.StudentId,
+                MaSV     = svDict.TryGetValue(f.StudentId, out var student) ? student.StudentCode : "—",
                 HoTen    = svDict.TryGetValue(f.StudentId, out var sv) ? sv.FullName : $"#{f.StudentId}",
                 Lop      = svDict.TryGetValue(f.StudentId, out var sv2) ? sv2.ClassName : "",
                 HocKy    = semDict.TryGetValue(f.SemesterId, out var sem) ? sem.Name : $"#{f.SemesterId}",
@@ -567,7 +567,7 @@ namespace _26K1_DotNet
                 }
 
                 Hide("Id");
-                Center("_SvId", "Mã SV", 75);
+                Center("MaSV", "Mã SV", 95);
                 if (dgv.Columns["HoTen"] is { } name)
                 {
                     name.HeaderText = "Họ và tên";
@@ -587,7 +587,7 @@ namespace _26K1_DotNet
                 Center("TrangThai", "Trạng thái", 120);
                 Hide("NgayNop");
                 Hide("GhiChu");
-                foreach (var column in new[] { "_SvId", "HoTen", "Lop", "HocKy", "PhaiNop", "DaNop", "ConLai", "HanNop", "TrangThai" })
+                foreach (var column in new[] { "MaSV", "HoTen", "Lop", "HocKy", "PhaiNop", "DaNop", "ConLai", "HanNop", "TrangThai" })
                     ConfigureSortableColumn(column);
                 ShowSortGlyph();
             }
@@ -608,7 +608,8 @@ namespace _26K1_DotNet
 
             return _sortColumn switch
             {
-                "_SvId" => SortBy(fees, fee => fee.StudentId),
+                "MaSV" => SortBy(fees, fee => students.TryGetValue(fee.StudentId, out var student) ? student.StudentCode : string.Empty,
+                    StringComparer.CurrentCultureIgnoreCase),
                 "Lop" => SortBy(fees, fee => students.TryGetValue(fee.StudentId, out var student) ? student.ClassName : string.Empty,
                     StringComparer.CurrentCultureIgnoreCase),
                 "HocKy" => SortBy(fees, fee => semesters.TryGetValue(fee.SemesterId, out var semester) ? semester.Name : string.Empty,
@@ -631,7 +632,7 @@ namespace _26K1_DotNet
         {
             if (e.ColumnIndex < 0) return;
             string column = dgv.Columns[e.ColumnIndex].Name;
-            if (column is not ("_SvId" or "HoTen" or "Lop" or "HocKy" or "PhaiNop" or "DaNop" or "ConLai" or "HanNop" or "TrangThai")) return;
+            if (column is not ("MaSV" or "HoTen" or "Lop" or "HocKy" or "PhaiNop" or "DaNop" or "ConLai" or "HanNop" or "TrangThai")) return;
 
             if (_sortColumn == column) _sortAscending = !_sortAscending;
             else { _sortColumn = column; _sortAscending = true; }
@@ -801,7 +802,7 @@ namespace _26K1_DotNet
             var cols = new List<(string Header, Func<TuitionFee, object> ValueGetter)>
             {
                 ("Mã HP", f => f.Id),
-                ("Mã SV", f => f.StudentId),
+                ("Mã SV", f => svDict.TryGetValue(f.StudentId, out var sv) ? sv.StudentCode : ""),
                 ("Họ và Tên", f => svDict.TryGetValue(f.StudentId, out var sv) ? sv.FullName : ""),
                 ("Lớp", f => svDict.TryGetValue(f.StudentId, out var sv) ? sv.ClassName : ""),
                 ("Học Kỳ", f => semDict.TryGetValue(f.SemesterId, out var sem) ? sem.Name : ""),

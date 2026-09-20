@@ -180,7 +180,7 @@ namespace K26_DotNet.Services
         private string GenerateReceiptEmailHtml(Student student, Semester semester, TuitionFee fee, PaymentReceipt receipt)
         {
             string studentName = !string.IsNullOrWhiteSpace(receipt.StudentNameSnapshot) ? receipt.StudentNameSnapshot : student.FullName;
-            string studentCode = !string.IsNullOrWhiteSpace(receipt.StudentCodeSnapshot) ? receipt.StudentCodeSnapshot : $"SV{student.Id:D4}";
+            string studentCode = !string.IsNullOrWhiteSpace(receipt.StudentCodeSnapshot) ? receipt.StudentCodeSnapshot : student.StudentCode;
             string className = !string.IsNullOrWhiteSpace(receipt.ClassNameSnapshot) ? receipt.ClassNameSnapshot : student.ClassName;
             string semesterName = !string.IsNullOrWhiteSpace(receipt.SemesterNameSnapshot) ? receipt.SemesterNameSnapshot : semester.Name;
             decimal totalAmount = receipt.TotalTuitionSnapshot > 0 ? receipt.TotalTuitionSnapshot : fee.TotalAmount;
@@ -266,7 +266,7 @@ namespace K26_DotNet.Services
         private string GenerateDebtNoticeEmailHtml(Student student, Semester semester, TuitionFee fee)
         {
             var due = fee.DueDate ?? semester.DueDate;
-            string transferSyntax = $"HP {student.Id} {semester.Name.Replace(" ", "")}";
+            string transferSyntax = $"HP {student.StudentCode} {semester.Name.Replace(" ", "")}";
 
             return $@"
 <!DOCTYPE html>

@@ -326,7 +326,7 @@ namespace _26K1_DotNet
         private void LoadData()
         {
             foreach (var sv in _svSvc.GetAllStudents())
-                cmbStudent.Items.Add(new SvItem(sv.Id, sv.FullName, sv.ClassName));
+                cmbStudent.Items.Add(new SvItem(sv.Id, sv.StudentCode, sv.FullName, sv.ClassName));
 
             foreach (var sem in _semSvc.GetAll())
                 cmbSemester.Items.Add(new SemItem(sem.Id, sem.Name));
@@ -457,6 +457,12 @@ namespace _26K1_DotNet
             }
         }
 
-        private class SvItem  { public int Id; public string Name, Class; public SvItem(int id, string n, string c) { Id = id; Name = n; Class = c; } public override string ToString() => $"{Name}  (Lớp {Class})"; }
+        private class SvItem
+        {
+            public int Id;
+            public string Code, Name, Class;
+            public SvItem(int id, string code, string name, string className) { Id = id; Code = code; Name = name; Class = className; }
+            public override string ToString() => $"{Code} — {Name}  (Lớp {Class})";
+        }
     }
 }

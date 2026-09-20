@@ -45,6 +45,12 @@ namespace K26_DotNet.Services
                     string json = File.ReadAllText(_filePath);
                     if (string.IsNullOrWhiteSpace(json)) throw new JsonException("Tệp dữ liệu trống hoặc bị hỏng.");
                     _students = JsonSerializer.Deserialize<List<Student>>(json) ?? throw new JsonException("Dữ liệu không được là null.");
+                    foreach (var student in _students)
+                        student.StudentCode = string.IsNullOrWhiteSpace(student.StudentCode)
+                            ? $"SV{student.Id:D4}"
+                            : student.StudentCode.Trim();
+                    if (_students.GroupBy(s => s.StudentCode, StringComparer.OrdinalIgnoreCase).Any(group => group.Count() > 1))
+                        throw new InvalidDataException("Dữ liệu chứa mã sinh viên bị trùng.");
                 }
             }
             catch (Exception ex)
@@ -69,6 +75,9 @@ namespace K26_DotNet.Services
 
         public List<Student> GetAllStudents() => _students.OrderBy(s => s.Id).Select(CloneStudent).ToList();
         public Student? GetStudentById(int id) => _students.Where(s => s.Id == id).Select(CloneStudent).FirstOrDefault();
+        public Student? GetStudentByCode(string studentCode) => _students
+            .Where(s => string.Equals(s.StudentCode, studentCode?.Trim(), StringComparison.OrdinalIgnoreCase))
+            .Select(CloneStudent).FirstOrDefault();
 
         public void AddStudent(Student student)
         {
@@ -82,11 +91,14 @@ namespace K26_DotNet.Services
             ArgumentNullException.ThrowIfNull(students);
             var additions = students.ToList();
             var ids = _students.Select(s => s.Id).ToHashSet();
+            var codes = _students.Select(s => s.StudentCode).ToHashSet(StringComparer.OrdinalIgnoreCase);
             foreach (var student in additions)
             {
                 ArgumentNullException.ThrowIfNull(student);
+                student.StudentCode = student.StudentCode?.Trim() ?? string.Empty;
                 ValidateStudent(student);
                 if (!ids.Add(student.Id)) throw new ArgumentException($"Mã sinh viên không hợp lệ hoặc bị trùng: {student.Id}");
+                if (!codes.Add(student.StudentCode)) throw new ArgumentException($"Mã sinh viên đã tồn tại: {student.StudentCode}");
             }
             if (_repository != null)
             {
@@ -103,9 +115,12 @@ namespace K26_DotNet.Services
         public void UpdateStudent(Student student)
         {
             ArgumentNullException.ThrowIfNull(student);
+            student.StudentCode = student.StudentCode?.Trim() ?? string.Empty;
             ValidateStudent(student);
             var existingStudent = _students.FirstOrDefault(s => s.Id == student.Id)
                 ?? throw new Exception($"Không tìm thấy sinh viên với ID {student.Id}");
+            if (_students.Any(s => s.Id != student.Id && string.Equals(s.StudentCode, student.StudentCode, StringComparison.OrdinalIgnoreCase)))
+                throw new ArgumentException($"Mã sinh viên đã tồn tại: {student.StudentCode}");
             if (_repository != null)
             {
                 _repository.UpdateStudent(student);
@@ -146,6 +161,7 @@ namespace K26_DotNet.Services
         private static void ValidateStudent(Student student)
         {
             if (student.Id <= 0) throw new ArgumentOutOfRangeException(nameof(student.Id), "Mã sinh viên phải lớn hơn 0.");
+            if (string.IsNullOrWhiteSpace(student.StudentCode)) throw new ArgumentException("Mã sinh viên không được để trống.", nameof(student.StudentCode));
             if (string.IsNullOrWhiteSpace(student.FullName)) throw new ArgumentException("Họ tên không được để trống.", nameof(student.FullName));
             if (string.IsNullOrWhiteSpace(student.ClassName)) throw new ArgumentException("Lớp không được để trống.", nameof(student.ClassName));
             if (student.DateOfBirth.Date > DateTime.Today) throw new ArgumentException("Ngày sinh không thể ở tương lai.", nameof(student.DateOfBirth));
@@ -156,6 +172,7 @@ namespace K26_DotNet.Services
 
         private static void CopyStudent(Student source, Student destination)
         {
+            destination.StudentCode = source.StudentCode;
             destination.FullName = source.FullName;
             destination.Email = source.Email;
             destination.PhoneNumber = source.PhoneNumber;
@@ -165,7 +182,7 @@ namespace K26_DotNet.Services
 
         private static Student CloneStudent(Student s) => new()
         {
-            Id = s.Id, FullName = s.FullName, Email = s.Email, PhoneNumber = s.PhoneNumber,
+            Id = s.Id, StudentCode = s.StudentCode, FullName = s.FullName, Email = s.Email, PhoneNumber = s.PhoneNumber,
             DateOfBirth = s.DateOfBirth, ClassName = s.ClassName
         };
 

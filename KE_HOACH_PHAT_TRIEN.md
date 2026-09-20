@@ -53,25 +53,25 @@ Mọi thay đổi tiếp theo phải duy trì các invariant sau:
 
 ### Thực hiện
 
-- [ ] `MigrateV1ToV2()` chỉ đặt `PRAGMA user_version = 2`.
-- [ ] `MigrateV2ToV3()` chỉ đặt version 3 sau khi toàn bộ migration thành công.
-- [ ] Schema version không thay đổi nếu transaction rollback.
-- [ ] Xác thực schema thực tế tương ứng với version khai báo.
+- [x] `MigrateV1ToV2()` chỉ đặt `PRAGMA user_version = 2`.
+- [x] `MigrateV2ToV3()` chỉ đặt version 3 sau khi toàn bộ migration thành công.
+- [x] Schema version không thay đổi nếu transaction rollback.
+- [x] Xác thực schema thực tế tương ứng với version khai báo.
 
 ### Regression
 
-- [ ] v1 → v2 → v3 thành công.
-- [ ] v2 → v3 thành công.
-- [ ] Inject failure giữa migration v2 → v3.
-- [ ] Sau failure database vẫn ở version 2.
-- [ ] Lần khởi tạo tiếp theo có thể retry migration.
-- [ ] Record count và tổng tiền không thay đổi sau retry.
+- [x] v1 → v2 → v3 thành công.
+- [x] v2 → v3 thành công.
+- [x] Inject failure giữa migration v2 → v3.
+- [x] Sau failure database vẫn ở version 2.
+- [x] Lần khởi tạo tiếp theo có thể retry migration.
+- [x] Record count và tổng tiền không thay đổi sau retry.
 
 ### Definition of Done
 
-- [ ] Không tồn tại trạng thái `user_version` và schema thực tế không đồng nhất.
-- [ ] Regression suite pass.
-- [ ] Self-test pass.
+- [x] Không tồn tại trạng thái `user_version` và schema thực tế không đồng nhất.
+- [x] Regression suite pass (107/107).
+- [x] Self-test pass.
 
 ---
 
@@ -113,32 +113,32 @@ StudentCode TEXT NOT NULL UNIQUE
 
 ### Phạm vi cập nhật
 
-- [ ] `Student.cs`
-- [ ] SQLite schema và migration
-- [ ] `SqliteRepository`
-- [ ] `SqlDataMigrator`
-- [ ] `StudentService`
-- [ ] CSV import/export
-- [ ] Search/filter sinh viên
-- [ ] PanelStudents
-- [ ] PanelTuition
-- [ ] PanelStatistics
-- [ ] FormStudentDetail
-- [ ] Receipt snapshot
-- [ ] Email receipt
-- [ ] PDF receipt
-- [ ] Debt report
-- [ ] Demo data
-- [ ] Regression tests
+- [x] `Student.cs`
+- [x] SQLite schema và migration
+- [x] `SqliteRepository`
+- [x] `SqlDataMigrator`
+- [x] `StudentService`
+- [x] CSV import/export
+- [x] Search/filter sinh viên
+- [x] PanelStudents
+- [x] PanelTuition
+- [x] PanelStatistics
+- [x] FormStudentDetail
+- [x] Receipt snapshot
+- [x] Email receipt
+- [x] PDF receipt
+- [x] Debt report
+- [x] Demo data
+- [x] Regression tests
 
 ### Business rules
 
-- [ ] StudentCode bắt buộc.
-- [ ] StudentCode unique.
-- [ ] Trim trước khi lưu.
-- [ ] Foreign key tiếp tục sử dụng `StudentId`.
-- [ ] Receipt cũ giữ nguyên snapshot hiện có.
-- [ ] Receipt mới lưu StudentCode thực tế.
+- [x] StudentCode bắt buộc.
+- [x] StudentCode unique.
+- [x] Trim trước khi lưu.
+- [x] Foreign key tiếp tục sử dụng `StudentId`.
+- [x] Receipt cũ giữ nguyên snapshot hiện có.
+- [x] Receipt mới lưu StudentCode thực tế.
 
 ### Migration dữ liệu cũ
 
@@ -154,11 +154,11 @@ Không thay đổi `Id` và không phá vỡ foreign key.
 
 ### Definition of Done
 
-- [ ] UI không còn suy ra mã sinh viên trực tiếp từ database Id.
-- [ ] Duplicate StudentCode bị từ chối.
-- [ ] CSV round-trip giữ đúng StudentCode.
-- [ ] Receipt, PDF và email hiển thị StudentCode nhất quán.
-- [ ] Migration và regression pass.
+- [x] UI không còn suy ra mã sinh viên trực tiếp từ database Id.
+- [x] Duplicate StudentCode bị từ chối.
+- [x] CSV round-trip giữ đúng StudentCode.
+- [x] Receipt, PDF và email hiển thị StudentCode nhất quán.
+- [x] Migration và regression pass.
 
 ---
 
@@ -359,11 +359,11 @@ Không đặt mục tiêu bằng số lượng test cố định. Ưu tiên cove
 
 ## Test cần bổ sung
 
-- [ ] Schema migration failure/retry.
-- [ ] StudentCode unique.
-- [ ] StudentCode migration.
-- [ ] CSV StudentCode round-trip.
-- [ ] Receipt snapshot StudentCode.
+- [x] Schema migration failure/retry.
+- [x] StudentCode unique.
+- [x] StudentCode migration.
+- [x] CSV StudentCode round-trip.
+- [x] Receipt snapshot StudentCode.
 - [ ] Semester tuition rate.
 - [ ] Historical fee không đổi khi rate đổi.
 - [ ] Demo totals deterministic.
@@ -623,11 +623,11 @@ Cho phép cấu hình:
 
 ## P0 — Bắt buộc
 
-- [ ] Fix migration version.
-- [ ] Regression test migration failure/retry.
-- [ ] Tách StudentCode khỏi Id.
-- [ ] Regression StudentCode.
-- [ ] Build, regression và self-test pass.
+- [x] Fix migration version.
+- [x] Regression test migration failure/retry.
+- [x] Tách StudentCode khỏi Id.
+- [x] Regression StudentCode.
+- [x] Build, regression và self-test pass.
 - [ ] Release QA trên Windows.
 
 ## P1 — Khuyến nghị

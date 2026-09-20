@@ -28,14 +28,12 @@ namespace _26K1_DotNet
 
             if (_isNewStudent)
             {
-                textBoxId.Text = (_studentService.GetMaxStudentId() + 1).ToString();
-                textBoxId.ReadOnly = true;
+                textBoxId.Text = "";
                 dateTimePickerDOB.Value = DateTime.Now.AddYears(-18);
             }
             else if (_student != null)
             {
-                textBoxId.Text = _student.Id.ToString();
-                textBoxId.ReadOnly = true;
+                textBoxId.Text = _student.StudentCode;
                 textBoxFullName.Text = _student.FullName;
                 textBoxEmail.Text = _student.Email;
                 textBoxPhoneNumber.Text = _student.PhoneNumber;
@@ -51,7 +49,8 @@ namespace _26K1_DotNet
                 if (!ValidateInput())
                     return;
 
-                int id = int.Parse(textBoxId.Text);
+                int id = _student?.Id ?? _studentService.GetMaxStudentId() + 1;
+                string studentCode = textBoxId.Text.Trim();
                 string fullName = textBoxFullName.Text.Trim();
                 string email = textBoxEmail.Text.Trim();
                 string phoneNumber = textBoxPhoneNumber.Text.Trim();
@@ -60,12 +59,13 @@ namespace _26K1_DotNet
 
                 if (_isNewStudent)
                 {
-                    var newStudent = new Student(id, fullName, email, phoneNumber, dateOfBirth, className);
+                    var newStudent = new Student(id, studentCode, fullName, email, phoneNumber, dateOfBirth, className);
                     _studentService.AddStudent(newStudent);
                     UiFeedback.ShowSuccess("Thêm sinh viên thành công!");
                 }
                 else if (_student != null)
                 {
+                    _student.StudentCode = studentCode;
                     _student.FullName = fullName;
                     _student.Email = email;
                     _student.PhoneNumber = phoneNumber;
@@ -93,11 +93,12 @@ namespace _26K1_DotNet
         private bool ValidateInput()
         {
             bool valid = true;
+            valid &= UiFeedback.ValidateRequired(_ep, textBoxId, "mã sinh viên");
             valid &= UiFeedback.ValidateRequired(_ep, textBoxFullName, "họ tên");
             valid &= UiFeedback.ValidateEmail(_ep, textBoxEmail);
             valid &= UiFeedback.ValidateRequired(_ep, textBoxPhoneNumber, "điện thoại");
             valid &= UiFeedback.ValidateRequired(_ep, textBoxClassName, "lớp");
-            if (!valid) UiFeedback.FocusFirstError(_ep, textBoxFullName, textBoxEmail, textBoxPhoneNumber, textBoxClassName);
+            if (!valid) UiFeedback.FocusFirstError(_ep, textBoxId, textBoxFullName, textBoxEmail, textBoxPhoneNumber, textBoxClassName);
             return valid;
         }
     }
