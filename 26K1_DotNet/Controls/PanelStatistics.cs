@@ -18,6 +18,9 @@ namespace _26K1_DotNet
         private readonly Form1 _mainForm;
 
         private ComboBox cmbSem = null!;
+        private ComboBox cmbDebtClass = null!;
+        private TextBox txtDebtSearch = null!;
+        private CheckBox chkOverdueOnly = null!;
 
         // Containers
         private Panel scroll = null!;
@@ -39,11 +42,13 @@ namespace _26K1_DotNet
         private Label lblDebtTitle = null!;
         private Button btnQuickPay = null!, btnDebtNotice = null!, btnExportDebt = null!;
         private Button btnToggleDebt = null!, btnToggleClass = null!, btnToggleAll = null!;
+        private FlowLayoutPanel debtFilters = null!;
         private List<TuitionFee> _currentDebtFees = new();
         private List<TuitionFee> _currentAllFees = new();
         private int _currentPct = 0;
         private int _viewMode = 0; // 0 = SV Nợ, 1 = Theo Lớp, 2 = Tất cả SV
         private Label _lblEmpty = null!;
+        private bool _updatingDebtFilters;
 
         public PanelStatistics(StudentService sv, SemesterService sem, TuitionService tui,
             ReceiptService receiptSvc, Form1 mainForm)
@@ -61,49 +66,15 @@ namespace _26K1_DotNet
         {
             BackColor = UITheme.Background;
 
-            // ── Toolbar (Responsive FlowLayoutPanel) ───────────────────────
-            var toolbar = new Panel
-            {
-                Dock = DockStyle.Top, Height = 70,
-                BackColor = UITheme.Surface
-            };
-            toolbar.Controls.Add(UITheme.HSep(DockStyle.Bottom));
-
-            var flowFilter = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Left,
-                FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false,
-                AutoSize = true,
-                BackColor = Color.Transparent,
-                Padding = new Padding(28, 18, 0, 0)
-            };
-
-            var lblSem = new Label
-            {
-                Text = "Chọn học kỳ:",
-                AutoSize = true,
-                Font = UITheme.FontSmallBold,
-                ForeColor = UITheme.TextSecondary,
-                Margin = new Padding(0, 7, 8, 0)
-            };
-
+            // The global semester badge in Form1 is the single semester selector.
+            // Keep this unparented combo as lightweight selection state so the existing
+            // report/export logic and regression tests share one selected semester value.
             cmbSem = new ComboBox
             {
-                Width = 220, Height = 32,
-                Font = UITheme.FontBody,
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                BackColor = UITheme.SurfaceAlt,
-                Margin = new Padding(0, 3, 14, 0)
+                Visible = false,
+                DropDownStyle = ComboBoxStyle.DropDownList
             };
             cmbSem.SelectedIndexChanged += (s, e) => LoadStats();
-
-            var btnRefresh = UITheme.GhostBtn("Làm mới", 95, 34);
-            btnRefresh.Margin = new Padding(0, 2, 0, 0);
-            btnRefresh.Click += (s, e) => RefreshData();
-
-            flowFilter.Controls.AddRange(new Control[] { lblSem, cmbSem, btnRefresh });
-            toolbar.Controls.Add(flowFilter);
 
             // ── Scrollable content container ──────────────────────────────
             scroll = new Panel
@@ -130,7 +101,7 @@ namespace _26K1_DotNet
             var c1 = BuildBigCard("Tổng học phí", UITheme.Primary, out lblTotVal);
             var c2 = BuildBigCard("Đã thu",        UITheme.Success, out lblPaidVal);
             var c3 = BuildBigCard("Còn phải thu",  UITheme.Danger,  out lblLeftVal);
-            var c4 = BuildBigCard("Số phiếu",      UITheme.Purple,  out lblCntVal);
+            var c4 = BuildBigCard("Sinh viên có học phí", UITheme.Purple, out lblCntVal);
 
             cardsTable.Controls.Add(c1, 0, 0);
             cardsTable.Controls.Add(c2, 1, 0);
@@ -158,7 +129,7 @@ namespace _26K1_DotNet
 
             var lblProgTitle = new Label
             {
-                Text = "Tiến độ thu học phí",
+                Text = "Tiến độ thu học phí (toàn học kỳ)",
                 Font = UITheme.FontH2, ForeColor = UITheme.TextPrimary,
                 Location = new Point(20, 14), AutoSize = true,
                 Parent = progCard
@@ -255,7 +226,7 @@ namespace _26K1_DotNet
 
             var debtHeader = new Panel
             {
-                Dock = DockStyle.Top, Height = 94,
+                Dock = DockStyle.Top, Height = 138,
                 BackColor = Color.Transparent,
                 Padding = new Padding(12, 8, 12, 4)
             };
@@ -293,10 +264,10 @@ namespace _26K1_DotNet
 
             var flowDebtRight = new FlowLayoutPanel
             {
-                Dock = DockStyle.Bottom,
+                Dock = DockStyle.Top,
                 FlowDirection = FlowDirection.RightToLeft,
                 WrapContents = false,
-                AutoSize = true,
+                Height = 36,
                 BackColor = Color.Transparent
             };
 
@@ -318,8 +289,47 @@ namespace _26K1_DotNet
 
             flowDebtRight.Controls.AddRange(new Control[] { btnExportDebt, btnExportPdf, btnDebtNotice, btnQuickPay });
 
+            debtFilters = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 34,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                BackColor = Color.Transparent,
+                Padding = new Padding(0, 2, 0, 0)
+            };
+            cmbDebtClass = new ComboBox
+            {
+                Width = 145, Height = 28, DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = UITheme.FontSmall, BackColor = UITheme.SurfaceAlt, Margin = new Padding(0, 2, 8, 0)
+            };
+            cmbDebtClass.AccessibleName = "Lọc công nợ theo lớp";
+            cmbDebtClass.SelectedIndexChanged += (s, e) => { if (!_updatingDebtFilters && cmbSem.SelectedItem is SemItem) LoadStats(); };
+            txtDebtSearch = new TextBox
+            {
+                Width = 175, Font = UITheme.FontSmall, PlaceholderText = "Tìm mã, tên hoặc lớp",
+                Margin = new Padding(0, 2, 8, 0)
+            };
+            txtDebtSearch.AccessibleName = "Tìm sinh viên trong danh sách công nợ";
+            txtDebtSearch.TextChanged += (s, e) => { if (!_updatingDebtFilters && cmbSem.SelectedItem is SemItem) LoadStats(); };
+            chkOverdueOnly = new CheckBox
+            {
+                Visible = false
+            };
+            chkOverdueOnly.CheckedChanged += (s, e) => { if (!_updatingDebtFilters && cmbSem.SelectedItem is SemItem) LoadStats(); };
+            debtFilters.Controls.AddRange(new Control[]
+            {
+                new Label { Text = "Lớp:", AutoSize = true, Font = UITheme.FontSmall,
+                    ForeColor = UITheme.TextSecondary, Margin = new Padding(0, 7, 5, 0) },
+                cmbDebtClass,
+                new Label { Text = "Tìm SV:", AutoSize = true, Font = UITheme.FontSmall,
+                    ForeColor = UITheme.TextSecondary, Margin = new Padding(0, 7, 5, 0) },
+                txtDebtSearch
+            });
+
             debtHeader.Controls.Add(flowDebtLeft);
             debtHeader.Controls.Add(flowDebtRight);
+            debtHeader.Controls.Add(debtFilters);
 
             dgvDebt = new DataGridView
             {
@@ -352,7 +362,6 @@ namespace _26K1_DotNet
             scroll.Controls.AddRange(new Control[] { cardsTable, progCard, breakCard, debtCard });
 
             Controls.Add(scroll);
-            Controls.Add(toolbar);
 
             LayoutContent();
         }
@@ -480,12 +489,13 @@ namespace _26K1_DotNet
             var stats = _tuiSvc.GetStatistics(si.Id, si.Name);
             var svDict = _svSvc.GetAllStudents().ToDictionary(x => x.Id);
             var fees = _tuiSvc.GetBySemester(si.Id);
+            PopulateClassFilter(svDict);
 
             // Big cards
             lblTotVal.Text  = $"{stats.TotalAmount:N0} ₫";
             lblPaidVal.Text = $"{stats.TotalPaid:N0} ₫";
             lblLeftVal.Text = $"{stats.TotalRemaining:N0} ₫";
-            lblCntVal.Text  = $"{stats.TotalStudents} phiếu";
+            lblCntVal.Text  = $"{stats.TotalStudents} SV";
 
             // Progress bar
             _currentPct = stats.TotalAmount > 0 ? (int)(stats.TotalPaid / stats.TotalAmount * 100) : 0;
@@ -515,9 +525,8 @@ namespace _26K1_DotNet
                 return;
             }
 
-            _currentDebtFees = fees.Where(f => f.Status != PaymentStatus.Paid)
-                .OrderByDescending(f => f.RemainingAmount).ToList();
-            lblDebtTitle.Text = $"Sinh viên còn nợ ({_currentDebtFees.Count} SV)";
+            _currentDebtFees = BuildFilteredDebtFees(fees, svDict);
+            lblDebtTitle.Text = "Sinh viên còn nợ";
 
             var currentSem = _semSvc.GetById(si.Id);
             var rows = _currentDebtFees.Select(f => new
@@ -539,7 +548,7 @@ namespace _26K1_DotNet
 
             if (_currentDebtFees.Count == 0)
             {
-                _lblEmpty.Text = "Không có sinh viên nào nợ học phí trong học kỳ này.";
+                _lblEmpty.Text = "Không có sinh viên phù hợp bộ lọc công nợ.";
                 _lblEmpty.Visible = true;
             }
             else
@@ -569,6 +578,7 @@ namespace _26K1_DotNet
             // Toggle action buttons visibility
             btnQuickPay.Visible = mode != 1;
             btnDebtNotice.Visible = mode == 0;
+            debtFilters.Visible = mode == 0;
 
             lblDebtTitle.Text = mode switch
             {
@@ -586,31 +596,52 @@ namespace _26K1_DotNet
             }
         }
 
+        private void PopulateClassFilter(IReadOnlyDictionary<int, Student> students)
+        {
+            string selectedClass = cmbDebtClass.SelectedItem as string ?? "— Tất cả lớp —";
+            var classes = students.Values.Select(student => student.ClassName)
+                .Where(className => !string.IsNullOrWhiteSpace(className))
+                .Distinct(StringComparer.CurrentCultureIgnoreCase)
+                .OrderBy(className => className, StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
+
+            _updatingDebtFilters = true;
+            try
+            {
+                cmbDebtClass.Items.Clear();
+                cmbDebtClass.Items.Add("— Tất cả lớp —");
+                foreach (var className in classes) cmbDebtClass.Items.Add(className);
+                int index = cmbDebtClass.FindStringExact(selectedClass);
+                cmbDebtClass.SelectedIndex = index >= 0 ? index : 0;
+            }
+            finally { _updatingDebtFilters = false; }
+        }
+
+        private List<TuitionFee> BuildFilteredDebtFees(IEnumerable<TuitionFee> fees, IReadOnlyDictionary<int, Student> students)
+        {
+            string selectedClass = cmbDebtClass.SelectedItem as string ?? "— Tất cả lớp —";
+            string search = txtDebtSearch.Text.Trim();
+            bool onlyOverdue = chkOverdueOnly.Checked;
+
+            return fees.Where(fee => fee.Status != PaymentStatus.Paid)
+                .Where(fee => !onlyOverdue || fee.Status == PaymentStatus.Overdue)
+                .Where(fee => selectedClass == "— Tất cả lớp —" ||
+                    (students.TryGetValue(fee.StudentId, out var student) &&
+                     string.Equals(student.ClassName, selectedClass, StringComparison.CurrentCultureIgnoreCase)))
+                .Where(fee => string.IsNullOrWhiteSpace(search) ||
+                    $"SV{fee.StudentId:D4}".Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
+                    (students.TryGetValue(fee.StudentId, out var student) &&
+                     (student.FullName.Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
+                      student.ClassName.Contains(search, StringComparison.CurrentCultureIgnoreCase))))
+                .OrderByDescending(fee => fee.RemainingAmount)
+                .ToList();
+        }
+
         private void LoadClassStats(int semesterId)
         {
             var fees = _tuiSvc.GetBySemester(semesterId);
             var svDict = _svSvc.GetAllStudents().ToDictionary(x => x.Id);
-
-            var classGroups = fees
-                .GroupBy(f => svDict.TryGetValue(f.StudentId, out var sv) && !string.IsNullOrWhiteSpace(sv.ClassName) ? sv.ClassName : "Chưa phân lớp")
-                .Select(g =>
-                {
-                    decimal total = g.Sum(x => x.TotalAmount);
-                    decimal paid = g.Sum(x => x.PaidAmount);
-                    decimal remaining = total - paid;
-                    int pct = total > 0 ? (int)(paid / total * 100) : 100;
-                    return new
-                    {
-                        Lop = g.Key,
-                        SoSV = g.Select(x => x.StudentId).Distinct().Count(),
-                        PhaiThu = total,
-                        DaThu = paid,
-                        ConNo = remaining,
-                        TyLe = $"{pct}%"
-                    };
-                })
-                .OrderByDescending(c => c.ConNo)
-                .ToList();
+            var classGroups = BuildClassStats(fees, svDict);
 
             dgvDebt.DataSource = null;
             dgvDebt.DataSource = classGroups;
@@ -805,6 +836,9 @@ namespace _26K1_DotNet
                 cHan.Width = 110;
                 cHan.DefaultCellStyle.Padding = new Padding(2, 0, 2, 0);
                 cHan.HeaderCell.Style.Padding = new Padding(2, 0, 2, 0);
+                // At the minimum supported window width, prioritize student names and balances.
+                // The due date remains available in wider layouts and in exported reports.
+                cHan.Visible = debtCard.Width >= 900;
             }
             if (dgvDebt.Columns["TrangThai"] is { } c6)
             {
@@ -907,19 +941,7 @@ namespace _26K1_DotNet
                 if (cmbSem.SelectedItem is not SemItem si) return;
                 var fees = _tuiSvc.GetBySemester(si.Id);
                 var svDict = _svSvc.GetAllStudents().ToDictionary(x => x.Id);
-
-                var classGroups = fees
-                    .GroupBy(f => svDict.TryGetValue(f.StudentId, out var sv) && !string.IsNullOrWhiteSpace(sv.ClassName) ? sv.ClassName : "Chưa phân lớp")
-                    .Select(g =>
-                    {
-                        decimal total = g.Sum(x => x.TotalAmount);
-                        decimal paid = g.Sum(x => x.PaidAmount);
-                        decimal remaining = total - paid;
-                        int pct = total > 0 ? (int)(paid / total * 100) : 100;
-                        return new ClassStatRow(g.Key, g.Select(x => x.StudentId).Distinct().Count(), total, paid, remaining, $"{pct}%");
-                    })
-                    .OrderByDescending(c => c.ConNo)
-                    .ToList();
+                var classGroups = BuildClassStats(fees, svDict);
 
                 var cols = new List<(string Header, Func<ClassStatRow, object> ValueGetter)>
                 {
@@ -936,7 +958,9 @@ namespace _26K1_DotNet
             }
 
             var svDict2 = _svSvc.GetAllStudents().ToDictionary(x => x.Id);
-            var currentSem = _semSvc.GetAll().FirstOrDefault(s => s.Name == semName);
+            var currentSem = (cmbSem.SelectedItem as SemItem) is { } selected
+                ? _semSvc.GetById(selected.Id)
+                : null;
             var cols2 = new List<(string Header, Func<TuitionFee, object> ValueGetter)>
             {
                 ("Mã HP", f => f.Id),
@@ -961,23 +985,30 @@ namespace _26K1_DotNet
             if (cmbSem.SelectedItem is not SemItem selectedSemester) return;
             var students = _svSvc.GetAllStudents().ToDictionary(student => student.Id);
             var semester = _semSvc.GetById(selectedSemester.Id);
-            var fees = _viewMode == 2
-                ? _currentAllFees
-                : _viewMode == 1
-                    ? _tuiSvc.GetBySemester(selectedSemester.Id)
-                    : _currentDebtFees;
-            var rows = fees.Select(fee =>
+            List<DebtReportRow> rows;
+            if (_viewMode == 1)
             {
-                students.TryGetValue(fee.StudentId, out var student);
-                return new DebtReportRow(
-                    $"SV{fee.StudentId:D4}", student?.FullName ?? "Không tìm thấy hồ sơ",
-                    student?.ClassName ?? string.Empty, fee.TotalAmount, fee.PaidAmount,
-                    fee.RemainingAmount, fee.DueDate ?? semester?.DueDate, fee.StatusDisplayText);
-            }).ToList();
+                var classStats = BuildClassStats(_tuiSvc.GetBySemester(selectedSemester.Id), students);
+                rows = classStats.Select(item => new DebtReportRow(
+                    item.Lop, $"{item.SoSV} sinh viên", item.Lop, item.PhaiThu, item.DaThu,
+                    item.ConNo, semester?.DueDate, item.TyLe)).ToList();
+            }
+            else
+            {
+                var fees = _viewMode == 2 ? _currentAllFees : _currentDebtFees;
+                rows = fees.Select(fee =>
+                {
+                    students.TryGetValue(fee.StudentId, out var student);
+                    return new DebtReportRow(
+                        $"SV{fee.StudentId:D4}", student?.FullName ?? "Không tìm thấy hồ sơ",
+                        student?.ClassName ?? string.Empty, fee.TotalAmount, fee.PaidAmount,
+                        fee.RemainingAmount, fee.DueDate ?? semester?.DueDate, fee.StatusDisplayText);
+                }).ToList();
+            }
 
             string viewDescription = _viewMode switch
             {
-                1 => "Tổng hợp chi tiết theo lớp",
+                1 => "Tổng hợp theo lớp",
                 2 => "Tất cả sinh viên",
                 _ => "Sinh viên còn nợ"
             };
@@ -1002,5 +1033,23 @@ namespace _26K1_DotNet
         }
 
         private record ClassStatRow(string Lop, int SoSV, decimal PhaiThu, decimal DaThu, decimal ConNo, string TyLe);
+
+        private static List<ClassStatRow> BuildClassStats(IEnumerable<TuitionFee> fees, IReadOnlyDictionary<int, Student> students)
+        {
+            return fees
+                .GroupBy(fee => students.TryGetValue(fee.StudentId, out var student) && !string.IsNullOrWhiteSpace(student.ClassName)
+                    ? student.ClassName
+                    : "Chưa phân lớp")
+                .Select(group =>
+                {
+                    decimal total = group.Sum(fee => fee.TotalAmount);
+                    decimal paid = group.Sum(fee => fee.PaidAmount);
+                    decimal remaining = total - paid;
+                    int percent = total > 0 ? (int)(paid / total * 100) : 100;
+                    return new ClassStatRow(group.Key, group.Select(fee => fee.StudentId).Distinct().Count(), total, paid, remaining, $"{percent}%");
+                })
+                .OrderByDescending(row => row.ConNo)
+                .ToList();
+        }
     }
 }

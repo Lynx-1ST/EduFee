@@ -131,6 +131,7 @@ namespace K26_DotNet.Data
             using var tx = conn.BeginTransaction();
             try
             {
+                ValidateLedger(conn, tx);
                 const string students = "Students_v1";
                 const string semesters = "Semesters_v1";
                 const string fees = "TuitionFees_v1";
@@ -160,6 +161,8 @@ namespace K26_DotNet.Data
                     ALTER TABLE TuitionFees_v1 RENAME TO TuitionFees;
                     ALTER TABLE PaymentReceipts_v1 RENAME TO PaymentReceipts;");
 
+                PopulateLegacyReceiptSnapshots(conn, tx);
+
                 SetSchemaVersion(conn, tx, CurrentSchemaVersion);
                 tx.Commit();
             }
@@ -176,6 +179,7 @@ namespace K26_DotNet.Data
             using var tx = conn.BeginTransaction();
             try
             {
+                ValidateLedger(conn, tx);
                 ExecuteNonQuery(conn, tx, @"
                     ALTER TABLE PaymentReceipts ADD COLUMN StudentNameSnapshot TEXT NOT NULL DEFAULT '';
                     ALTER TABLE PaymentReceipts ADD COLUMN StudentCodeSnapshot TEXT NOT NULL DEFAULT '';
@@ -184,18 +188,8 @@ namespace K26_DotNet.Data
                     ALTER TABLE PaymentReceipts ADD COLUMN TotalTuitionSnapshot INTEGER NOT NULL DEFAULT 0;
                     ALTER TABLE PaymentReceipts ADD COLUMN TotalPaidAfterSnapshot INTEGER NOT NULL DEFAULT 0;
                     ALTER TABLE PaymentReceipts ADD COLUMN RemainingAfterSnapshot INTEGER NOT NULL DEFAULT 0;
-                    ALTER TABLE PaymentReceipts ADD COLUMN DueDateSnapshot TEXT;
-
-                    UPDATE PaymentReceipts
-                    SET StudentNameSnapshot = COALESCE((SELECT FullName FROM Students WHERE Id=PaymentReceipts.StudentId), ''),
-                        StudentCodeSnapshot = printf('SV%04d', StudentId),
-                        ClassNameSnapshot = COALESCE((SELECT ClassName FROM Students WHERE Id=PaymentReceipts.StudentId), ''),
-                        SemesterNameSnapshot = COALESCE((SELECT Name FROM Semesters WHERE Id=PaymentReceipts.SemesterId), ''),
-                        TotalTuitionSnapshot = COALESCE((SELECT TotalAmount FROM TuitionFees WHERE Id=PaymentReceipts.FeeId), 0),
-                        TotalPaidAfterSnapshot = COALESCE((SELECT PaidAmount FROM TuitionFees WHERE Id=PaymentReceipts.FeeId), Amount),
-                        RemainingAfterSnapshot = COALESCE((SELECT TotalAmount-PaidAmount FROM TuitionFees WHERE Id=PaymentReceipts.FeeId), 0),
-                        DueDateSnapshot = COALESCE((SELECT DueDate FROM TuitionFees WHERE Id=PaymentReceipts.FeeId),
-                                                   (SELECT DueDate FROM Semesters WHERE Id=PaymentReceipts.SemesterId));");
+                    ALTER TABLE PaymentReceipts ADD COLUMN DueDateSnapshot TEXT;");
+                PopulateLegacyReceiptSnapshots(conn, tx);
                 SetSchemaVersion(conn, tx, CurrentSchemaVersion);
                 tx.Commit();
             }
@@ -217,6 +211,71 @@ namespace K26_DotNet.Data
             cmd.Transaction = tx;
             cmd.CommandText = sql;
             cmd.ExecuteNonQuery();
+        }
+
+        private static void PopulateLegacyReceiptSnapshots(SqliteConnection conn, SqliteTransaction tx)
+        {
+            var rows = new List<(long Id, long FeeId, long Amount, long Total, string StudentName,
+                string StudentCode, string ClassName, string SemesterName, string? DueDate)>();
+            using (var command = conn.CreateCommand())
+            {
+                command.Transaction = tx;
+                command.CommandText = @"
+                    SELECT r.Id, r.FeeId, r.Amount, f.TotalAmount,
+                           s.FullName, printf('SV%04d', r.StudentId), COALESCE(s.ClassName, ''),
+                           sem.Name, COALESCE(f.DueDate, sem.DueDate)
+                    FROM PaymentReceipts r
+                    JOIN TuitionFees f ON f.Id = r.FeeId
+                    JOIN Students s ON s.Id = r.StudentId
+                    JOIN Semesters sem ON sem.Id = r.SemesterId
+                    ORDER BY r.FeeId, r.PaymentDate, r.Id;";
+                using var reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    rows.Add((reader.GetInt64(0), reader.GetInt64(1), reader.GetInt64(2), reader.GetInt64(3),
+                        reader.GetString(4), reader.GetString(5), reader.GetString(6), reader.GetString(7),
+                        reader.IsDBNull(8) ? null : reader.GetString(8)));
+                }
+            }
+
+            long currentFeeId = -1;
+            long paidAfter = 0;
+            foreach (var row in rows)
+            {
+                if (row.FeeId != currentFeeId)
+                {
+                    currentFeeId = row.FeeId;
+                    paidAfter = 0;
+                }
+
+                paidAfter = checked(paidAfter + row.Amount);
+                if (paidAfter > row.Total)
+                    throw new InvalidDataException("Tổng biên lai vượt quá học phí trong dữ liệu cần nâng cấp.");
+
+                using var update = conn.CreateCommand();
+                update.Transaction = tx;
+                update.CommandText = @"
+                    UPDATE PaymentReceipts
+                    SET StudentNameSnapshot = @studentName,
+                        StudentCodeSnapshot = @studentCode,
+                        ClassNameSnapshot = @className,
+                        SemesterNameSnapshot = @semesterName,
+                        TotalTuitionSnapshot = @total,
+                        TotalPaidAfterSnapshot = @paidAfter,
+                        RemainingAfterSnapshot = @remaining,
+                        DueDateSnapshot = @dueDate
+                    WHERE Id = @id;";
+                update.Parameters.AddWithValue("@studentName", row.StudentName);
+                update.Parameters.AddWithValue("@studentCode", row.StudentCode);
+                update.Parameters.AddWithValue("@className", row.ClassName);
+                update.Parameters.AddWithValue("@semesterName", row.SemesterName);
+                update.Parameters.AddWithValue("@total", row.Total);
+                update.Parameters.AddWithValue("@paidAfter", paidAfter);
+                update.Parameters.AddWithValue("@remaining", row.Total - paidAfter);
+                update.Parameters.AddWithValue("@dueDate", (object?)row.DueDate ?? DBNull.Value);
+                update.Parameters.AddWithValue("@id", row.Id);
+                update.ExecuteNonQuery();
+            }
         }
 
         private static string CreateTablesSql(string students, string semesters, string fees, string receipts) => $@"
@@ -305,6 +364,8 @@ namespace K26_DotNet.Data
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
             string fullPath = Path.GetFullPath(destinationPath);
+            if (string.Equals(fullPath, DbPath, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Tệp sao lưu phải khác cơ sở dữ liệu đang sử dụng.");
             string? directory = Path.GetDirectoryName(fullPath);
             if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
 
@@ -339,7 +400,7 @@ namespace K26_DotNet.Data
                 throw new InvalidDataException("Tệp sao lưu không đúng phiên bản hoặc thiếu bảng dữ liệu EduFee.");
             ValidateRestoreContract(source);
 
-            string safetyBackup = DbPath + $".before-restore-{DateTime.Now:yyyyMMdd-HHmmss}.db";
+            string safetyBackup = GetUniqueSafetyBackupPath();
             BackupTo(safetyBackup);
             using var destination = CreateConnection();
             source.BackupDatabase(destination);
@@ -377,8 +438,71 @@ namespace K26_DotNet.Data
                 !HasIntegerColumn(source, "PaymentReceipts", "Amount"))
                 throw new InvalidDataException("Tệp sao lưu không dùng kiểu INTEGER cho tiền VND.");
 
-            if (!HasUniqueIndex(source, "TuitionFees") || !HasUniqueIndex(source, "PaymentReceipts"))
+            if (!HasUniqueIndex(source, "TuitionFees", "StudentId", "SemesterId") ||
+                !HasUniqueIndex(source, "PaymentReceipts", "ReceiptCode"))
                 throw new InvalidDataException("Tệp sao lưu thiếu ràng buộc duy nhất bắt buộc.");
+
+            ValidateLedger(source, null);
+            ValidateReceiptSnapshots(source, null);
+        }
+
+        private string GetUniqueSafetyBackupPath()
+        {
+            string prefix = DbPath + $".before-restore-{DateTime.Now:yyyyMMdd-HHmmss}";
+            string candidate = prefix + ".db";
+            for (int suffix = 1; File.Exists(candidate); suffix++)
+                candidate = prefix + $"-{suffix}.db";
+            return candidate;
+        }
+
+        private static void ValidateLedger(SqliteConnection connection, SqliteTransaction? transaction)
+        {
+            using (var links = connection.CreateCommand())
+            {
+                links.Transaction = transaction;
+                links.CommandText = @"
+                    SELECT 1
+                    FROM PaymentReceipts r
+                    JOIN TuitionFees f ON f.Id = r.FeeId
+                    WHERE r.StudentId <> f.StudentId OR r.SemesterId <> f.SemesterId
+                    LIMIT 1;";
+                if (links.ExecuteScalar() is not null)
+                    throw new InvalidDataException("Biên lai không khớp sinh viên hoặc học kỳ của học phí.");
+            }
+
+            using (var totals = connection.CreateCommand())
+            {
+                totals.Transaction = transaction;
+                totals.CommandText = @"
+                    SELECT 1
+                    FROM TuitionFees f
+                    LEFT JOIN PaymentReceipts r ON r.FeeId = f.Id
+                    GROUP BY f.Id, f.PaidAmount
+                    HAVING f.PaidAmount <> COALESCE(SUM(r.Amount), 0)
+                    LIMIT 1;";
+                if (totals.ExecuteScalar() is not null)
+                    throw new InvalidDataException("Tổng tiền biên lai không khớp số đã thu của học phí.");
+            }
+        }
+
+        private static void ValidateReceiptSnapshots(SqliteConnection connection, SqliteTransaction? transaction)
+        {
+            using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = @"
+                SELECT 1
+                FROM PaymentReceipts
+                WHERE typeof(TotalTuitionSnapshot) <> 'integer'
+                   OR typeof(TotalPaidAfterSnapshot) <> 'integer'
+                   OR typeof(RemainingAfterSnapshot) <> 'integer'
+                   OR TotalTuitionSnapshot < 0
+                   OR TotalPaidAfterSnapshot < Amount
+                   OR TotalPaidAfterSnapshot > TotalTuitionSnapshot
+                   OR RemainingAfterSnapshot < 0
+                   OR TotalPaidAfterSnapshot + RemainingAfterSnapshot <> TotalTuitionSnapshot
+                LIMIT 1;";
+            if (command.ExecuteScalar() is not null)
+                throw new InvalidDataException("Tệp sao lưu chứa snapshot tiền biên lai không hợp lệ.");
         }
 
         private static int CountPragmaRows(SqliteConnection connection, string commandText)
@@ -402,13 +526,29 @@ namespace K26_DotNet.Data
             return false;
         }
 
-        private static bool HasUniqueIndex(SqliteConnection connection, string table)
+        private static bool HasUniqueIndex(SqliteConnection connection, string table, params string[] expectedColumns)
         {
+            var indexes = new List<string>();
             using var command = connection.CreateCommand();
             command.CommandText = $"PRAGMA index_list('{table}');";
-            using var reader = command.ExecuteReader();
-            while (reader.Read())
-                if (reader.GetInt32(2) == 1) return true;
+            using (var reader = command.ExecuteReader())
+            {
+                while (reader.Read())
+                    if (reader.GetInt32(2) == 1) indexes.Add(reader.GetString(1));
+            }
+
+            foreach (string index in indexes)
+            {
+                var columns = new List<string>();
+                using var info = connection.CreateCommand();
+                info.CommandText = $"PRAGMA index_info('{index.Replace("'", "''")}');";
+                using var infoReader = info.ExecuteReader();
+                while (infoReader.Read()) columns.Add(infoReader.GetString(2));
+                if (columns.Count == expectedColumns.Length &&
+                    columns.Zip(expectedColumns, (actual, expected) =>
+                        string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase)).All(matches => matches))
+                    return true;
+            }
             return false;
         }
     }

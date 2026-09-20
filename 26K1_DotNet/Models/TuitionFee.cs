@@ -34,13 +34,21 @@ namespace K26_DotNet.Models
 
         public TuitionFee(int id, int studentId, int semesterId, int credits, decimal pricePerCredit = 620_000m, string note = "", DateTime? dueDate = null, decimal discountAmount = 0, string discountReason = "")
         {
+            if (credits <= 0) throw new ArgumentOutOfRangeException(nameof(credits), "Số tín chỉ phải lớn hơn 0.");
+            if (pricePerCredit <= 0) throw new ArgumentOutOfRangeException(nameof(pricePerCredit), "Đơn giá tín chỉ phải lớn hơn 0.");
+            if (discountAmount < 0) throw new ArgumentOutOfRangeException(nameof(discountAmount), "Khoản miễn giảm không được âm.");
+
+            decimal originalAmount = checked(credits * pricePerCredit);
+            if (discountAmount > originalAmount)
+                throw new ArgumentOutOfRangeException(nameof(discountAmount), "Khoản miễn giảm không được vượt quá học phí gốc.");
+
             Id = id;
             StudentId = studentId;
             SemesterId = semesterId;
             Credits = credits;
             DiscountAmount = discountAmount;
             DiscountReason = discountReason ?? string.Empty;
-            TotalAmount = Math.Max(0, (credits * pricePerCredit) - discountAmount);
+            TotalAmount = originalAmount - discountAmount;
             PaidAmount = 0;
             PaidDate = null;
             DueDate = dueDate;

@@ -14,12 +14,14 @@ namespace _26K1_DotNet
         private readonly StudentService _studentSvc;
         private readonly ReceiptService _receiptSvc;
         private readonly EmailService _emailSvc;
+        private readonly IQrPaymentGateway _qrGateway = new MockQrPaymentGateway();
 
         private NumericUpDown numAmount = null!;
         private ComboBox cmbMethod = null!;
         private TextBox txtPayer = null!;
         private TextBox txtNote = null!;
         private CheckBox chkSendEmail = null!;
+        private Button btnConfirm = null!;
         private bool _paymentRecorded;
         private bool _submitting;
 
@@ -60,7 +62,7 @@ namespace _26K1_DotNet
             var footer = new Panel { Dock = DockStyle.Bottom, Height = 64, BackColor = UITheme.Surface };
             footer.Controls.Add(UITheme.HSep(DockStyle.Top));
 
-            var btnConfirm = UITheme.PrimaryBtn("Xác nhận thu", 140, 38);
+            btnConfirm = UITheme.PrimaryBtn("Xác nhận thu", 160, 38);
             btnConfirm.Font = UITheme.FontBold;
             btnConfirm.Click += BtnConfirm_Click;
 
@@ -143,8 +145,14 @@ namespace _26K1_DotNet
                 BackColor = UITheme.SurfaceAlt,
                 AccessibleName = "Hình thức thanh toán"
             };
-            cmbMethod.Items.AddRange(new object[] { "Chuyển khoản ngân hàng", "Tiền mặt", "Thẻ ATM / Thẻ tín dụng" });
+            cmbMethod.Items.AddRange(new object[]
+            {
+                "VietQR (mô phỏng)", "MoMo QR (mô phỏng)",
+                "Chuyển khoản ngân hàng", "Tiền mặt", "Thẻ ATM / Thẻ tín dụng"
+            });
             cmbMethod.SelectedIndex = 0;
+            cmbMethod.SelectedIndexChanged += (s, e) =>
+                btnConfirm.Text = IsQrMethod() ? "Tạo mã QR" : "Xác nhận thu";
             card.Controls.Add(cmbMethod);
             y += 42;
 
@@ -245,6 +253,20 @@ namespace _26K1_DotNet
                 var sem = _semSvc.GetById(_fee.SemesterId);
                 var student = _studentSvc.GetStudentById(_fee.StudentId);
 
+                if (IsQrMethod())
+                {
+                    var provider = cmbMethod.SelectedIndex == 1 ? QrPaymentProvider.MoMo : QrPaymentProvider.VietQr;
+                    string description = $"SV{_fee.StudentId:D4} HP {sem?.Name ?? _fee.SemesterId.ToString()}";
+                    var session = _qrGateway.CreateSession(new QrPaymentRequest(provider, _fee.Id,
+                        _fee.StudentId, _fee.SemesterId, amount, description));
+                    using var qrForm = new FormQrPayment(_qrGateway, session);
+                    if (qrForm.ShowDialog(this) != DialogResult.OK || qrForm.Confirmation?.IsSuccessful != true) return;
+                    method = $"{session.ProviderName} (mô phỏng)";
+                    note = string.IsNullOrWhiteSpace(note)
+                        ? $"QR mô phỏng: {session.TransactionId}"
+                        : $"{note} | QR mô phỏng: {session.TransactionId}";
+                }
+
                 // Record the balance update and receipt in one SQLite transaction.
                 var receipt = _tuiSvc.RecordPaymentWithReceipt(_fee.Id, amount, sem?.DueDate,
                     _receiptSvc, method, payer, note);
@@ -291,5 +313,7 @@ namespace _26K1_DotNet
             }
             finally { _submitting = false; }
         }
+
+        private bool IsQrMethod() => cmbMethod.SelectedIndex is 0 or 1;
     }
 }

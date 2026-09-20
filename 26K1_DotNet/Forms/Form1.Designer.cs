@@ -213,7 +213,6 @@ namespace _26K1_DotNet
             WireHover(lblWidgetStatus);
 
             panelSemWidget.Controls.AddRange(new Control[] { lblWidgetTitle, lblWidgetSemName, lblWidgetStatus });
-            flowNavMiddle.Controls.Add(panelSemWidget);
 
             // Sidebar footer
             panelSidebarFooter.Dock = DockStyle.Bottom;
@@ -252,7 +251,7 @@ namespace _26K1_DotNet
             // HEADER
             // ═══════════════════════════════════════════════════════════════
             panelHeader.Dock = DockStyle.Top;
-            panelHeader.Height = 76;
+            panelHeader.Height = 86;
             panelHeader.BackColor = UITheme.Surface;
             panelHeader.Padding = new Padding(32, 0, 32, 0);
 
@@ -262,7 +261,7 @@ namespace _26K1_DotNet
                 WrapContents = false,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                Location = new Point(32, 14),
+                Location = new Point(32, 11),
                 BackColor = UITheme.Surface,
                 Margin = Padding.Empty,
                 Padding = Padding.Empty
@@ -276,7 +275,7 @@ namespace _26K1_DotNet
             labelPageTitle.AutoSize = true;
 
             lblPageSub.Text = "";
-            lblPageSub.Font = UITheme.FontSmall;
+            lblPageSub.Font = UITheme.FontBody;
             lblPageSub.ForeColor = UITheme.TextSecondary;
             lblPageSub.UseMnemonic = false;
             lblPageSub.Margin = new Padding(0, 0, 0, 0);
@@ -292,7 +291,7 @@ namespace _26K1_DotNet
                 ForeColor = UITheme.PrimaryDark,
                 BackColor = UITheme.PrimaryLight,
                 Padding = new Padding(14, 8, 14, 8),
-                Location = new Point(880, 20),
+                Location = new Point(880, 22),
                 Text = "Học kỳ: —",
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
                 Cursor = Cursors.Hand
@@ -307,7 +306,16 @@ namespace _26K1_DotNet
             };
             lblHeaderSemesterBadge.Click += (s, e) => OpenSemesterQuickSwitch(lblHeaderSemesterBadge, new Point(0, lblHeaderSemesterBadge.Height + 2));
 
+            void PositionSemesterBadge()
+            {
+                lblHeaderSemesterBadge.Left = Math.Max(420,
+                    panelHeader.ClientSize.Width - panelHeader.Padding.Right - lblHeaderSemesterBadge.Width);
+            }
+            panelHeader.Resize += (s, e) => PositionSemesterBadge();
+            lblHeaderSemesterBadge.TextChanged += (s, e) => PositionSemesterBadge();
+
             panelHeader.Controls.AddRange(new Control[] { panelTitleBox, lblHeaderSemesterBadge });
+            lblHeaderSemesterBadge.BringToFront();
             panelHeader.Paint += (s, e) =>
             {
                 using var pen = new Pen(UITheme.Border, 1);

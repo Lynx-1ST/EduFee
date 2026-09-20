@@ -28,7 +28,6 @@ namespace _26K1_DotNet
         private List<TuitionFee> _current = new();
         private int? _studentContextId;
         private bool _suppressFilterEvents;
-        private bool _hasInitializedSemesters;
 
         public PanelTuition(StudentService sv, SemesterService sem, TuitionService tui,
             ReceiptService receiptSvc, Form1 mainForm)
@@ -50,7 +49,7 @@ namespace _26K1_DotNet
             var toolbar = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 98,
+                Height = 92,
                 BackColor = UITheme.Surface,
                 Padding = new Padding(24, 10, 24, 8)
             };
@@ -131,7 +130,8 @@ namespace _26K1_DotNet
             row1.Controls.Add(flowSearch);
             row1.Controls.Add(flowActions);
 
-            // Row 2: Semester & Status filters + Student Context badge
+            // Row 2: Status filter + Student Context badge. The semester is selected
+            // globally from the badge in Form1, so it is not repeated here.
             var row2 = new Panel
             {
                 Dock = DockStyle.Top,
@@ -151,27 +151,11 @@ namespace _26K1_DotNet
                 Padding = Padding.Empty
             };
 
-            var lblSem = new Label
-            {
-                Text = "Học kỳ:",
-                AutoSize = true,
-                Margin = new Padding(0, 8, 4, 0),
-                Font = UITheme.FontSmallBold,
-                ForeColor = UITheme.TextSecondary
-            };
             cmbSem = new ComboBox
             {
-                Width = 145,
-                Height = 30,
-                Font = UITheme.FontBody,
                 DropDownStyle = ComboBoxStyle.DropDownList,
-                BackColor = UITheme.SurfaceAlt,
-                Margin = new Padding(0, 2, 4, 0)
+                Visible = false
             };
-            var btnManageSem = UITheme.GhostBtn("...", 36, 30);
-            btnManageSem.AccessibleName = "Quản lý học kỳ";
-            btnManageSem.Margin = new Padding(0, 2, 14, 0);
-            btnManageSem.Click += (s, e) => _mainForm.OpenSemesterManager();
 
             var lblStatus = new Label
             {
@@ -205,7 +189,6 @@ namespace _26K1_DotNet
             lblStudentContext.Click += (s, e) => ResetFilters();
 
             flowFilters.Controls.AddRange(new Control[] {
-                lblSem, cmbSem, btnManageSem,
                 lblStatus, cmbStatus,
                 lblStudentContext
             });
@@ -401,19 +384,16 @@ namespace _26K1_DotNet
 
         public void RefreshData(int? selectSemesterId = null)
         {
-            int selectedSemesterId = selectSemesterId ?? (cmbSem.SelectedItem is SemItem selected ? selected.Id : 0);
+            int selectedSemesterId = selectSemesterId ?? _semSvc.GetActive()?.Id ?? 0;
             _suppressFilterEvents = true;
             try
             {
                 cmbSem.Items.Clear();
-                cmbSem.Items.Add(new SemItem(0, "— Tất cả học kỳ —"));
                 foreach (var s in _semSvc.GetAll()) cmbSem.Items.Add(new SemItem(s.Id, s.Name));
 
-                int semesterToSelect = selectSemesterId ?? (_hasInitializedSemesters ? selectedSemesterId : _semSvc.GetActive()?.Id ?? 0);
                 int index = Enumerable.Range(0, cmbSem.Items.Count)
-                    .FirstOrDefault(i => cmbSem.Items[i] is SemItem item && item.Id == semesterToSelect);
-                cmbSem.SelectedIndex = index;
-                _hasInitializedSemesters = true;
+                    .FirstOrDefault(i => cmbSem.Items[i] is SemItem item && item.Id == selectedSemesterId);
+                cmbSem.SelectedIndex = cmbSem.Items.Count == 0 ? -1 : index;
             }
             finally
             {
@@ -433,7 +413,6 @@ namespace _26K1_DotNet
             _suppressFilterEvents = true;
             try
             {
-                cmbSem.SelectedIndex = 0;
                 cmbStatus.SelectedIndex = 0;
                 _studentContextId = studentId;
                 txtSearch.Text = sv.FullName;
@@ -465,7 +444,6 @@ namespace _26K1_DotNet
             _suppressFilterEvents = true;
             try
             {
-                cmbSem.SelectedIndex = 0;
                 cmbStatus.SelectedIndex = 0;
                 _studentContextId = null;
                 txtSearch.Text = string.Empty;
@@ -538,7 +516,7 @@ namespace _26K1_DotNet
             dgv.DataSource = null;
             dgv.DataSource = rows;
 
-            bool hasFilter = cmbSem.SelectedIndex > 0 || cmbStatus.SelectedIndex > 0 || _studentContextId.HasValue || !string.IsNullOrWhiteSpace(txtSearch.Text);
+            bool hasFilter = cmbStatus.SelectedIndex > 0 || _studentContextId.HasValue || !string.IsNullOrWhiteSpace(txtSearch.Text);
             if (_current.Count == 0)
             {
                 _lblEmpty.Text = hasFilter

@@ -1,95 +1,60 @@
-# EduFee — Hệ Thống Quản Lý Sinh Viên & Học Phí
+# EduFee — Quản lý sinh viên và học phí
 
-> Ứng dụng Desktop Windows Forms quản lý sinh viên, học kỳ, học phí, thu tiền và công nợ trên nền tảng **.NET 10 (C# 14)** cho Trường Đại học Mỏ - Địa chất.
+Ứng dụng Windows Forms cho đồ án quản lý sinh viên, học kỳ, học phí, công nợ và biên lai trên một máy Windows. Dữ liệu vận hành được lưu bằng SQLite tại `%LocalAppData%\EduFee\edufee.db`.
 
----
+## Chức năng đã có
 
-## 📌 Tính Năng Nổi Bật
+- Thêm, sửa, tìm kiếm, lọc lớp, nhập và xuất CSV sinh viên.
+- Lập học kỳ và học phí theo tín chỉ, miễn giảm, hạn nộp, trạng thái nợ/quá hạn.
+- Ghi nhận thanh toán một phần hoặc đủ tiền; cập nhật học phí và phát hành biên lai trong một transaction SQLite.
+- Thanh toán QR mô phỏng VietQR/MoMo: tạo mã QR quét được, mã giao dịch và callback xác nhận giả lập trước khi lập biên lai; không kết nối tài khoản thật.
+- Thống kê công nợ theo học kỳ/lớp, xuất CSV và PDF; xuất PDF biên lai.
+- Sao lưu và phục hồi SQLite có kiểm tra trước khi thay dữ liệu; một phiên ứng dụng tại một thời điểm.
 
-* **Quản lý Sinh viên**: Thêm, sửa, xóa hồ sơ sinh viên; tìm kiếm theo tên, mã sinh viên, lọc theo lớp; nhập (Import) và xuất (Export) CSV chống lỗi ký tự xuống dòng, formula injection và trùng lặp mã.
-* **Quản lý Học phí & Học kỳ**: Thiết lập học kỳ, tính học phí tự động theo số tín chỉ (chuẩn 620.000 VNĐ/tín chỉ), hỗ trợ chính sách miễn giảm/học bổng, theo dõi hạn nộp và trạng thái quá hạn.
-* **Giao Dịch Thu Tiền & Biên Lai Nguyên Tử**: Ghi nhận nộp tiền và phát hành biên lai trong **cùng một transaction SQLite**. Không bao giờ xảy ra tình trạng đã trừ nợ nhưng thiếu biên lai hoặc ngược lại.
-* **Biên Lai Lịch Sử Bất Biến (Snapshot)**: Lưu trữ trọn vẹn trạng thái tại thời điểm thanh toán (tên SV, lớp, học kỳ, tổng học phí, số tiền đã đóng lũy kế, số dư còn lại) vào biên lai để bảo toàn tính pháp lý lịch sử.
-* **Xuất Báo Cáo & Biên Lai PDF Trực Tiếp**:
-  * Biên lai thu học phí: Định dạng chuẩn A4 Portrait.
-  * Báo cáo công nợ học phí: Định dạng A4 Landscape đa trang, tự động phân trang (23–24 dòng/trang) với lặp lại tiêu đề và dòng tổng kết tài chính không tràn lề.
-  * Không phụ thuộc vào cài đặt máy in hay driver của Windows.
-* **Bảo Mật & Độ Tin Cậy**:
-  * Mã hóa mật khẩu SMTP cấu hình gửi email bằng **Windows DPAPI** theo tài khoản người dùng Windows.
-  * Dữ liệu tiền tệ lưu trữ kiểu số nguyên đồng `INTEGER` tránh sai số làm tròn số thực.
-  * Bật kiểm soát khóa ngoại (`PRAGMA foreign_keys = ON`), chặn xóa hồ sơ có lịch sử tài chính.
-  * Sao lưu (Backup) và Phục hồi (Restore) SQLite có kiểm chứng toàn vẹn cấu trúc và hợp đồng schema.
-* **Trải Nghiệm UI/UX Hiện Đại**: Hệ thống theme tập trung (`UITheme`), hỗ trợ **High-DPI PerMonitorV2**, layout phản hồi (responsive), điều hướng phím tắt (Enter/Esc), validation thông minh qua `ErrorProvider`.
+Các tệp PDF được tạo từ ảnh bố cục để hỗ trợ tiếng Việt mà không thêm thư viện ngoài. Vì vậy nội dung PDF không thể tìm kiếm hoặc chọn/copy văn bản. Chức năng in trên máy in thật chưa được nghiệm thu; xuất PDF không cần driver máy in.
 
----
+## Chạy ứng dụng
 
-## 🚀 Cài Đặt & Khởi Chạy
+Yêu cầu: Windows 10/11 và .NET 10 SDK để phát triển/chạy từ mã nguồn.
 
-### Yêu cầu môi trường
-* Hệ điều hành: Windows 10/11
-* .NET SDK: **.NET 10.0** trở lên
-
-### Build và chạy ứng dụng
-
-Từ thư mục chứa repository:
+Tại thư mục gốc repository:
 
 ```powershell
-# Khôi phục và build mã nguồn
-dotnet build
-
-# Chạy ứng dụng giao diện chính
-dotnet run
+dotnet build 26K1_DotNet.slnx
+dotnet run --project 26K1_DotNet
 ```
 
-*(Hoặc từ thư mục gốc chứa file solution: `dotnet build 26K1_DotNet.slnx`)*
-
-### Các tham số dòng lệnh hữu ích
-
-* **Kiểm tra tự động toàn diện (Self-Test)**:
-  ```powershell
-  dotnet run -- --test
-  ```
-  *Chạy bộ kiểm thử giả lập cách ly với thư mục tạm: kiểm tra schema database, đối soát di trú dữ liệu, phát hành email mô phỏng.*
-
-* **Chuyển đổi dữ liệu JSON sang SQLite (Migration)**:
-  ```powershell
-  dotnet run -- --migrate
-  ```
-  *Đối soát sổ cái tài chính và nạp dữ liệu từ các file JSON vào file database chuẩn `edufee.db`.*
-
----
-
-## 🧪 Kiểm Thử Hồi Quy (Regression Tests)
-
-Dự án đi kèm bộ kiểm thử hồi quy độc lập tại `26K1_DotNet.RegressionTests`:
+Chạy bản trình diễn tách biệt với dữ liệu thật:
 
 ```powershell
-dotnet run --project ../26K1_DotNet.RegressionTests
+dotnet run --project 26K1_DotNet -- --demo
 ```
 
-**Kết quả kiểm thử**: Đạt **52/52 bài kiểm tra PASS (100%)**, bao gồm:
-1. Quy tắc tính học phí, miễn giảm, tính ngày quá hạn.
-2. Cơ chế ghi đè nguyên tử và khôi phục khi tệp dữ liệu bị khóa/lỗi.
-3. Chống đọc dữ liệu hỏng hoặc tệp rỗng.
-4. Nhập xuất CSV an toàn, chống formula injection.
-5. Mã hóa và giải mã DPAPI mật khẩu SMTP.
-6. Tính bền vững của bộ lọc học phí và thống kê khi đổi học kỳ.
-7. Đảm bảo giao diện hiển thị chuẩn ở các độ rộng 900px và 1080px.
-8. Giao dịch đồng thời, khóa ngoại và ràng buộc tiền tệ trên SQLite.
-9. Kiểm chứng hợp đồng sao lưu và phục hồi database.
-10. Xuất file PDF biên lai và báo cáo công nợ đa trang không cần máy in.
+Demo tạo 3 sinh viên, 1 học kỳ, 3 phiếu học phí và 1 biên lai. Với đơn giá mặc định 620.000 đồng/tín chỉ, tổng học phí là **22.440.000 đồng**, đã thu **3.000.000 đồng**, còn nợ **19.440.000 đồng**. Dữ liệu demo nằm trong thư mục demo riêng và email chỉ được mô phỏng.
 
----
+Lệnh kiểm thử nhanh cách ly với dữ liệu thật:
 
-## 📂 Cấu Trúc Dữ Liệu & Vận Hành
+```powershell
+dotnet run --project 26K1_DotNet -- --test
+dotnet run --project 26K1_DotNet.RegressionTests
+```
 
-* **Cơ sở dữ liệu SQLite**: `%LocalAppData%\EduFee\edufee.db` là nguồn chân lý duy nhất trong quá trình ứng dụng chạy.
-* **Khởi tạo lần đầu**: Nếu database trong AppData chưa có dữ liệu, ứng dụng sẽ tự động nhập dữ liệu ban đầu từ các file seed (`students.json`, `semesters.json`, `tuitionfees.json`, `receipts.json`) và đối soát tính toàn vẹn của sổ cái.
-* **Cấu hình Email**: Lưu tại `email_settings.json` với mật khẩu được mã hóa an toàn qua DPAPI.
+Kết quả regression hiện hành được ghi ở đầu ra của runner và `regression-latest.log` khi chạy; không dùng một số lượng kiểm tra cố định trong tài liệu vì bộ kiểm thử được mở rộng cùng mã nguồn.
 
----
+Đóng gói Release phụ thuộc .NET Desktop Runtime trên máy đích:
 
-## 📑 Tài Liệu Tham Khảo
+```powershell
+dotnet publish 26K1_DotNet -c Release -o output/publish --self-contained false
+```
 
-* [**IMPROVEMENTS.md**](IMPROVEMENTS.md): Nhật ký rà soát độ tin cậy và chi tiết các giải pháp kiến trúc đã triển khai.
-* [**KE_HOACH_PHAT_TRIEN.md**](KE_HOACH_PHAT_TRIEN.md): Báo cáo đánh giá hệ thống và lộ trình phát triển backlog (T01 – T09).
+## Dữ liệu, nhập và phục hồi
+
+- SQLite trong AppData là nguồn dữ liệu duy nhất khi ứng dụng chạy. Ứng dụng không tự nhập JSON cũ lúc khởi động.
+- Dùng màn hình cấu hình dữ liệu hoặc `--migrate` để nhập rõ ràng một thư mục có đủ `students.json`, `semesters.json`, `tuitionfees.json`, `receipts.json`. Ứng dụng tạo bản sao lưu trước khi nhập và từ chối cả lượt nhập nếu liên kết hoặc sổ cái không khớp.
+- Dữ liệu mẫu JSON cũ có phiếu học phí #13 và #15 đã ghi nhận thu nhưng không có biên lai tương ứng. Chúng được giữ nguyên và không được tự sửa hay tự sinh biên lai.
+- Email settings được lưu cùng vùng dữ liệu người dùng; mật khẩu SMTP dùng Windows DPAPI. Demo chỉ ghi email mô phỏng.
+
+## Tài liệu
+
+- [Kế hoạch phát triển](KE_HOACH_PHAT_TRIEN.md) ghi trạng thái bản lõi và các chức năng tiếp theo.
+- [Ghi chú cải tiến](IMPROVEMENTS.md) tóm tắt các thay đổi độ tin cậy đã áp dụng và giới hạn còn lại.

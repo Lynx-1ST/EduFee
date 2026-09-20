@@ -19,26 +19,37 @@ namespace _26K1_DotNet
         private PanelTuition? _panelTuition;
         private PanelStatistics? _panelStatistics;
         private string _currentPanel = "";
+        private readonly bool _demoMode;
+        private readonly string? _dataDirectory;
 
-        public Form1()
+        public Form1(bool demoMode = false, string? dataDirectory = null)
         {
+            _demoMode = demoMode;
+            _dataDirectory = dataDirectory;
             InitializeComponent();
             DoubleBuffered = true;
+            Text = demoMode ? "EduFee — DỮ LIỆU DEMO" : "EduFee";
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
             try
             {
-                _dbContext       = DatabaseBootstrapper.InitializeDefaultDatabase(Environment.CurrentDirectory);
+                var bootstrap = _demoMode
+                    ? DatabaseBootstrapper.InitializeDemoDatabase(_dataDirectory)
+                    : DatabaseBootstrapper.InitializeDefaultDatabase(_dataDirectory ?? DatabaseBootstrapper.GetDefaultDataDirectory(), Environment.CurrentDirectory);
+                _dbContext       = bootstrap.Database;
                 _studentService  = new StudentService(_dbContext);
                 _semesterService = new SemesterService(_dbContext);
                 _tuitionService  = new TuitionService(_dbContext);
                 _receiptService  = new ReceiptService(_dbContext);
-                _emailService    = new EmailService("email_settings.json");
+                _emailService    = new EmailService(DatabaseBootstrapper.GetEmailSettingsPath(_dataDirectory ?? (_demoMode ? DatabaseBootstrapper.GetDemoDataDirectory() : null)));
+                if (_demoMode) _emailService.Settings.IsSimulationMode = true;
 
                 UpdateHeaderActiveSemester();
                 ShowPanel("students");
+                if (!string.IsNullOrWhiteSpace(bootstrap.Notice))
+                    lblPageSub.Text = bootstrap.Notice;
             }
             catch (Exception ex)
             {
@@ -189,6 +200,12 @@ namespace _26K1_DotNet
 
         public void OpenEmailSettings()
         {
+            if (_demoMode)
+            {
+                MessageBox.Show("Chế độ demo chỉ mô phỏng email và không cho phép thay đổi cấu hình SMTP.",
+                    "Dữ liệu demo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
             using var form = new FormEmailSettings(_emailService);
             form.ShowDialog();
         }

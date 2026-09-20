@@ -211,7 +211,9 @@ namespace _26K1_DotNet
 
         private void BtnMigrate_Click(object? sender, EventArgs e)
         {
-            if (!UiFeedback.ConfirmAction("Hệ thống sẽ thay thế toàn bộ dữ liệu SQL bằng các file JSON trong thư mục chạy hiện tại. Hãy sao lưu trước khi tiếp tục.\nBạn có muốn tiếp tục?"))
+            using var folder = new FolderBrowserDialog { Description = "Chọn thư mục chứa đủ students.json, semesters.json, tuitionfees.json và receipts.json" };
+            if (folder.ShowDialog(this) != DialogResult.OK) return;
+            if (!UiFeedback.ConfirmAction($"Thay dữ liệu SQL bằng JSON trong:\n{folder.SelectedPath}\nDữ liệu hiện tại sẽ được sao lưu tự động. Bạn có muốn tiếp tục?"))
             {
                 return;
             }
@@ -222,12 +224,9 @@ namespace _26K1_DotNet
 
             try
             {
-                var jsonStudents = new StudentService("students.json");
-                var jsonSemesters = new SemesterService("semesters.json");
-                var jsonTuition = new TuitionService("tuitionfees.json");
-                var jsonReceipts = new ReceiptService("receipts.json");
-                var migrator = new SqlDataMigrator(_dbContext);
-                var res = migrator.MigrateFromJson(jsonStudents, jsonSemesters, jsonTuition, jsonReceipts);
+                string backup = _dbContext.DbPath + $".before-import-{Guid.NewGuid():N}.db";
+                _dbContext.BackupTo(backup);
+                var res = DatabaseBootstrapper.ImportLegacyJson(_dbContext, folder.SelectedPath);
                 _studentSvc.LoadStudents();
                 _semSvc.LoadSemesters();
                 _tuiSvc.LoadFees();
@@ -238,7 +237,7 @@ namespace _26K1_DotNet
                 lblStatus.Text = $"✓ {res.Message} ({res.Students} SV, {res.Semesters} HK, {res.Fees} HP, {res.Receipts} Biên lai)";
                 lblStatus.ForeColor = UITheme.Success;
 
-                UiFeedback.ShowSuccess($"Đồng bộ thành công!\n- Sinh viên: {res.Students}\n- Học kỳ: {res.Semesters}\n- Phiếu học phí: {res.Fees}\n- Biên lai: {res.Receipts}");
+                UiFeedback.ShowSuccess($"Đồng bộ thành công!\n- Sinh viên: {res.Students}\n- Học kỳ: {res.Semesters}\n- Phiếu học phí: {res.Fees}\n- Biên lai: {res.Receipts}\nBản sao lưu trước khi nhập:\n{backup}");
             }
             catch (Exception ex)
             {

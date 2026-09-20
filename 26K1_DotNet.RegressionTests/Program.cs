@@ -2,6 +2,7 @@ using K26_DotNet.Data;
 using K26_DotNet.Models;
 using K26_DotNet.Services;
 using K26_DotNet.Reports;
+using K26_DotNet.RegressionTests;
 using _26K1_DotNet;
 using System.Reflection;
 
@@ -107,6 +108,13 @@ internal static class Program
             VerifyPanelRendering(root, Check);
             VerifySqlitePersistence(root, Check, Throws);
             VerifyPdfExports(root, Check);
+            FinanceAcceptance.Run(root, Check);
+            PdfAcceptance.Run(root, Check);
+            StartupAcceptance.Run(root, Check);
+            DatabaseAcceptance.Run(root, Check);
+            MigrationAcceptance.Run(root, Check);
+            ReportAcceptance.Run(root, Check);
+            QrPaymentAcceptance.Run(Check);
 
             Console.WriteLine($"All {passed} regression checks passed.");
             return 0;
@@ -150,6 +158,8 @@ internal static class Program
         Application.DoEvents();
         tuition.Add(new TuitionFee(0, 101, semesters.GetAll().Single(s => s.Name == "Học kỳ cũ").Id, 1));
         tuition.Add(new TuitionFee(0, 202, semesters.GetAll().Single(s => s.Name == "Học kỳ cũ").Id, 1));
+        tuition.Add(new TuitionFee(0, 101, semesters.GetActive()!.Id, 1));
+        tuition.Add(new TuitionFee(0, 202, semesters.GetActive()!.Id, 1));
         panel.RefreshData();
 
         var semesterCombo = GetPrivateField<ComboBox>(panel, "cmbSem");
@@ -161,13 +171,13 @@ internal static class Program
             .ToArray();
         check(displayedStudentIds.SequenceEqual([101]), "Tuition student filter uses the selected student ID when names collide");
 
-        SelectSemester(semesterCombo, "Học kỳ cũ");
-        panel.RefreshData();
-        check(semesterCombo.SelectedItem?.ToString() == "Học kỳ cũ", "Tuition refresh preserves a selected older semester");
+        var oldSemester = semesters.GetAll().Single(s => s.Name == "Học kỳ cũ");
+        panel.RefreshData(oldSemester.Id);
+        check(semesterCombo.SelectedItem?.ToString() == "Học kỳ cũ", "Tuition follows the semester selected from the global badge");
 
-        SelectSemester(semesterCombo, "— Tất cả học kỳ —");
-        panel.RefreshData();
-        check(semesterCombo.SelectedItem?.ToString() == "— Tất cả học kỳ —", "Tuition refresh preserves the all-semesters selection");
+        var activeSemester = semesters.GetActive()!;
+        panel.RefreshData(activeSemester.Id);
+        check(semesterCombo.SelectedItem?.ToString() == activeSemester.Name, "Tuition returns to the active global semester");
     }
 
     private static void VerifySqlitePersistence(string root, Action<bool, string> check, Func<Action, bool> throws)
@@ -187,8 +197,22 @@ internal static class Program
         var after = repository.LoadAll();
         check(after.Fees.Single().PaidAmount == 400_000m && after.Receipts.Single().Id == receipt.Id && after.Receipts.Single().Amount == 400_000m,
             "SQLite commits payment and receipt together");
+        check(after.Receipts.Single().StudentNameSnapshot == "Nguyễn Văn An" &&
+              after.Receipts.Single().TotalPaidAfterSnapshot == 400_000m && after.Receipts.Single().RemainingAfterSnapshot == 600_000m,
+            "Receipt stores the student and balance snapshot at payment time");
 
-        check(throws(() => repository.RecordPayment(301, 700_000m, "Tiền mặt", "Nguyễn Văn An", "Vượt nợ")),
+        repository.UpdateStudent(new Student(101, "Tên đã thay đổi", "new@example.com", "0909", new DateTime(2005, 1, 2), "K27"));
+        var sqliteTuition = new TuitionService(database);
+        var tuitionDraft = sqliteTuition.GetById(301) ?? throw new InvalidOperationException("Missing tuition fixture.");
+        tuitionDraft.TotalAmount = 1_500_000m;
+        check(sqliteTuition.GetById(301)?.TotalAmount == 1_000_000m,
+            "Tuition query returns a safe copy instead of mutable service state");
+        sqliteTuition.Update(tuitionDraft);
+        var unchangedReceipt = repository.LoadAll().Receipts.Single();
+        check(unchangedReceipt.StudentNameSnapshot == "Nguyễn Văn An" && unchangedReceipt.TotalTuitionSnapshot == 1_000_000m,
+            "Historical receipt snapshot is unchanged after profile and tuition edits");
+
+        check(throws(() => repository.RecordPayment(301, 1_200_000m, "Tiền mặt", "Nguyễn Văn An", "Vượt nợ")),
             "SQLite rejects payment above remaining balance");
         var afterRejectedPayment = repository.LoadAll();
         check(afterRejectedPayment.Fees.Single().PaidAmount == 400_000m && afterRejectedPayment.Receipts.Count == 1,
@@ -204,10 +228,36 @@ internal static class Program
         check(restored.Students.Count == 1 && restored.Students.Single().Id == 101 && File.Exists(safetyBackup),
             "SQLite backup and verified restore recover the previous data");
 
+        string invalidBackup = Path.Combine(root, "invalid-schema.db");
+        using (var invalid = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={invalidBackup}"))
+        {
+            invalid.Open();
+            using var command = invalid.CreateCommand();
+            command.CommandText = "CREATE TABLE Students(Id INTEGER); CREATE TABLE Semesters(Id INTEGER); CREATE TABLE TuitionFees(Id INTEGER); CREATE TABLE PaymentReceipts(Id INTEGER); PRAGMA user_version=2;";
+            command.ExecuteNonQuery();
+        }
+        check(throws(() => database.RestoreFrom(invalidBackup)) && repository.LoadAll().Students.Count == 1,
+            "Restore rejects a database that only imitates EduFee table names");
+
         using var connection = database.CreateConnection();
         using var fk = connection.CreateCommand();
         fk.CommandText = "PRAGMA foreign_keys;";
         check(Convert.ToInt32(fk.ExecuteScalar()) == 1, "SQLite enables foreign keys on every connection");
+
+        string badRoot = Path.Combine(root, "bad-ledger");
+        Directory.CreateDirectory(badRoot);
+        var badStudents = new StudentService(Path.Combine(badRoot, "students.json"));
+        badStudents.AddStudent(new Student(1, "Sinh viên lệch sổ", "bad@example.com", "0900", new DateTime(2005, 1, 1), "K26"));
+        var badSemesters = new SemesterService(Path.Combine(badRoot, "semesters.json"));
+        var activeSemester = badSemesters.GetActive() ?? throw new InvalidOperationException("Missing seeded semester.");
+        var badFees = new TuitionService(Path.Combine(badRoot, "fees.json"));
+        badFees.Add(new TuitionFee(0, 1, activeSemester.Id, 1));
+        badFees.RecordPayment(badFees.GetAll().Single().Id, 100_000m, activeSemester.DueDate);
+        var badReceipts = new ReceiptService(Path.Combine(badRoot, "receipts.json"));
+        var badDatabase = new SqlDatabaseContext(Path.Combine(badRoot, "database.db"));
+        check(throws(() => new SqlDataMigrator(badDatabase).MigrateFromJson(badStudents, badSemesters, badFees, badReceipts)) &&
+              badDatabase.GetRecordCounts() == (0, 0, 0, 0),
+            "JSON migration rejects an unreconciled payment ledger without partial writes");
     }
 
     private static void VerifyPdfExports(string root, Action<bool, string> check)
@@ -234,6 +284,14 @@ internal static class Program
             File.ReadAllBytes(path).Take(5).SequenceEqual("%PDF-"u8.ToArray());
         check(IsPdf(receiptPath), "Receipt PDF is generated without a printer driver");
         check(IsPdf(debtPath), "Multi-page debt report PDF is generated without a printer driver");
+
+        string fullLastPagePath = Path.Combine(outputDirectory, "bao-cao-25-dong.pdf");
+        DebtReportPdfRenderer.Export(fullLastPagePath, new DebtReportPdfData(
+            "TRƯỜNG ĐẠI HỌC MỎ - ĐỊA CHẤT", "HK1 2026-2027", "Kiểm tra phân trang",
+            new DateTime(2026, 9, 19), rows.Take(25).ToList()));
+        string pdfAscii = System.Text.Encoding.ASCII.GetString(File.ReadAllBytes(fullLastPagePath));
+        check(IsPdf(fullLastPagePath) && pdfAscii.Split("/Type /Page ", StringSplitOptions.None).Length - 1 == 2,
+            "Debt report reserves a separate total row when the last page is full");
     }
 
     private static void VerifyStatisticsSemesterRefresh(string root, Action<bool, string> check)
@@ -309,6 +367,12 @@ internal static class Program
                 panel.DrawToBitmap(bitmap, new Rectangle(Point.Empty, bitmap.Size));
                 var screenshot = Path.Combine(root, $"{panelName}-{width}.png");
                 bitmap.Save(screenshot);
+                string? artifactDirectory = Environment.GetEnvironmentVariable("EDUFEE_PDF_SAMPLE_DIR");
+                if (!string.IsNullOrWhiteSpace(artifactDirectory))
+                {
+                    Directory.CreateDirectory(artifactDirectory);
+                    bitmap.Save(Path.Combine(artifactDirectory, $"{panelName}-{width}.png"));
+                }
                 check(new FileInfo(screenshot).Length > 0, $"{panelName} renders at {width}px content width");
 
                 var clippedButtons = Descendants(panel)

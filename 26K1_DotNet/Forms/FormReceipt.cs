@@ -225,7 +225,7 @@ namespace _26K1_DotNet
 
             var btnPrint = UITheme.PrimaryBtn("In phiếu", 110, 38);
             btnPrint.Margin = new Padding(0, 0, 10, 0);
-            btnPrint.Click += (s, e) => PrintReceipt(paper);
+            btnPrint.Click += (s, e) => PrintReceipt();
 
             var btnPdf = UITheme.SuccessBtn("Xuất PDF", 110, 38);
             btnPdf.Margin = new Padding(0, 0, 10, 0);
@@ -299,27 +299,43 @@ namespace _26K1_DotNet
             });
         }
 
-        private void PrintReceipt(Panel paper)
+        private ReceiptPdfData BuildReceiptData() => new(
+            "TRƯỜNG ĐẠI HỌC MỎ - ĐỊA CHẤT", _receipt.ReceiptCode, _receipt.PaymentDate,
+            ReceiptStudentName, ReceiptStudentCode, ReceiptClassName, ReceiptSemesterName,
+            _receipt.PayerName, _receipt.PaymentMethod, _receipt.Amount, ReceiptTotal,
+            ReceiptPaidAfter, ReceiptRemaining, ReceiptDueDate, _receipt.Note);
+
+        private void PrintReceipt()
         {
             try
             {
+                var pages = ReceiptPdfRenderer.RenderPages(BuildReceiptData());
                 using var printDoc = new PrintDocument();
+                int pageIndex = 0;
+                printDoc.BeginPrint += (s, e) => pageIndex = 0;
                 printDoc.PrintPage += (s, ev) =>
                 {
-                    using var bmp = new Bitmap(paper.Width, paper.Height);
-                    paper.DrawToBitmap(bmp, new Rectangle(0, 0, paper.Width, paper.Height));
-                    if (ev.Graphics != null)
-                    {
-                        ev.Graphics.DrawImage(bmp, 50, 50);
-                    }
+                    if (ev.Graphics == null || pageIndex >= pages.Count) { ev.HasMorePages = false; return; }
+                    var page = pages[pageIndex++];
+                    var bounds = ev.MarginBounds;
+                    float scale = Math.Min((float)bounds.Width / page.Width, (float)bounds.Height / page.Height);
+                    int width = Math.Max(1, (int)Math.Round(page.Width * scale));
+                    int height = Math.Max(1, (int)Math.Round(page.Height * scale));
+                    int x = bounds.X + (bounds.Width - width) / 2;
+                    int y = bounds.Y + (bounds.Height - height) / 2;
+                    ev.Graphics.DrawImage(page, new Rectangle(x, y, width, height));
+                    ev.HasMorePages = pageIndex < pages.Count;
                 };
-
-                using var printPreview = new PrintPreviewDialog
+                try
                 {
-                    Document = printDoc,
-                    Size = new Size(800, 700)
-                };
-                printPreview.ShowDialog();
+                    using var printPreview = new PrintPreviewDialog
+                    {
+                        Document = printDoc,
+                        Size = new Size(800, 700)
+                    };
+                    printPreview.ShowDialog(this);
+                }
+                finally { foreach (var page in pages) page.Dispose(); }
             }
             catch (Exception ex)
             {
@@ -339,11 +355,7 @@ namespace _26K1_DotNet
 
             try
             {
-                ReceiptPdfRenderer.Export(dialog.FileName, new ReceiptPdfData(
-                    "TRƯỜNG ĐẠI HỌC MỎ - ĐỊA CHẤT", _receipt.ReceiptCode, _receipt.PaymentDate,
-                    ReceiptStudentName, ReceiptStudentCode, ReceiptClassName, ReceiptSemesterName,
-                    _receipt.PayerName, _receipt.PaymentMethod, _receipt.Amount, ReceiptTotal,
-                    ReceiptPaidAfter, ReceiptRemaining, ReceiptDueDate, _receipt.Note));
+                ReceiptPdfRenderer.Export(dialog.FileName, BuildReceiptData());
                 UiFeedback.ShowSuccess($"Đã xuất biên lai PDF:\n{dialog.FileName}");
             }
             catch (Exception ex)

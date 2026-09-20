@@ -30,8 +30,9 @@ namespace _26K1_DotNet
                     return;
                 }
 
+                bool demoMode = args?.Any(arg => string.Equals(arg, "--demo", StringComparison.OrdinalIgnoreCase)) == true;
                 ApplicationConfiguration.Initialize();
-                Application.Run(new Form1());
+                Application.Run(new Form1(demoMode));
             }
             finally
             {
@@ -41,15 +42,20 @@ namespace _26K1_DotNet
 
         static void RunMigrate()
         {
-            var dbContext = new K26_DotNet.Data.SqlDatabaseContext("edufee.db");
-            var studentSvc = new K26_DotNet.Services.StudentService("students.json");
-            var semSvc = new K26_DotNet.Services.SemesterService("semesters.json");
-            var tuitionSvc = new K26_DotNet.Services.TuitionService("tuitionfees.json");
-            var receiptSvc = new K26_DotNet.Services.ReceiptService("receipts.json");
-
-            var migrator = new K26_DotNet.Data.SqlDataMigrator(dbContext);
-            var (sCount, semCount, feeCount, recCount, msg) = migrator.MigrateFromJson(studentSvc, semSvc, tuitionSvc, receiptSvc);
-            Console.WriteLine($"[Migrate] Đã chuyển đổi thành công sang edufee.db: {sCount} SV, {semCount} HK, {feeCount} phiếu HP, {recCount} biên lai.");
+            try
+            {
+                var dbContext = K26_DotNet.Data.DatabaseBootstrapper.InitializeDefaultDatabase(Environment.CurrentDirectory);
+                string backupPath = dbContext.DbPath + $".before-json-import-{Guid.NewGuid():N}.db";
+                dbContext.BackupTo(backupPath);
+                var (sCount, semCount, feeCount, recCount, msg) =
+                    K26_DotNet.Data.DatabaseBootstrapper.ImportLegacyJson(dbContext, Environment.CurrentDirectory);
+                Console.WriteLine($"[Migrate] Đã chuyển đổi thành công sang edufee.db: {sCount} SV, {semCount} HK, {feeCount} phiếu HP, {recCount} biên lai. Bản sao lưu: {backupPath}");
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[Migrate] Không thể nhập dữ liệu JSON: {ex.Message}");
+                Environment.ExitCode = 1;
+            }
         }
 
         static void RunSelfTest()

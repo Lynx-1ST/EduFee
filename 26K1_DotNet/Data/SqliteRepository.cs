@@ -105,6 +105,8 @@ public sealed class SqliteRepository
         foreach (var fee in fees)
         {
             ValidateFee(fee);
+            if (fee.PaidAmount != 0 || fee.PaidDate.HasValue)
+                throw new InvalidOperationException("Phiếu học phí mới không được có số đã thu; hãy ghi nhận bằng biên lai.");
             using var command = connection.CreateCommand();
             command.Transaction = transaction;
             command.CommandText = """
@@ -119,18 +121,39 @@ public sealed class SqliteRepository
         transaction.Commit();
     }
 
-    public void UpdateTuitionFee(TuitionFee fee)
+    public PaymentStatus UpdateTuitionFee(TuitionFee fee)
     {
         ValidateFee(fee);
         using var connection = _db.CreateConnection();
+        using (var ledger = connection.CreateCommand())
+        {
+            ledger.CommandText = "SELECT PaidAmount, PaidDate FROM TuitionFees WHERE Id=@id;";
+            ledger.Parameters.AddWithValue("@id", fee.Id);
+            using var reader = ledger.ExecuteReader();
+            if (!reader.Read()) throw new InvalidOperationException("Không tìm thấy phiếu học phí cần cập nhật.");
+            long paidAmount = reader.GetInt64(0);
+            DateTime? paidDate = reader.IsDBNull(1) ? null : ParseDate(reader.GetString(1));
+            if (paidAmount != ToVnd(fee.PaidAmount) || paidDate != fee.PaidDate)
+                throw new InvalidOperationException("Không thể sửa số tiền hoặc ngày thu trực tiếp. Hãy lập biên lai thu tiền.");
+        }
         using var command = connection.CreateCommand();
         command.CommandText = """
             UPDATE TuitionFees SET Credits=@credits, TotalAmount=@total, DiscountAmount=@discount,
-                DiscountReason=@reason, PaidAmount=@paid, PaidDate=@paidDate, DueDate=@dueDate,
-                Status=@status, Note=@note WHERE Id=@id;
+                DiscountReason=@reason, DueDate=@dueDate,
+                Status=CASE
+                    WHEN PaidAmount >= @total THEN 2
+                    WHEN COALESCE(@dueDate, (SELECT DueDate FROM Semesters WHERE Id=TuitionFees.SemesterId)) IS NOT NULL
+                         AND @today > date(COALESCE(@dueDate, (SELECT DueDate FROM Semesters WHERE Id=TuitionFees.SemesterId))) THEN 3
+                    WHEN PaidAmount > 0 THEN 1
+                    ELSE 0
+                END,
+                Note=@note WHERE Id=@id RETURNING Status;
             """;
         AddFeeParameters(command, fee);
-        RequireOne(command.ExecuteNonQuery(), "Không tìm thấy phiếu học phí cần cập nhật.");
+        command.Parameters.AddWithValue("@today", DateTime.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+        var status = command.ExecuteScalar();
+        if (status is null) throw new InvalidOperationException("Không tìm thấy phiếu học phí cần cập nhật.");
+        return (PaymentStatus)Convert.ToInt32(status);
     }
 
     public void DeleteTuitionFee(int id) => DeleteRestricted("TuitionFees", id,
@@ -306,6 +329,8 @@ public sealed class SqliteRepository
     private static void ValidateFee(TuitionFee fee)
     {
         ArgumentNullException.ThrowIfNull(fee);
+        if (fee.Id <= 0 || fee.StudentId <= 0 || fee.SemesterId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(fee), "Mã phiếu, sinh viên và học kỳ phải lớn hơn 0.");
         if (fee.Credits <= 0) throw new ArgumentOutOfRangeException(nameof(fee.Credits), "Số tín chỉ phải lớn hơn 0.");
         if (fee.TotalAmount < 0 || fee.DiscountAmount < 0 || fee.PaidAmount < 0 || fee.PaidAmount > fee.TotalAmount)
             throw new ArgumentException("Số tiền học phí, giảm trừ hoặc đã thu không hợp lệ.");

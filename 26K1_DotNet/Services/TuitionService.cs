@@ -138,41 +138,58 @@ namespace K26_DotNet.Services
         public void Add(TuitionFee fee)
         {
             if (fee == null) throw new ArgumentNullException(nameof(fee));
+            ValidateFee(fee, allowExistingPayment: false);
             if (ExistsForStudentInSemester(fee.StudentId, fee.SemesterId))
                 throw new Exception("Sinh viên này đã có phiếu học phí trong học kỳ đã chọn!");
 
+            int previousId = fee.Id;
             fee.Id = _fees.Any() ? _fees.Max(f => f.Id) + 1 : 1;
-            _fees.Add(fee);
+            fee.UpdateStatus();
             try
             {
                 if (_repository != null) _repository.AddTuitionFees([fee]);
-                else SaveFees();
+                _fees.Add(fee);
+                if (_repository == null) SaveFees();
             }
-            catch { _fees.Remove(fee); throw; }
+            catch { _fees.Remove(fee); fee.Id = previousId; throw; }
         }
 
         public void AddRange(IEnumerable<TuitionFee> fees)
         {
             if (fees == null) throw new ArgumentNullException(nameof(fees));
-            var additions = new List<TuitionFee>();
-            int nextId = _fees.Any() ? _fees.Max(f => f.Id) + 1 : 1;
-            foreach (var fee in fees)
+            // Materialize and validate before mutating the cache.  This also makes an
+            // iterator which throws midway through enumeration leave the cache intact.
+            var requested = fees.ToList();
+            foreach (var fee in requested)
             {
-                if (ExistsForStudentInSemester(fee.StudentId, fee.SemesterId))
+                if (fee == null) throw new ArgumentException("Danh sách học phí có phần tử rỗng.", nameof(fees));
+                ValidateFee(fee, allowExistingPayment: false);
+            }
+
+            var additions = new List<TuitionFee>();
+            var assignedIds = new List<(TuitionFee Fee, int PreviousId)>();
+            var keys = _fees.Select(f => (f.StudentId, f.SemesterId)).ToHashSet();
+            int nextId = _fees.Any() ? _fees.Max(f => f.Id) + 1 : 1;
+            foreach (var fee in requested)
+            {
+                if (!keys.Add((fee.StudentId, fee.SemesterId)))
                     continue;
 
+                assignedIds.Add((fee, fee.Id));
                 fee.Id = nextId++;
-                _fees.Add(fee);
+                fee.UpdateStatus();
                 additions.Add(fee);
             }
             try
             {
                 if (_repository != null) _repository.AddTuitionFees(additions);
-                else SaveFees();
+                _fees.AddRange(additions);
+                if (_repository == null) SaveFees();
             }
             catch
             {
                 foreach (var fee in additions) _fees.Remove(fee);
+                foreach (var assigned in assignedIds) assigned.Fee.Id = assigned.PreviousId;
                 throw;
             }
         }
@@ -182,16 +199,25 @@ namespace K26_DotNet.Services
             if (fee == null) throw new ArgumentNullException(nameof(fee));
             var existing = _fees.FirstOrDefault(f => f.Id == fee.Id)
                 ?? throw new Exception($"Không tìm thấy học phí ID {fee.Id}");
+            ValidateFee(fee, allowExistingPayment: true);
+            if (fee.PaidAmount != existing.PaidAmount || fee.PaidDate != existing.PaidDate)
+                throw new InvalidOperationException("Không thể sửa số tiền hoặc ngày thu trực tiếp. Hãy lập biên lai thu tiền.");
             if (fee.TotalAmount < existing.PaidAmount)
                 throw new ArgumentException("Tổng học phí không được nhỏ hơn số tiền đã thu.");
             var previous = Clone(existing);
             CopyEditableFields(fee, existing);
+            existing.UpdateStatus();
             try
             {
-                if (_repository != null) _repository.UpdateTuitionFee(existing);
+                if (_repository != null) existing.Status = _repository.UpdateTuitionFee(existing);
                 else SaveFees();
             }
-            catch { CopyEditableFields(previous, existing); throw; }
+            catch
+            {
+                CopyEditableFields(previous, existing);
+                existing.Status = previous.Status;
+                throw;
+            }
         }
 
         public void Delete(int id)
@@ -252,27 +278,22 @@ namespace K26_DotNet.Services
             if (!ReferenceEquals(_repository, receiptService.Repository) && receiptService.DatabasePath != DatabasePath)
                 throw new InvalidOperationException("Dịch vụ học phí và biên lai phải dùng cùng một cơ sở dữ liệu.");
 
+            if (amount <= 0 || amount != decimal.Truncate(amount) || amount > long.MaxValue)
+                throw new ArgumentOutOfRangeException(nameof(amount), "Số tiền thanh toán phải là số nguyên VND dương hợp lệ.");
+            if (string.IsNullOrWhiteSpace(payerName))
+                throw new ArgumentException("Thiếu người nộp tiền.", nameof(payerName));
+            var fee = _fees.FirstOrDefault(current => current.Id == id)
+                ?? throw new InvalidOperationException($"Không tìm thấy học phí ID {id} trong dữ liệu hiện tại.");
+            if (amount > fee.RemainingAmount)
+                throw new InvalidOperationException($"Số tiền vượt quá số còn lại ({fee.RemainingAmount:N0} VNĐ).");
+
             var receipt = _repository.RecordPayment(id, amount, paymentMethod, payerName, note, dueDate);
-            try
-            {
-                var fee = _fees.FirstOrDefault(f => f.Id == id);
-                if (fee != null)
-                {
-                    fee.PaidAmount += amount;
-                    fee.PaidDate = receipt.PaymentDate;
-                    fee.UpdateStatus(dueDate);
-                }
-                else
-                {
-                    LoadFees();
-                }
-                receiptService.AcceptCommittedReceipt(receipt);
-            }
-            catch
-            {
-                try { LoadFees(); } catch { }
-                try { receiptService.ReloadFromDatabase(); } catch { }
-            }
+            // The database transaction is already committed.  Only use the receipt's
+            // ledger snapshot, so a stale input amount cannot make the cache diverge.
+            fee.PaidAmount = receipt.TotalPaidAfterSnapshot;
+            fee.PaidDate = receipt.PaymentDate;
+            fee.UpdateStatus(receipt.DueDateSnapshot);
+            receiptService.AcceptCommittedReceipt(receipt);
             return receipt;
         }
 
@@ -292,11 +313,32 @@ namespace K26_DotNet.Services
             target.TotalAmount = source.TotalAmount;
             target.DiscountAmount = source.DiscountAmount;
             target.DiscountReason = source.DiscountReason;
-            target.PaidAmount = source.PaidAmount;
-            target.PaidDate = source.PaidDate;
             target.DueDate = source.DueDate;
-            target.Status = source.Status;
             target.Note = source.Note;
+        }
+
+        private static void ValidateFee(TuitionFee fee, bool allowExistingPayment)
+        {
+            if (fee.Id < 0)
+                throw new ArgumentOutOfRangeException(nameof(fee.Id), "Mã phiếu học phí không hợp lệ.");
+            if (fee.StudentId <= 0 || fee.SemesterId <= 0)
+                throw new ArgumentOutOfRangeException(nameof(fee), "Mã sinh viên và học kỳ phải lớn hơn 0.");
+            if (fee.Credits <= 0)
+                throw new ArgumentOutOfRangeException(nameof(fee.Credits), "Số tín chỉ phải lớn hơn 0.");
+            if (fee.TotalAmount < 0 || fee.DiscountAmount < 0 || fee.PaidAmount < 0 || fee.PaidAmount > fee.TotalAmount)
+                throw new ArgumentException("Số tiền học phí, miễn giảm hoặc đã thu không hợp lệ.", nameof(fee));
+            if (!allowExistingPayment && (fee.PaidAmount != 0 || fee.PaidDate.HasValue))
+                throw new InvalidOperationException("Phiếu học phí mới không được có số đã thu; hãy ghi nhận bằng biên lai.");
+            ValidateVnd(fee.TotalAmount, nameof(fee.TotalAmount));
+            ValidateVnd(fee.DiscountAmount, nameof(fee.DiscountAmount));
+            ValidateVnd(fee.PaidAmount, nameof(fee.PaidAmount));
+            _ = checked(fee.TotalAmount + fee.DiscountAmount);
+        }
+
+        private static void ValidateVnd(decimal value, string name)
+        {
+            if (value != decimal.Truncate(value) || value > long.MaxValue)
+                throw new ArgumentOutOfRangeException(name, "Số tiền VND phải là số nguyên trong phạm vi hợp lệ.");
         }
 
         // ─── Statistics ───────────────────────────────────────────────────────

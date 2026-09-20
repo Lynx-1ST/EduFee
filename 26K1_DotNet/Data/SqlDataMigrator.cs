@@ -57,7 +57,7 @@ namespace K26_DotNet.Data
                 {
                     cmd.Transaction = tx;
                     cmd.CommandText = @"
-                        INSERT OR REPLACE INTO Students (Id, FullName, Email, PhoneNumber, DateOfBirth, ClassName)
+                        INSERT INTO Students (Id, FullName, Email, PhoneNumber, DateOfBirth, ClassName)
                         VALUES (@id, @name, @email, @phone, @dob, @class);";
 
                     var pId = cmd.Parameters.Add("@id", SqliteType.Integer);
@@ -84,7 +84,7 @@ namespace K26_DotNet.Data
                 {
                     cmd.Transaction = tx;
                     cmd.CommandText = @"
-                        INSERT OR REPLACE INTO Semesters (Id, Name, StartDate, EndDate, DueDate, IsActive)
+                        INSERT INTO Semesters (Id, Name, StartDate, EndDate, DueDate, IsActive)
                         VALUES (@id, @name, @start, @end, @due, @active);";
 
                     var pId = cmd.Parameters.Add("@id", SqliteType.Integer);
@@ -111,7 +111,7 @@ namespace K26_DotNet.Data
                 {
                     cmd.Transaction = tx;
                     cmd.CommandText = @"
-                        INSERT OR REPLACE INTO TuitionFees (Id, StudentId, SemesterId, Credits, TotalAmount, DiscountAmount, DiscountReason, PaidAmount, PaidDate, DueDate, Status, Note)
+                        INSERT INTO TuitionFees (Id, StudentId, SemesterId, Credits, TotalAmount, DiscountAmount, DiscountReason, PaidAmount, PaidDate, DueDate, Status, Note)
                         VALUES (@id, @svId, @semId, @credits, @tot, @disc, @discReason, @paid, @paidDate, @dueDate, @status, @note);";
 
                     var pId = cmd.Parameters.Add("@id", SqliteType.Integer);
@@ -150,7 +150,7 @@ namespace K26_DotNet.Data
                 {
                     cmd.Transaction = tx;
                     cmd.CommandText = @"
-                        INSERT OR REPLACE INTO PaymentReceipts
+                        INSERT INTO PaymentReceipts
                             (Id, FeeId, StudentId, SemesterId, ReceiptCode, Amount, PaymentDate, PaymentMethod, PayerName, Note,
                              StudentNameSnapshot, StudentCodeSnapshot, ClassNameSnapshot, SemesterNameSnapshot,
                              TotalTuitionSnapshot, TotalPaidAfterSnapshot, RemainingAfterSnapshot, DueDateSnapshot)
@@ -192,14 +192,20 @@ namespace K26_DotNet.Data
                         var student = studentById[r.StudentId];
                         var semester = semesterById[r.SemesterId];
                         decimal paidAfter = paidAfterByReceiptId[r.Id];
-                        pStudentName.Value = student.FullName;
-                        pStudentCode.Value = $"SV{student.Id:D4}";
-                        pClassName.Value = student.ClassName;
-                        pSemesterName.Value = semester.Name;
-                        pTotalSnapshot.Value = ToVnd(fee.TotalAmount);
-                        pPaidAfter.Value = ToVnd(paidAfter);
-                        pRemaining.Value = ToVnd(fee.TotalAmount - paidAfter);
-                        pDueSnapshot.Value = (fee.DueDate ?? semester.DueDate).ToString("o", CultureInfo.InvariantCulture);
+                        bool hasSnapshot = !string.IsNullOrWhiteSpace(r.StudentCodeSnapshot);
+                        if (hasSnapshot && (r.TotalPaidAfterSnapshot < r.Amount || r.RemainingAfterSnapshot < 0 ||
+                            r.TotalTuitionSnapshot != r.TotalPaidAfterSnapshot + r.RemainingAfterSnapshot))
+                            throw new InvalidOperationException($"Biên lai {r.ReceiptCode} có snapshot số tiền không hợp lệ.");
+                        pStudentName.Value = hasSnapshot ? r.StudentNameSnapshot : student.FullName;
+                        pStudentCode.Value = hasSnapshot ? r.StudentCodeSnapshot : $"SV{student.Id:D4}";
+                        pClassName.Value = hasSnapshot ? r.ClassNameSnapshot : student.ClassName;
+                        pSemesterName.Value = hasSnapshot ? r.SemesterNameSnapshot : semester.Name;
+                        pTotalSnapshot.Value = ToVnd(hasSnapshot ? r.TotalTuitionSnapshot : fee.TotalAmount);
+                        pPaidAfter.Value = ToVnd(hasSnapshot ? r.TotalPaidAfterSnapshot : paidAfter);
+                        pRemaining.Value = ToVnd(hasSnapshot ? r.RemainingAfterSnapshot : fee.TotalAmount - paidAfter);
+                        pDueSnapshot.Value = hasSnapshot
+                            ? (object?)r.DueDateSnapshot?.ToString("o", CultureInfo.InvariantCulture) ?? DBNull.Value
+                            : (fee.DueDate ?? semester.DueDate).ToString("o", CultureInfo.InvariantCulture);
                         cmd.ExecuteNonQuery();
                     }
                 }
@@ -210,7 +216,7 @@ namespace K26_DotNet.Data
             catch (Exception ex)
             {
                 tx.Rollback();
-                throw new InvalidOperationException("Lỗi chuyển đổi dữ liệu sang SQL.", ex);
+                throw new InvalidOperationException($"Lỗi chuyển đổi dữ liệu sang SQL: {ex.Message}", ex);
             }
         }
 
