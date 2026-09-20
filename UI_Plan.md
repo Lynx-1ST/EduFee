@@ -1105,7 +1105,7 @@ Chuẩn hóa message khi xóa.
 Không dùng text kiểu:
 
 ```text
-Bạn có chắc chắn không?
+Xác nhận thực hiện thao tác?
 ```
 
 Mà dùng:
