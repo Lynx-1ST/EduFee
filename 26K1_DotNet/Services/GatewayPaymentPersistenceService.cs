@@ -69,9 +69,12 @@ public sealed class GatewayPaymentPersistenceService
             throw new InvalidOperationException("Kết quả thành công phải được ghi nhận cùng biên lai.");
         if (string.IsNullOrWhiteSpace(confirmation.Provider))
             throw new ArgumentException("Thiếu nhà cung cấp trong kết quả thanh toán.", nameof(confirmation));
+        bool isTerminal = confirmation.Status is GatewayPaymentStatus.Failed
+            or GatewayPaymentStatus.Cancelled or GatewayPaymentStatus.Expired;
         _repository.UpdateGatewayTransactionStatus(confirmation.Provider, confirmation.OrderId,
-            confirmation.ProviderTransactionId, (int)confirmation.Status, confirmation.ResultCode,
-            (int)GatewayPaymentStatus.Success);
+            confirmation.ProviderTransactionId, confirmation.Amount, (int)confirmation.Status,
+            confirmation.ResultCode, (int)GatewayPaymentStatus.Success, (int)GatewayPaymentStatus.Pending,
+            (int)GatewayPaymentStatus.Unknown, isTerminal);
     }
 
     private static PaymentGatewayTransaction ToModel(GatewayTransactionRow row) => new(

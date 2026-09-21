@@ -3,10 +3,10 @@ using System.Globalization;
 namespace K26_DotNet.Services;
 
 /// <summary>
-/// Cổng QR tại chỗ phục vụ trình diễn. Nó không gọi MoMo, VietQR hoặc ngân hàng nào.
-/// Việc thu tiền thật vẫn phải đi qua nghiệp vụ lập biên lai của ứng dụng.
+/// Cổng VietQR tạo yêu cầu chuyển khoản và chờ người dùng xác nhận đã chuyển tiền.
+/// VietQR không cung cấp trạng thái giao dịch cho ứng dụng desktop này, vì vậy xác nhận là thủ công.
 /// </summary>
-public sealed class MockQrPaymentGateway : IQrPaymentGateway, IPaymentGateway
+public sealed class VietQrPaymentGateway : IQrPaymentGateway, IPaymentGateway
 {
     private static readonly TimeSpan SessionLifetime = TimeSpan.FromMinutes(15);
     private readonly Func<DateTime> _clock;
@@ -19,7 +19,7 @@ public sealed class MockQrPaymentGateway : IQrPaymentGateway, IPaymentGateway
     public const string ProviderName = "VietQR";
     public string Provider => ProviderName;
 
-    public MockQrPaymentGateway(Func<DateTime>? clock = null)
+    public VietQrPaymentGateway(Func<DateTime>? clock = null)
     {
         _clock = clock ?? (() => DateTime.Now);
     }
@@ -30,7 +30,7 @@ public sealed class MockQrPaymentGateway : IQrPaymentGateway, IPaymentGateway
         Validate(request);
 
         var now = _clock();
-        var transactionId = "SIM-" + Guid.NewGuid().ToString("N").ToUpperInvariant();
+        var transactionId = "VQR-" + Guid.NewGuid().ToString("N").ToUpperInvariant();
         const string providerName = "VietQR";
         var description = request.Description.Trim();
         var payload = BuildPayload(transactionId, request, description);
@@ -42,7 +42,7 @@ public sealed class MockQrPaymentGateway : IQrPaymentGateway, IPaymentGateway
             description,
             payload,
             now.Add(SessionLifetime),
-            IsSimulation: true);
+            RequiresManualConfirmation: true);
 
         lock (_sync)
         {
@@ -91,14 +91,13 @@ public sealed class MockQrPaymentGateway : IQrPaymentGateway, IPaymentGateway
         {
             Amount = request.Amount,
             ExpiresAt = now.Add(SessionLifetime),
-            IsSimulation = true,
             QrPayload = string.Create(CultureInfo.InvariantCulture,
-                $"edufee-sim://vietqr/pay?orderId={Uri.EscapeDataString(request.OrderId.Trim())}&requestId={requestId}&amount={request.Amount:0}")
+                $"vietqr://pay?orderId={Uri.EscapeDataString(request.OrderId.Trim())}&requestId={requestId}&amount={request.Amount:0}")
         };
         lock (_sync)
         {
             if (!_paymentSessions.TryAdd(session.OrderId, session))
-                throw new InvalidOperationException("Mã đơn thanh toán mô phỏng đã tồn tại.");
+                throw new InvalidOperationException("Mã đơn thanh toán VietQR đã tồn tại.");
             _paymentStatuses[session.OrderId] = GatewayPaymentStatus.Pending;
         }
         return Task.FromResult(session);
@@ -111,7 +110,7 @@ public sealed class MockQrPaymentGateway : IQrPaymentGateway, IPaymentGateway
         lock (_sync)
         {
             if (!_paymentSessions.TryGetValue(orderId.Trim(), out var session))
-                return Task.FromResult(new PaymentGatewayStatus(orderId.Trim(), string.Empty, 0, GatewayPaymentStatus.Unknown, "NOT_FOUND", "Không tìm thấy giao dịch mô phỏng.") { Provider = Provider });
+                return Task.FromResult(new PaymentGatewayStatus(orderId.Trim(), string.Empty, 0, GatewayPaymentStatus.Unknown, "NOT_FOUND", "Không tìm thấy giao dịch VietQR.") { Provider = Provider });
             var status = _paymentStatuses[session.OrderId];
             if (status == GatewayPaymentStatus.Pending && session.ExpiresAt <= _clock()) status = GatewayPaymentStatus.Expired;
             return Task.FromResult(new PaymentGatewayStatus(session.OrderId,
@@ -120,13 +119,13 @@ public sealed class MockQrPaymentGateway : IQrPaymentGateway, IPaymentGateway
         }
     }
 
-    public void SimulatePayment(string orderId, GatewayPaymentStatus status = GatewayPaymentStatus.Success)
+    public void ConfirmTransferred(string orderId, GatewayPaymentStatus status = GatewayPaymentStatus.Success)
     {
         if (string.IsNullOrWhiteSpace(orderId)) throw new ArgumentException("Mã đơn thanh toán không được để trống.", nameof(orderId));
         if (status is GatewayPaymentStatus.Unknown) throw new ArgumentOutOfRangeException(nameof(status));
         lock (_sync)
         {
-            if (!_paymentSessions.ContainsKey(orderId.Trim())) throw new InvalidOperationException("Không tìm thấy giao dịch mô phỏng.");
+            if (!_paymentSessions.ContainsKey(orderId.Trim())) throw new InvalidOperationException("Không tìm thấy giao dịch VietQR.");
             _paymentStatuses[orderId.Trim()] = status;
         }
     }
@@ -161,18 +160,17 @@ public sealed class MockQrPaymentGateway : IQrPaymentGateway, IPaymentGateway
 
     private static string ToMessage(GatewayPaymentStatus status) => status switch
     {
-        GatewayPaymentStatus.Success => "Thanh toán mô phỏng thành công.",
-        GatewayPaymentStatus.Pending => "Đang chờ thanh toán mô phỏng.",
-        GatewayPaymentStatus.Cancelled => "Thanh toán mô phỏng đã bị hủy.",
-        GatewayPaymentStatus.Expired => "Thanh toán mô phỏng đã hết hạn.",
-        _ => "Thanh toán mô phỏng không thành công."
+        GatewayPaymentStatus.Success => "Đã xác nhận chuyển khoản VietQR.",
+        GatewayPaymentStatus.Pending => "Đang chờ xác nhận chuyển khoản VietQR.",
+        GatewayPaymentStatus.Cancelled => "Thanh toán VietQR đã bị hủy.",
+        GatewayPaymentStatus.Expired => "Mã VietQR đã hết hạn.",
+        _ => "Thanh toán VietQR không thành công."
     };
 
     private static string BuildPayload(string transactionId, QrPaymentRequest request, string description)
     {
-        const string provider = "vietqr";
         return string.Create(CultureInfo.InvariantCulture,
-            $"edufee-sim://{provider}/pay?transactionId={transactionId}&feeId={request.TuitionFeeId}&studentId={request.StudentId}&semesterId={request.SemesterId}&amount={request.Amount:0}&description={Uri.EscapeDataString(description)}");
+            $"vietqr://pay?transactionId={transactionId}&feeId={request.TuitionFeeId}&studentId={request.StudentId}&semesterId={request.SemesterId}&amount={request.Amount:0}&description={Uri.EscapeDataString(description)}");
     }
 
     private static QrPaymentConfirmation Failed(string transactionId, string message, DateTime now) =>

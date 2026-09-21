@@ -31,7 +31,7 @@ EduFee là ứng dụng desktop Windows Forms xây dựng trên .NET 10, phục 
 - Cập nhật số dư học phí và tạo biên lai trong cùng một SQLite transaction nguyên tử.
 - Chặn thu vượt số còn lại và ngăn sửa trực tiếp số tiền đã được chứng minh bằng biên lai.
 - Lưu snapshot lịch sử bất biến trên biên lai để chứng từ không thay đổi khi hồ sơ sinh viên hoặc học phí được cập nhật sau này.
-- Hỗ trợ VietQR mô phỏng và MoMo Sandbox tùy chọn qua interface gateway chung.
+- Hỗ trợ mã chuyển khoản VietQR và MoMo Sandbox tùy chọn qua interface gateway chung.
 
 ### 4. Báo cáo và thống kê
 
@@ -100,6 +100,7 @@ Tích hợp này **chỉ dùng thanh toán thử nghiệm**, gọi API `captureW
 
 - Nhập Partner Code, Access Key và Secret Key của tài khoản Sandbox trong cửa sổ cấu hình MoMo. Secret luôn được che, lưu bằng Windows DPAPI theo tài khoản Windows hiện tại; không đưa credential vào source code hoặc CI.
 - Mã đơn được lưu trước khi gọi mạng. Tạo hoặc quét QR chưa làm tăng số học phí đã thu. Chỉ phản hồi truy vấn thành công, khớp giao dịch mới cập nhật học phí, tạo biên lai và đánh dấu hoàn tất trong cùng một transaction SQLite.
+- Kết quả thất bại, bị hủy và hết hạn được lưu cùng mã kết quả và thời điểm kết thúc để đối soát. Trạng thái đang xử lý hoặc chưa xác định vẫn có thể kiểm tra lại; mọi trạng thái chưa thành công đều không thay đổi học phí hoặc tạo biên lai.
 - Cửa sổ thanh toán kiểm tra trạng thái mỗi bốn giây. Đóng cửa sổ sẽ dừng polling, không hủy giao dịch phía MoMo. Lỗi mạng không tự đánh dấu thanh toán thất bại.
 - `RedirectUrl` và `IpnUrl` mặc định là `https://localhost/` cho luồng desktop chỉ dùng query. Ứng dụng không cung cấp callback listener; trang quay về localhost sẽ không tải được. Có thể dùng URL do bạn quản lý nếu tài khoản Sandbox yêu cầu. Redirect/IPN không được dùng làm bằng chứng thanh toán.
 - `--demo` luôn dùng mock. Kiểm thử tự động dùng HTTP giả lập, không cần credential hoặc kết nối MoMo.
@@ -132,7 +133,7 @@ Bộ regression kiểm tra các nhóm chính:
 - CSV import/export
 - backup/restore validation
 - PDF/report generation
-- VietQR mô phỏng
+- Luồng chuyển khoản VietQR
 - Chữ ký MoMo, xác thực phản hồi, chống ghi nhận trùng và rollback/retry migration v5
 - startup và một số hành vi UI
 

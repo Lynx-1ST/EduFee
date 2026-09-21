@@ -47,11 +47,22 @@ public static class PaymentGatewayAcceptance
         check(pending.Status == GatewayPaymentStatus.Pending,
             "MoMo processing result codes remain pending for polling");
 
-        var mock = new MockQrPaymentGateway();
-        var session = mock.CreatePaymentAsync(new PaymentGatewayRequest("MOCK-1", 1_000m, "Học phí", "SV1", "Sinh viên 1")).GetAwaiter().GetResult();
-        mock.SimulatePayment(session.OrderId);
-        check(mock.QueryPaymentAsync(session.OrderId).GetAwaiter().GetResult().Status == GatewayPaymentStatus.Success,
-            "Mock gateway exposes an explicit simulated payment status");
+        foreach (int failedCode in new[] { 98, 99, 1001, 1002, 1004, 1007, 1017, 1026, 2019, 4001, 4002, 4100 })
+        {
+            string failedOrderId = "FAILED-" + failedCode;
+            string failedJson = $$"""{"partnerCode":"partner","requestId":"REQUEST","orderId":"{{failedOrderId}}","amount":1000,"resultCode":{{failedCode}},"transId":0}""";
+            using var failedClient = new HttpClient(new StubHandler(failedJson)) { Timeout = TimeSpan.FromSeconds(1) };
+            var failed = new MomoSandboxPaymentGateway(settingsService, failedClient)
+                .QueryPaymentAsync(failedOrderId).GetAwaiter().GetResult();
+            check(failed.Status == GatewayPaymentStatus.Failed,
+                $"MoMo final result code {failedCode} maps to Failed");
+        }
+
+        var vietQr = new VietQrPaymentGateway();
+        var session = vietQr.CreatePaymentAsync(new PaymentGatewayRequest("VIETQR-1", 1_000m, "Học phí", "SV1", "Sinh viên 1")).GetAwaiter().GetResult();
+        vietQr.ConfirmTransferred(session.OrderId);
+        check(vietQr.QueryPaymentAsync(session.OrderId).GetAwaiter().GetResult().Status == GatewayPaymentStatus.Success,
+            "VietQR supports explicit manual transfer confirmation");
     }
 
     private static bool Throws(Action action)

@@ -224,7 +224,7 @@ namespace _26K1_DotNet
         {
             if (_demoMode)
             {
-                UiFeedback.ShowInfo("Chế độ demo luôn dùng cổng mô phỏng nội bộ và không gọi MoMo Sandbox.");
+                UiFeedback.ShowInfo("Chế độ demo luôn dùng VietQR và không gọi MoMo Sandbox.");
                 return;
             }
             using var form = new FormMomoSettings(_momoSettingsService);

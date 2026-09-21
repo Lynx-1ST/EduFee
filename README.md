@@ -31,7 +31,7 @@ EduFee is a .NET 10 Windows Forms desktop application for managing student recor
 - Update tuition balances and create receipts within a single atomic SQLite transaction.
 - Reject overpayments and prevent direct modification of receipt-backed paid amounts.
 - Store immutable receipt snapshots so historical documents remain stable after student or tuition data changes.
-- Support simulated VietQR sessions and optional MoMo Sandbox payments through a shared gateway interface.
+- Support VietQR bank-transfer QR codes and optional MoMo Sandbox payments through a shared gateway interface.
 
 ### 4. Reports and Statistics
 
@@ -100,6 +100,7 @@ This integration is for **test payments only**. It uses MoMo's `captureWallet` c
 
 - Configure your own Sandbox Partner Code, Access Key and Secret Key in the MoMo settings dialog. The secret stays masked and is saved with Windows DPAPI for the current Windows user. Do not copy credentials into source code or CI secrets.
 - A new order is persisted before the network request. Creating or scanning a QR code does not record tuition. Only a matching, successful query response can update tuition, create a receipt and mark the gateway transaction complete in one SQLite transaction.
+- Failed, cancelled and expired results are persisted with their provider result code and completion time for audit. Pending and unknown results remain recoverable; none of these non-success states changes tuition or creates a receipt.
 - The payment dialog queries every four seconds. Closing it stops polling; it does not cancel a remote MoMo payment. Network failures do not mark a payment failed.
 - `RedirectUrl` and `IpnUrl` default to `https://localhost/` for the query-only desktop flow. No callback listener is provided; the local return page will not load. Supply URLs you control if needed for your Sandbox account. A redirect or IPN is never treated as proof of payment.
 - Demo mode always uses the internal mock. Automated tests use fake HTTP responses and require no MoMo credentials or Internet access to the provider.
@@ -134,7 +135,7 @@ The regression suite covers areas including:
 - CSV import/export
 - backup/restore validation
 - PDF/report generation
-- simulated VietQR flows
+- VietQR transfer flows
 - MoMo signatures, response validation, duplicate-payment protection and schema v5 rollback/retry
 - startup and selected UI behaviors
 

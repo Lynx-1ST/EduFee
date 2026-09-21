@@ -16,7 +16,7 @@ public sealed class FormQrPayment : Form
     private DateTime _expiryTime;
     private Label _status = null!;
     private Label _lblCountdown = null!;
-    private Button _simulateSuccess = null!;
+    private Button _confirmTransferred = null!;
     private bool _pollStarted;
     private bool _completed;
     private bool _pollDisposed;
@@ -168,12 +168,12 @@ public sealed class FormQrPayment : Form
         _countdownTimer.Tick += (_, _) => UpdateCountdown();
         _countdownTimer.Start();
 
-        // Nút mô phỏng thanh toán (chỉ hiển thị ở chế độ mô phỏng)
-        _simulateSuccess = UITheme.PrimaryBtn(isMomo ? "Mô phỏng thanh toán MoMo" : "Mô phỏng đã thanh toán", 210, 34);
-        _simulateSuccess.Location = new Point(125, 476);
-        _simulateSuccess.Visible = _session.IsSimulation && _gateway is MockQrPaymentGateway;
-        _simulateSuccess.Click += (_, _) => SimulateSuccess();
-        body.Controls.Add(_simulateSuccess);
+        // VietQR không có API đối soát trong ứng dụng desktop; người dùng xác nhận thủ công.
+        _confirmTransferred = UITheme.PrimaryBtn("Tôi đã chuyển khoản", 210, 34);
+        _confirmTransferred.Location = new Point(125, 476);
+        _confirmTransferred.Visible = !isMomo && _gateway is VietQrPaymentGateway;
+        _confirmTransferred.Click += (_, _) => ConfirmVietQrTransfer();
+        body.Controls.Add(_confirmTransferred);
 
         var footer = new Panel { Dock = DockStyle.Bottom, Height = 66, BackColor = UITheme.Surface };
         footer.Controls.Add(UITheme.HSep(DockStyle.Top));
@@ -319,13 +319,13 @@ public sealed class FormQrPayment : Form
         }
     }
 
-    private void SimulateSuccess()
+    private void ConfirmVietQrTransfer()
     {
-        if (_gateway is MockQrPaymentGateway mock)
+        if (_gateway is VietQrPaymentGateway vietQr)
         {
-            mock.SimulatePayment(_session.OrderId);
-            _simulateSuccess.Enabled = false;
-            _status.Text = "Đã ghi nhận thanh toán, đang xác nhận...";
+            vietQr.ConfirmTransferred(_session.OrderId);
+            _confirmTransferred.Enabled = false;
+            _status.Text = "Đã xác nhận chuyển khoản, đang ghi nhận...";
         }
     }
 
@@ -338,4 +338,3 @@ public sealed class FormQrPayment : Form
         _ => string.IsNullOrWhiteSpace(status.Message) ? "Đang kiểm tra giao dịch..." : status.Message
     };
 }
-

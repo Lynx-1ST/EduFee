@@ -108,22 +108,33 @@ public sealed class SqliteRepository
     }
 
     public void UpdateGatewayTransactionStatus(string provider, string orderId, string? providerTransactionId,
-        int status, string? rawResultCode, int successStatus)
+        decimal amount, int status, string? rawResultCode, int successStatus, int pendingStatus,
+        int unknownStatus, bool isTerminal)
     {
         if (string.IsNullOrWhiteSpace(provider)) throw new ArgumentException("Thiếu nhà cung cấp thanh toán.", nameof(provider));
         ArgumentException.ThrowIfNullOrWhiteSpace(orderId);
+        long amountVnd = ToVnd(amount);
+        if (amountVnd <= 0) throw new ArgumentOutOfRangeException(nameof(amount), "Số tiền thanh toán phải lớn hơn 0.");
         using var connection = _db.CreateConnection();
         using var command = connection.CreateCommand();
         command.CommandText = @"UPDATE PaymentGatewayTransactions
             SET ProviderTransactionId=COALESCE(NULLIF(@transactionId, ''), ProviderTransactionId),
-                Status=@status, RawResultCode=@resultCode
-            WHERE OrderId=@orderId AND Provider=@provider AND Status<>@successStatus;";
+                Status=@status,
+                CompletedAt=CASE WHEN @isTerminal=1 THEN COALESCE(CompletedAt, @completedAt) ELSE NULL END,
+                RawResultCode=@resultCode
+            WHERE OrderId=@orderId AND Provider=@provider AND Amount=@amount AND Status<>@successStatus
+              AND (Status IN (@pendingStatus, @unknownStatus) OR Status=@status);";
         command.Parameters.AddWithValue("@transactionId", providerTransactionId?.Trim() ?? string.Empty);
+        command.Parameters.AddWithValue("@amount", amountVnd);
         command.Parameters.AddWithValue("@status", status);
+        command.Parameters.AddWithValue("@isTerminal", isTerminal ? 1 : 0);
+        command.Parameters.AddWithValue("@completedAt", FormatDate(DateTime.Now));
         command.Parameters.AddWithValue("@resultCode", (object?)rawResultCode ?? DBNull.Value);
         command.Parameters.AddWithValue("@orderId", orderId.Trim());
         command.Parameters.AddWithValue("@provider", provider.Trim());
         command.Parameters.AddWithValue("@successStatus", successStatus);
+        command.Parameters.AddWithValue("@pendingStatus", pendingStatus);
+        command.Parameters.AddWithValue("@unknownStatus", unknownStatus);
         if (command.ExecuteNonQuery() != 1)
             throw new InvalidOperationException("Không tìm thấy giao dịch đang chờ của nhà cung cấp thanh toán.");
     }

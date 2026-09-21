@@ -28,7 +28,6 @@ public sealed record PaymentSession(
 {
     public decimal Amount { get; init; }
     public DateTime? ExpiresAt { get; init; }
-    public bool IsSimulation { get; init; }
     public string QrPayload { get; init; } = string.Empty;
 }
 

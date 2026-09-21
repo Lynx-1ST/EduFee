@@ -15,7 +15,7 @@
 | Học phí | Tính theo tín chỉ, miễn giảm, công nợ, trạng thái thanh toán |
 | Thanh toán | Thu một phần/đủ, chặn thu vượt số dư |
 | Biên lai | Snapshot lịch sử, Print Preview, PDF, email |
-| VietQR | Luồng mô phỏng, không kết nối ngân hàng thật |
+| VietQR | Mã chuyển khoản ngân hàng; xác nhận giao dịch thủ công trong ứng dụng |
 | MoMo Sandbox | Gateway thử nghiệm, ký HMAC-SHA256, truy vấn trạng thái, lưu giao dịch trong schema v5; không nhận tiền thật |
 | SQLite | Nguồn dữ liệu vận hành, khóa ngoại, constraints, schema versioning |
 | Transaction | Cập nhật học phí và tạo biên lai trong cùng transaction |
@@ -40,7 +40,7 @@ Mọi thay đổi tiếp theo phải duy trì các invariant sau:
 - Migration phải hỗ trợ rollback và có regression test.
 - Không thêm Web API, cloud database, WPF/WinUI hoặc framework UI nặng.
 - Không phát triển module quản lý lớp riêng.
-- VietQR chỉ là mô phỏng trong phạm vi hệ thống hiện tại.
+- VietQR tạo mã chuyển khoản thật; ứng dụng chưa có API ngân hàng để tự động đối soát nên bước xác nhận vẫn do người dùng thực hiện.
 
 ---
 
@@ -464,7 +464,7 @@ README phải phản ánh đúng trạng thái hệ thống:
 - Test.
 - Database path.
 - Backup/Restore.
-- VietQR là mô phỏng.
+- VietQR dùng xác nhận chuyển khoản thủ công.
 - PDF sử dụng raster rendering.
 - Print Preview.
 - Windows/.NET Runtime requirements.
@@ -532,7 +532,7 @@ Luồng kiểm thử end-to-end:
 7. Thu một phần bằng tiền mặt.
 8. Kiểm tra biên lai.
 9. Xuất biên lai PDF.
-10. Thực hiện thanh toán VietQR mô phỏng.
+10. Thực hiện chuyển khoản VietQR và xác nhận thủ công.
 11. Kiểm tra trạng thái thanh toán.
 12. Lọc công nợ theo học kỳ/lớp.
 13. Xuất báo cáo PDF.

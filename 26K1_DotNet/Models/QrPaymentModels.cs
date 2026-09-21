@@ -1,6 +1,6 @@
 namespace K26_DotNet.Services;
 
-/// <summary>Nhà cung cấp mã QR được mô phỏng trong hệ thống.</summary>
+/// <summary>Nhà cung cấp mã thanh toán QR trong hệ thống.</summary>
 public enum QrPaymentProvider
 {
     VietQr
@@ -15,7 +15,7 @@ public sealed record QrPaymentRequest(
     decimal Amount,
     string Description);
 
-/// <summary>Phiên QR ngắn hạn; chỉ dùng cho mô phỏng, không phải xác nhận ngân hàng thật.</summary>
+/// <summary>Phiên VietQR ngắn hạn; việc xác nhận chuyển khoản được thực hiện thủ công.</summary>
 public sealed record QrPaymentSession(
     string TransactionId,
     QrPaymentProvider Provider,
@@ -24,9 +24,9 @@ public sealed record QrPaymentSession(
     string Description,
     string Payload,
     DateTime ExpiresAt,
-    bool IsSimulation);
+    bool RequiresManualConfirmation);
 
-/// <summary>Kết quả xác nhận của cổng QR mô phỏng.</summary>
+/// <summary>Kết quả xác nhận thủ công của cổng VietQR.</summary>
 public sealed record QrPaymentConfirmation(
     string TransactionId,
     bool IsSuccessful,

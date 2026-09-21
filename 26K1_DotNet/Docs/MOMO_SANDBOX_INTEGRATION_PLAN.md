@@ -2,14 +2,14 @@
 
 ## 1. Mục tiêu
 
-Tích hợp MoMo Sandbox như một phương thức thanh toán thử nghiệm bên cạnh cơ chế QR mô phỏng hiện có.
+Tích hợp MoMo Sandbox như một phương thức thanh toán thử nghiệm bên cạnh VietQR hiện có.
 
 Phần tích hợp cần đáp ứng các nguyên tắc:
 
 - Giữ nguyên kiến trúc .NET 10 WinForms + SQLite.
 - Không thay đổi cơ chế ghi nhận học phí và biên lai hiện tại.
 - Chỉ ghi nhận thanh toán khi giao dịch MoMo được xác nhận thành công.
-- Giữ `MockQrPaymentGateway` để sử dụng trong Demo Mode, regression tests và môi trường không có Internet.
+- Giữ `VietQrPaymentGateway` để sử dụng trong Demo Mode và môi trường không có Internet; trạng thái được xác nhận thủ công do không có API đối soát ngân hàng.
 - Không yêu cầu backend public trong giai đoạn đầu.
 - Không sử dụng tiền thật hoặc môi trường Production.
 
@@ -21,9 +21,9 @@ Phần tích hợp cần đáp ứng các nguyên tắc:
 FormPayment
     ↓
 IPaymentGateway
-    ├── MockQrPaymentGateway
+    ├── VietQrPaymentGateway
     │       ↓
-    │   Local Simulation
+    │   Manual transfer confirmation
     │
     └── MomoSandboxPaymentGateway
             ↓
@@ -123,9 +123,9 @@ public enum GatewayPaymentStatus
 
 ---
 
-# Phase 2 — Refactor Mock QR Gateway
+# Phase 2 — Chuẩn hóa VietQR Gateway
 
-`MockQrPaymentGateway` tiếp tục được giữ lại nhưng chuyển sang triển khai `IPaymentGateway`.
+`VietQrPaymentGateway` triển khai `IPaymentGateway`; người dùng xác nhận thủ công sau khi chuyển khoản.
 
 Mục tiêu:
 
@@ -141,10 +141,10 @@ UI và nghiệp vụ thanh toán không phụ thuộc trực tiếp vào một g
 
 ### Regression
 
-- [x] Mock Create Payment hoạt động.
-- [x] Mock Query Status hoạt động.
-- [x] Mock Success tạo đúng một receipt.
-- [x] Mock Failed không tạo receipt.
+- [x] VietQR Create Payment hoạt động.
+- [x] VietQR Query Status hoạt động.
+- [x] VietQR xác nhận thành công tạo đúng một receipt.
+- [x] VietQR chưa xác nhận không tạo receipt.
 - [x] Demo Mode không gọi dịch vụ bên ngoài.
 - [x] CI không phụ thuộc Internet.
 
@@ -366,7 +366,7 @@ PaymentSession
 IPaymentGateway
 ```
 
-thay vì phụ thuộc trực tiếp vào `MockQrPaymentGateway`.
+thay vì phụ thuộc trực tiếp vào `VietQrPaymentGateway`.
 
 ### UI dự kiến
 
@@ -518,7 +518,7 @@ Bổ sung khu vực cấu hình payment provider.
 Thanh toán
 
 Provider
-(•) Mô phỏng nội bộ
+(•) VietQR
 ( ) MoMo Sandbox
 
 MoMo Sandbox
@@ -551,7 +551,7 @@ Secret Key
 `--demo` luôn sử dụng:
 
 ```text
-MockQrPaymentGateway
+VietQrPaymentGateway
 ```
 
 Không gọi MoMo Sandbox.
@@ -717,7 +717,7 @@ Không mô tả Sandbox như hệ thống thanh toán Production.
 ```text
 1. IPaymentGateway
         ↓
-2. Refactor MockQrPaymentGateway
+2. Chuẩn hóa VietQrPaymentGateway
         ↓
 3. MomoSettings + DPAPI
         ↓
@@ -800,7 +800,7 @@ Không triển khai trong giai đoạn này:
 
 Integration được coi là hoàn thành khi:
 
-- [x] Mock và MoMo Sandbox cùng triển khai `IPaymentGateway`.
+- [x] VietQR và MoMo Sandbox cùng triển khai `IPaymentGateway`.
 - [x] MoMo request signing có regression test.
 - [x] Create Payment hoạt động với cấu hình Sandbox hợp lệ.
 - [x] Query Status hoạt động.
@@ -822,8 +822,8 @@ EduFee có hai chế độ thanh toán rõ ràng:
 
 ```text
 Payment Provider
-├── Internal Simulation
-│   └── MockQrPaymentGateway
+├── VietQR
+│   └── VietQrPaymentGateway
 │
 └── MoMo Sandbox
     └── MomoSandboxPaymentGateway

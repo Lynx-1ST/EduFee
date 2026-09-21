@@ -14,7 +14,7 @@ namespace _26K1_DotNet
         private readonly StudentService _studentSvc;
         private readonly ReceiptService _receiptSvc;
         private readonly EmailService _emailSvc;
-        private readonly IPaymentGateway _mockGateway;
+        private readonly IPaymentGateway _vietQrGateway;
         private IPaymentGateway? _momoGateway;
         private readonly GatewayPaymentPersistenceService? _gatewayPersistence;
         private readonly MomoSettingsService? _momoSettings;
@@ -40,7 +40,7 @@ namespace _26K1_DotNet
             _studentSvc = studentSvc;
             _receiptSvc = receiptSvc;
             _emailSvc = emailSvc ?? new EmailService();
-            _mockGateway = new MockQrPaymentGateway();
+            _vietQrGateway = new VietQrPaymentGateway();
             _momoSettings = momoSettings;
             _momoGateway = momoGateway ?? (_momoSettings?.Settings.Enabled == true ? new MomoSandboxPaymentGateway(_momoSettings) : null);
             _gatewayPersistence = gatewayPersistence;
@@ -310,8 +310,15 @@ namespace _26K1_DotNet
                     _gatewayPersistence?.PersistIntent(_fee.Id, gateway.Provider, request);
                     var session = await gateway.CreatePaymentAsync(request);
                     using var qrForm = new FormQrPayment(gateway, session);
-                    if (qrForm.ShowDialog(this) != DialogResult.OK || qrForm.PaymentStatus?.Status != GatewayPaymentStatus.Success) return;
+                    var paymentDialogResult = qrForm.ShowDialog(this);
+                    if (qrForm.PaymentStatus is null) return;
                     var confirmation = qrForm.PaymentStatus with { Provider = gateway.Provider };
+                    if (confirmation.Status != GatewayPaymentStatus.Success)
+                    {
+                        _gatewayPersistence?.RecordGatewayStatus(confirmation);
+                        return;
+                    }
+                    if (paymentDialogResult != DialogResult.OK) return;
                     if (_gatewayPersistence != null)
                     {
                         var gatewayReceipt = _gatewayPersistence.RecordConfirmedSuccess(confirmation, payer, sem?.DueDate);
@@ -392,7 +399,7 @@ namespace _26K1_DotNet
                 }
                 return null;
             }
-            return _mockGateway;
+            return _vietQrGateway;
         }
 
         private async Task CompleteRecordedPaymentAsync(PaymentReceipt receipt, Student? student, Semester? sem)

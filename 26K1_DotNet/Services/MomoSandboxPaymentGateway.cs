@@ -69,7 +69,6 @@ public sealed partial class MomoSandboxPaymentGateway : IPaymentGateway
         return new PaymentSession(orderId, requestId, Provider, parsedPayUrl.AbsoluteUri, qrCode, _clock(), GatewayPaymentStatus.Pending)
         {
             Amount = request.Amount,
-            IsSimulation = false,
             QrPayload = qrCode
         };
     }
@@ -178,6 +177,8 @@ public sealed partial class MomoSandboxPaymentGateway : IPaymentGateway
         1000 or 7000 or 7002 or 8000 or 9000 => GatewayPaymentStatus.Pending,
         1005 => GatewayPaymentStatus.Expired,
         1003 or 1006 => GatewayPaymentStatus.Cancelled,
+        98 or 99 or 1001 or 1002 or 1004 or 1007 or 1017 or 1026 or 2019 or 4001 or 4002 or 4100
+            => GatewayPaymentStatus.Failed,
         _ => GatewayPaymentStatus.Unknown
     };
 
