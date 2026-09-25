@@ -28,6 +28,11 @@ namespace K26_DotNet.Models
 
         // Calculated properties
         public decimal OriginalAmount => TotalAmount + DiscountAmount;
+        /// <summary>
+        /// Đơn giá đã được chốt khi phiếu được lập. Phiếu cũ không đọc lại đơn giá
+        /// hiện tại của học kỳ khi người dùng chỉ mở hoặc chỉnh sửa thông tin khác.
+        /// </summary>
+        public decimal PricePerCreditSnapshot => Credits > 0 ? OriginalAmount / Credits : 0;
         public decimal RemainingAmount => TotalAmount - PaidAmount;
         public bool IsFullyPaid => PaidAmount >= TotalAmount;
 

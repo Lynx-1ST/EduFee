@@ -87,7 +87,7 @@ public sealed partial class MomoSandboxPaymentGateway : IPaymentGateway
         using var response = await SendAsync(QueryEndpoint, payload, cancellationToken).ConfigureAwait(false);
         var body = await ReadResponseAsync(response, cancellationToken).ConfigureAwait(false);
         var resultCode = GetRequiredInt(body, "resultCode");
-        ValidateIdentity(body, settings.PartnerCode, trimmedOrderId, requestId, expectedAmount: null, requireTransactionId: resultCode == 0);
+        ValidateIdentity(body, settings.PartnerCode, trimmedOrderId, requestId, expectedAmount: null, requireTransactionId: resultCode is 0 or 9000);
         var amount = GetRequiredInt64(body, "amount");
         if (amount <= 0) throw new InvalidOperationException("MoMo Sandbox trả về số tiền không hợp lệ.");
         var transactionId = GetOptionalString(body, "transId");
@@ -173,8 +173,8 @@ public sealed partial class MomoSandboxPaymentGateway : IPaymentGateway
 
     private static GatewayPaymentStatus MapStatus(int resultCode) => resultCode switch
     {
-        0 => GatewayPaymentStatus.Success,
-        1000 or 7000 or 7002 or 8000 or 9000 => GatewayPaymentStatus.Pending,
+        0 or 9000 => GatewayPaymentStatus.Success,
+        1000 or 7000 or 7002 or 8000 => GatewayPaymentStatus.Pending,
         1005 => GatewayPaymentStatus.Expired,
         1003 or 1006 => GatewayPaymentStatus.Cancelled,
         98 or 99 or 1001 or 1002 or 1004 or 1007 or 1017 or 1026 or 1080 or 1081 or 1088

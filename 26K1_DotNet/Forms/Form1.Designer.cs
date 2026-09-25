@@ -53,6 +53,16 @@ namespace _26K1_DotNet
             {
                 using var pen = new Pen(UITheme.SidebarDivider, 1);
                 e.Graphics.DrawLine(pen, panelSidebar.Width - 1, 0, panelSidebar.Width - 1, panelSidebar.Height);
+
+                // Subtle contour-line motif: a geological signature without visual noise.
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                using var contourPen = new Pen(Color.FromArgb(22, UITheme.SidebarAccent), 1);
+                for (int i = 0; i < 4; i++)
+                {
+                    int inset = i * 13;
+                    e.Graphics.DrawArc(contourPen, -88 + inset, panelSidebar.Height - 260 + inset,
+                        270 - inset * 2, 210 - inset * 2, 282, 132);
+                }
             };
 
             // Logo area
@@ -70,7 +80,7 @@ namespace _26K1_DotNet
                 g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
                 g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
 
-                // 1. Logo badge box at (14, 20), 40x40, radius 10
+                // 1. Original EduFee graduation badge.
                 var badgeRect = new Rectangle(14, 20, 40, 40);
                 using (var logoBg = new System.Drawing.Drawing2D.LinearGradientBrush(badgeRect,
                     UITheme.Primary, UITheme.PrimaryDark, 90F))
@@ -81,7 +91,6 @@ namespace _26K1_DotNet
                     g.DrawPath(logoPen, path);
                 }
 
-                // Graduation icon
                 using (var iconBrush = new SolidBrush(Color.White))
                 {
                     var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
@@ -226,7 +235,7 @@ namespace _26K1_DotNet
 
             var lblFooterOrg = new Label
             {
-                Text = "ĐH Mỏ - Địa chất",
+                Text = "EduFee Desktop",
                 Location = new Point(88, 33),
                 Font = UITheme.FontSmallBold,
                 ForeColor = UITheme.SidebarText,
@@ -241,19 +250,40 @@ namespace _26K1_DotNet
             lblVersion.BackColor = UITheme.SidebarDeep;
             lblVersion.AutoSize = true;
 
-            var humgLogo = new PictureBox
+            var appLogo = new Panel
             {
                 Location = new Point(16, 20),
                 Size = new Size(60, 60),
-                SizeMode = PictureBoxSizeMode.Zoom,
                 BackColor = Color.Transparent,
-                Image = BrandAssets.TryLoadHumgLogo(),
-                AccessibleName = "Logo Trường Đại học Mỏ - Địa chất",
+                AccessibleName = "Logo EduFee",
                 TabStop = false
             };
-            humgLogo.Disposed += (s, e) => humgLogo.Image?.Dispose();
+            appLogo.Paint += (s, e) =>
+            {
+                var g = e.Graphics;
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
 
-            panelSidebarFooter.Controls.AddRange(new Control[] { humgLogo, lblFooterOrg, lblVersion });
+                var sealRect = new Rectangle(4, 4, 51, 51);
+                using (var fill = new System.Drawing.Drawing2D.LinearGradientBrush(sealRect,
+                    UITheme.Primary, UITheme.PrimaryDark, 90F))
+                using (var path = UITheme.GetRoundedPath(sealRect, 14))
+                {
+                    g.FillPath(fill, path);
+                    using var border = new Pen(UITheme.ActiveBorder, 1);
+                    g.DrawPath(border, path);
+                }
+
+                using var iconBrush = new SolidBrush(Color.White);
+                using var iconFont = new Font("Segoe UI Emoji", 20F);
+                using var sf = new StringFormat
+                {
+                    Alignment = StringAlignment.Center,
+                    LineAlignment = StringAlignment.Center
+                };
+                g.DrawString("🎓", iconFont, iconBrush, sealRect, sf);
+            };
+
+            panelSidebarFooter.Controls.AddRange(new Control[] { appLogo, lblFooterOrg, lblVersion });
 
             panelSidebar.Controls.Add(flowNavMiddle);
             panelSidebar.Controls.Add(panelLogo);

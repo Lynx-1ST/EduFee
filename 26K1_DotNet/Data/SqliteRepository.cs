@@ -269,8 +269,29 @@ public sealed class SqliteRepository
     {
         ValidateFee(fee);
         using var connection = _db.CreateConnection();
+        return UpdateTuitionFee(connection, null, fee);
+    }
+
+    public IReadOnlyDictionary<int, PaymentStatus> UpdateTuitionFeesAtomic(IEnumerable<TuitionFee> fees)
+    {
+        ArgumentNullException.ThrowIfNull(fees);
+        var updates = fees.ToList();
+        foreach (var fee in updates) ValidateFee(fee);
+
+        using var connection = _db.CreateConnection();
+        using var transaction = connection.BeginTransaction();
+        var statuses = new Dictionary<int, PaymentStatus>();
+        foreach (var fee in updates)
+            statuses[fee.Id] = UpdateTuitionFee(connection, transaction, fee);
+        transaction.Commit();
+        return statuses;
+    }
+
+    private static PaymentStatus UpdateTuitionFee(SqliteConnection connection, SqliteTransaction? transaction, TuitionFee fee)
+    {
         using (var ledger = connection.CreateCommand())
         {
+            ledger.Transaction = transaction;
             ledger.CommandText = "SELECT PaidAmount, PaidDate FROM TuitionFees WHERE Id=@id;";
             ledger.Parameters.AddWithValue("@id", fee.Id);
             using var reader = ledger.ExecuteReader();
@@ -281,6 +302,7 @@ public sealed class SqliteRepository
                 throw new InvalidOperationException("Không thể sửa số tiền hoặc ngày thu trực tiếp. Hãy lập biên lai thu tiền.");
         }
         using var command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = """
             UPDATE TuitionFees SET Credits=@credits, TotalAmount=@total, DiscountAmount=@discount,
                 DiscountReason=@reason, DueDate=@dueDate,

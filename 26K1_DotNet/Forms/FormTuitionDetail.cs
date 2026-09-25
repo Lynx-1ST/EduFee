@@ -329,6 +329,8 @@ namespace _26K1_DotNet
 
         private decimal GetTuitionPerCredit()
         {
+            if (!_isNew && _fee != null && _fee.PricePerCreditSnapshot > 0)
+                return _fee.PricePerCreditSnapshot;
             if (cmbSemester?.SelectedItem is SemItem semesterItem)
                 return _semSvc.GetById(semesterItem.Id)?.TuitionPerCredit ?? Semester.DefaultTuitionPerCredit;
             return Semester.DefaultTuitionPerCredit;

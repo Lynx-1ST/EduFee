@@ -7,8 +7,7 @@ using System.Windows.Forms;
 namespace _26K1_DotNet
 {
     /// <summary>
-    /// Modern SaaS-style navigation pill button with rounded corners,
-    /// smooth hover highlights, and crisp active states.
+    /// Academic Ledger navigation with a quiet ink surface and mineral-gold marker.
     /// Uses UITheme cached fonts/colors to avoid per-paint GDI allocations.
     /// </summary>
     public class NavButton : Control
@@ -136,14 +135,12 @@ namespace _26K1_DotNet
 
             if (IsActive)
             {
-                using var brush = new LinearGradientBrush(rect,
-                    UITheme.PrimaryDark,
-                    UITheme.Primary,
-                    90F);
+                using var brush = new SolidBrush(UITheme.SidebarActive);
                 FillRoundedRectangle(g, brush, rect, radius);
 
-                using var borderPen = new Pen(UITheme.ActiveBorder, 1);
-                DrawRoundedRectangle(g, borderPen, rect, radius);
+                using var markerBrush = new SolidBrush(UITheme.SidebarAccent);
+                using var markerPath = UITheme.GetRoundedPath(new Rectangle(0, 8, 4, Height - 16), 2);
+                g.FillPath(markerBrush, markerPath);
             }
             else if (_isHovered)
             {
@@ -156,7 +153,7 @@ namespace _26K1_DotNet
 
             int yOffset = _isPressed ? 1 : 0;
 
-            var iconColor = IsActive ? Color.White : (_isHovered ? Color.White : UITheme.SidebarText);
+            var iconColor = IsActive ? UITheme.ActiveDot : (_isHovered ? Color.White : UITheme.SidebarText);
             if (VectorIcon.HasValue)
             {
                 var iconRect = new Rectangle(14, (Height - 18) / 2 + yOffset, 18, 18);

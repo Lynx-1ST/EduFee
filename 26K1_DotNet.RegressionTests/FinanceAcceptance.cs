@@ -28,6 +28,10 @@ public static class FinanceAcceptance
             "AddRange validates every item before changing the cache", check);
         check(jsonService.GetAll().Count == 0, "failed AddRange leaves no partial additions");
 
+        var historicalFee = new TuitionFee(1, 1, 1, 10, 620_000m, discountAmount: 620_000m);
+        check(historicalFee.PricePerCreditSnapshot == 620_000m,
+            "an existing tuition fee retains its original per-credit price snapshot");
+
         var db = new SqlDatabaseContext(Path.Combine(root, "finance-acceptance.db"));
         var students = new StudentService(db);
         students.AddStudent(new Student(1, "Nguyen Van A", "a@example.edu", "", new DateTime(2000, 1, 1), "K26A"));
@@ -77,6 +81,33 @@ public static class FinanceAcceptance
             new TuitionService(db).GetById(1)!.PaidAmount == 100m &&
             new ReceiptService(db).GetAll().Count == 1 && receipts.GetAll().Count == 1,
             "Receipt insert failure rolls back SQLite payment and leaves both service caches unchanged");
+
+        var recalcDb = new SqlDatabaseContext(Path.Combine(root, "recalc-atomic.db"));
+        var recalcStudents = new StudentService(recalcDb);
+        recalcStudents.AddStudent(new Student(11, "Atomic A", "aa@example.edu", "", today, "K26"));
+        recalcStudents.AddStudent(new Student(12, "Atomic B", "ab@example.edu", "", today, "K26"));
+        var recalcStudentIds = recalcStudents.GetAllStudents().Select(student => student.Id).ToArray();
+        var recalcSemesters = new SemesterService(recalcDb);
+        recalcSemesters.Add(new Semester(21, "HK atomic", today, today.AddMonths(4), today.AddMonths(3)));
+        int recalcSemesterId = recalcSemesters.GetAll().Single().Id;
+        var recalcFees = new TuitionService(recalcDb);
+        recalcFees.AddRange([
+            new TuitionFee(0, recalcStudentIds[0], recalcSemesterId, 2, 620_000m),
+            new TuitionFee(0, recalcStudentIds[1], recalcSemesterId, 2, 620_000m)
+        ]);
+        using (var connection = recalcDb.CreateConnection())
+        using (var command = connection.CreateCommand())
+        {
+            command.CommandText = $"CREATE TRIGGER RejectSecondRecalculation BEFORE UPDATE ON TuitionFees WHEN OLD.StudentId={recalcStudentIds[1]} BEGIN SELECT RAISE(ABORT, 'injected recalculation failure'); END;";
+            command.ExecuteNonQuery();
+        }
+        bool recalculationRejected = false;
+        try { recalcFees.RecalculateFeesForSemester(recalcSemesterId, 700_000m); }
+        catch (Microsoft.Data.Sqlite.SqliteException) { recalculationRejected = true; }
+        var persistedRecalculation = new TuitionService(recalcDb).GetBySemester(recalcSemesterId);
+        check(recalculationRejected && persistedRecalculation.All(fee => fee.TotalAmount == 1_240_000m) &&
+            recalcFees.GetBySemester(recalcSemesterId).All(fee => fee.TotalAmount == 1_240_000m),
+            "bulk tuition recalculation rolls back every fee and the service cache when one update fails");
     }
 
     private static void CheckThrows(Action action, string message, Action<bool, string> check)

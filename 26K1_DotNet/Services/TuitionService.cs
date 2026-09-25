@@ -231,7 +231,7 @@ namespace K26_DotNet.Services
             var targetFees = _fees.Where(f => f.SemesterId == semesterId).ToList();
             if (targetFees.Count == 0) return 0;
 
-            int updatedCount = 0;
+            var updates = new List<TuitionFee>();
             foreach (var fee in targetFees)
             {
                 if (!updateFullyPaid && fee.IsFullyPaid) continue;
@@ -264,12 +264,37 @@ namespace K26_DotNet.Services
                     var clone = Clone(fee);
                     clone.TotalAmount = newTotal;
                     clone.DiscountAmount = newDiscount;
-                    Update(clone);
-                    updatedCount++;
+                    clone.UpdateStatus();
+                    ValidateFee(clone, allowExistingPayment: true);
+                    updates.Add(clone);
                 }
             }
 
-            return updatedCount;
+            if (updates.Count == 0) return 0;
+
+            if (_repository != null)
+            {
+                var statuses = _repository.UpdateTuitionFeesAtomic(updates);
+                foreach (var update in updates) update.Status = statuses[update.Id];
+            }
+            else
+            {
+                var replacements = updates.ToDictionary(fee => fee.Id);
+                var nextFees = _fees.Select(fee => replacements.TryGetValue(fee.Id, out var replacement)
+                    ? Clone(replacement)
+                    : Clone(fee)).ToList();
+                var options = new JsonSerializerOptions { WriteIndented = true };
+                AtomicFile.WriteAllText(_filePath, JsonSerializer.Serialize(nextFees, options));
+            }
+
+            foreach (var update in updates)
+            {
+                var existing = _fees.First(fee => fee.Id == update.Id);
+                CopyEditableFields(update, existing);
+                existing.Status = update.Status;
+            }
+
+            return updates.Count;
         }
 
         public void Delete(int id)

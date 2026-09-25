@@ -47,6 +47,11 @@ public static class PaymentGatewayAcceptance
         check(pending.Status == GatewayPaymentStatus.Pending,
             "MoMo processing result codes remain pending for polling");
 
+        using var authorizedClient = new HttpClient(new StubHandler("""{"partnerCode":"partner","requestId":"REQUEST","orderId":"ORDER-9000","amount":1000,"resultCode":9000,"transId":9000123}""")) { Timeout = TimeSpan.FromSeconds(1) };
+        var authorized = new MomoSandboxPaymentGateway(settingsService, authorizedClient).QueryPaymentAsync("ORDER-9000").GetAwaiter().GetResult();
+        check(authorized.Status == GatewayPaymentStatus.Success && authorized.ProviderTransactionId == "9000123",
+            "MoMo result code 9000 is successful for the auto-capture payment flow");
+
         foreach (int failedCode in new[]
                  { 98, 99, 1001, 1002, 1004, 1007, 1017, 1026, 1080, 1081, 1088, 2019, 4001, 4002, 4100 })
         {

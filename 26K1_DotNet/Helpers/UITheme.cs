@@ -5,14 +5,15 @@ using System.Windows.Forms;
 namespace _26K1_DotNet
 {
     /// <summary>
-    /// Centralized UI Theme - Indigo + Slate design system
+    /// Centralized UI Theme - Academic Ledger design system.
+    /// Ink navy communicates trust; mineral gold ties the product to HUMG.
     /// </summary>
     public static class UITheme
     {
         // ── Palette ───────────────────────────────────────────────────────────
-        public static readonly Color Primary       = Color.FromArgb(99, 102, 241);   // #6366F1
-        public static readonly Color PrimaryDark   = Color.FromArgb(79, 70, 229);    // #4F46E5
-        public static readonly Color PrimaryLight  = Color.FromArgb(238, 242, 255);  // #EEF2FF
+        public static readonly Color Primary       = Color.FromArgb(24, 59, 78);     // #183B4E ink blue
+        public static readonly Color PrimaryDark   = Color.FromArgb(12, 38, 54);     // #0C2636
+        public static readonly Color PrimaryLight  = Color.FromArgb(232, 241, 244);  // #E8F1F4
 
         public static readonly Color Success       = Color.FromArgb(16, 185, 129);   // #10B981
         public static readonly Color SuccessDark   = Color.FromArgb(5, 150, 105);
@@ -26,21 +27,21 @@ namespace _26K1_DotNet
         public static readonly Color DangerDark    = Color.FromArgb(185, 28, 28);
         public static readonly Color DangerLight   = Color.FromArgb(254, 226, 226);
 
-        public static readonly Color Purple        = Color.FromArgb(139, 92, 246);   // #8B5CF6
-        public static readonly Color PurpleDark    = Color.FromArgb(109, 40, 217);
-        public static readonly Color PurpleLight   = Color.FromArgb(237, 233, 254);
+        public static readonly Color Purple        = Color.FromArgb(180, 122, 35);   // #B47A23 mineral gold
+        public static readonly Color PurpleDark    = Color.FromArgb(137, 86, 17);
+        public static readonly Color PurpleLight   = Color.FromArgb(251, 243, 223);
 
         public static readonly Color Info          = Color.FromArgb(14, 165, 233);   // #0EA5E9
         public static readonly Color InfoDark      = Color.FromArgb(3, 105, 161);    // #0369A1
         public static readonly Color InfoLight     = Color.FromArgb(224, 242, 254);
 
         // ── Surfaces ──────────────────────────────────────────────────────────
-        public static readonly Color Background    = Color.FromArgb(241, 245, 249);  // #F1F5F9
+        public static readonly Color Background    = Color.FromArgb(244, 246, 243);  // #F4F6F3 warm paper
         public static readonly Color Surface       = Color.White;
         public static readonly Color SurfaceAlt    = Color.FromArgb(248, 250, 252);  // #F8FAFC
         public static readonly Color Border        = Color.FromArgb(226, 232, 240);  // #E2E8F0
         public static readonly Color BorderLight   = Color.FromArgb(241, 245, 249);
-        public static readonly Color AlternatingRow = Color.FromArgb(250, 252, 255); // grid alternate row
+        public static readonly Color AlternatingRow = Color.FromArgb(248, 250, 247); // grid alternate row
 
         // ── Text ──────────────────────────────────────────────────────────────
         public static readonly Color TextPrimary   = Color.FromArgb(15, 23, 42);     // #0F172A
@@ -49,23 +50,23 @@ namespace _26K1_DotNet
         public static readonly Color TextLight     = Color.FromArgb(203, 213, 225);  // #CBD5E1 (NavButton inactive text)
 
         // ── Sidebar ───────────────────────────────────────────────────────────
-        public static readonly Color SidebarBg          = Color.FromArgb(15, 23, 42);   // #0F172A
-        public static readonly Color SidebarHover       = Color.FromArgb(30, 41, 59);   // #1E293B
-        public static readonly Color SidebarActive      = Color.FromArgb(30, 41, 59);
-        public static readonly Color SidebarAccent      = Color.FromArgb(99, 102, 241); // same as Primary
-        public static readonly Color SidebarText        = Color.FromArgb(148, 163, 184);
+        public static readonly Color SidebarBg          = Color.FromArgb(13, 35, 47);   // #0D232F
+        public static readonly Color SidebarHover       = Color.FromArgb(24, 54, 68);   // #183644
+        public static readonly Color SidebarActive      = Color.FromArgb(20, 47, 61);
+        public static readonly Color SidebarAccent      = Color.FromArgb(205, 151, 57); // mineral gold
+        public static readonly Color SidebarText        = Color.FromArgb(153, 177, 185);
         public static readonly Color SidebarActiveText  = Color.White;
-        public static readonly Color SidebarDivider     = Color.FromArgb(30, 41, 59);   // #1E293B
-        public static readonly Color SidebarDeep        = Color.FromArgb(10, 15, 29);   // deepest sidebar bg
-        public static readonly Color SidebarCard        = Color.FromArgb(16, 24, 39);   // semester widget bg
-        public static readonly Color SidebarHoverBorder = Color.FromArgb(51, 65, 85);   // #334155
+        public static readonly Color SidebarDivider     = Color.FromArgb(36, 66, 78);
+        public static readonly Color SidebarDeep        = Color.FromArgb(8, 27, 38);
+        public static readonly Color SidebarCard        = Color.FromArgb(17, 43, 55);
+        public static readonly Color SidebarHoverBorder = Color.FromArgb(57, 89, 99);
 
         // ── Accent Colors ─────────────────────────────────────────────────────
-        public static readonly Color AccentLavender = Color.FromArgb(165, 180, 252);  // #A5B4FC brand accent
-        public static readonly Color AccentIndigo   = Color.FromArgb(49, 46, 129);    // #312E81 dark indigo
-        public static readonly Color ActiveBorder   = Color.FromArgb(129, 140, 248);  // #818CF8 NavButton active
-        public static readonly Color ActiveDot      = Color.FromArgb(224, 231, 255);  // #E0E7FF active indicator
-        public static readonly Color SubtitleLight  = Color.FromArgb(224, 231, 255);  // #E0E7FF dialog subtitle
+        public static readonly Color AccentLavender = Color.FromArgb(229, 198, 126);  // parchment gold
+        public static readonly Color AccentIndigo   = Color.FromArgb(20, 66, 84);     // deep teal
+        public static readonly Color ActiveBorder   = Color.FromArgb(205, 151, 57);   // mineral gold
+        public static readonly Color ActiveDot      = Color.FromArgb(244, 220, 164);
+        public static readonly Color SubtitleLight  = Color.FromArgb(205, 220, 222);
 
         // ── Simulation Panel ──────────────────────────────────────────────────
         public static readonly Color SimBg          = Color.FromArgb(240, 253, 244);  // green-50
