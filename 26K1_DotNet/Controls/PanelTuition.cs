@@ -16,7 +16,7 @@ namespace _26K1_DotNet
         private readonly ReceiptService _receiptSvc;
         private readonly Form1 _mainForm;
 
-        private ComboBox cmbSem = null!, cmbStatus = null!;
+        private ComboBox cmbSem = null!, cmbStatus = null!, cmbClass = null!;
         private TextBox txtSearch = null!;
         private DataGridView dgv = null!;
         private Label _lblEmpty = null!;
@@ -24,6 +24,8 @@ namespace _26K1_DotNet
         private Label lblTotalVal = null!, lblPaidVal = null!, lblLeftVal = null!, lblCountVal = null!;
         private Button btnBatch = null!, btnAdd = null!, btnPay = null!, btnHistory = null!, btnExport = null!, btnMore = null!;
         private Label lblStudentContext = null!;
+        private Label lblSemesterName = null!, lblSemesterMeta = null!;
+        private readonly List<Button> _statusSegments = new();
         private readonly ContextMenuStrip _selectionMenu = new();
         private List<TuitionFee> _current = new();
         private int? _studentContextId;
@@ -47,47 +49,48 @@ namespace _26K1_DotNet
         {
             BackColor = UITheme.Background;
 
-            // ── Actions, search, and filters toolbar ──────────────────────
+            // ── Tuition context, actions, and filters ─────────────────────
             var toolbar = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 92,
+                Height = 142,
                 BackColor = UITheme.Surface,
-                Padding = new Padding(24, 10, 24, 8)
+                Padding = new Padding(28, 12, 28, 8)
             };
             toolbar.Controls.Add(UITheme.HSep(DockStyle.Bottom));
 
-            // Row 1: Actions (Left) & Search (Right)
             var row1 = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 36,
+                Height = 40,
                 BackColor = Color.Transparent
             };
 
-            var flowActions = new FlowLayoutPanel
+            var context = new Panel
             {
                 Dock = DockStyle.Left,
-                FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false,
-                AutoSize = true,
-                BackColor = Color.Transparent,
-                Margin = Padding.Empty,
-                Padding = Padding.Empty
+                Width = 420,
+                BackColor = Color.Transparent
             };
+            lblSemesterName = new Label
+            {
+                Text = "Học phí",
+                AutoSize = true,
+                Location = new Point(0, 0),
+                Font = UITheme.FontDisplay,
+                ForeColor = UITheme.TextPrimary
+            };
+            lblSemesterMeta = new Label
+            {
+                Text = "Chọn học kỳ từ thanh điều hướng",
+                AutoSize = true,
+                Location = new Point(1, 24),
+                Font = UITheme.FontSmall,
+                ForeColor = UITheme.TextSecondary
+            };
+            context.Controls.AddRange(new Control[] { lblSemesterName, lblSemesterMeta });
 
-            btnAdd = UITheme.PrimaryBtn("+ Lập phiếu", 115, 34);
-            btnBatch = UITheme.GhostBtn("Tạo theo lớp", 125, 34);
-            btnExport = UITheme.GhostBtn("Xuất CSV", 95, 34);
-            btnAdd.Margin = new Padding(0, 1, 8, 0);
-            btnBatch.Margin = new Padding(0, 1, 8, 0);
-            btnExport.Margin = new Padding(0, 1, 0, 0);
-            btnAdd.Click += BtnAdd_Click;
-            btnBatch.Click += BtnBatch_Click;
-            btnExport.Click += (s, e) => ExportTuitionCsv();
-            flowActions.Controls.AddRange(new Control[] { btnAdd, btnBatch, btnExport });
-
-            var flowSearch = new FlowLayoutPanel
+            var flowActions = new FlowLayoutPanel
             {
                 Dock = DockStyle.Right,
                 FlowDirection = FlowDirection.LeftToRight,
@@ -98,48 +101,24 @@ namespace _26K1_DotNet
                 Padding = Padding.Empty
             };
 
-            var lblSearch = new Label
-            {
-                Text = "Tìm kiếm:",
-                AutoSize = true,
-                Margin = new Padding(0, 8, 6, 0),
-                Font = UITheme.FontSmallBold,
-                ForeColor = UITheme.TextSecondary
-            };
-            txtSearch = UITheme.MakeSearchBox("Tìm tên, mã SV, lớp, SĐT...", 210, 32);
-            txtSearch.Margin = new Padding(0, 1, 6, 0);
-            txtSearch.KeyDown += (s, e) =>
-            {
-                if (e.KeyCode == Keys.Enter)
-                {
-                    e.Handled = true;
-                    e.SuppressKeyPress = true;
-                    LoadData();
-                }
-            };
-            txtSearch.TextChanged += TxtSearch_TextChanged;
-
-            var btnFilter = UITheme.GhostBtn("Tìm", 55, 32);
-            btnFilter.Margin = new Padding(0, 1, 6, 0);
-            btnFilter.Click += (s, e) => LoadData();
-
-            var btnReset = UITheme.GhostBtn("Xóa lọc", 72, 32);
-            btnReset.Margin = new Padding(0, 1, 0, 0);
-            btnReset.Click += (s, e) => ResetFilters();
-
-            flowSearch.Controls.AddRange(new Control[] { lblSearch, txtSearch, btnFilter, btnReset });
-
-            row1.Controls.Add(flowSearch);
+            btnAdd = UITheme.PrimaryBtn("+ Lập phiếu", 116, 34);
+            btnBatch = UITheme.GhostBtn("Tạo hàng loạt", 126, 34);
+            btnExport = UITheme.GhostBtn("Xuất CSV", 92, 34);
+            btnAdd.Margin = new Padding(0, 1, 8, 0);
+            btnBatch.Margin = new Padding(0, 1, 8, 0);
+            btnExport.Margin = new Padding(0, 1, 0, 0);
+            btnAdd.Click += BtnAdd_Click;
+            btnBatch.Click += BtnBatch_Click;
+            btnExport.Click += (s, e) => ExportTuitionCsv();
+            flowActions.Controls.AddRange(new Control[] { btnAdd, btnBatch, btnExport });
             row1.Controls.Add(flowActions);
+            row1.Controls.Add(context);
 
-            // Row 2: Status filter + Student Context badge. The semester is selected
-            // globally from the badge in Form1, so it is not repeated here.
             var row2 = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 36,
-                BackColor = Color.Transparent,
-                Margin = new Padding(0, 4, 0, 0)
+                Height = 38,
+                BackColor = Color.Transparent
             };
 
             var flowFilters = new FlowLayoutPanel
@@ -159,25 +138,44 @@ namespace _26K1_DotNet
                 Visible = false
             };
 
-            var lblStatus = new Label
+            txtSearch = UITheme.MakeSearchBox("Tìm sinh viên, mã SV, lớp...", 250, 32);
+            txtSearch.Margin = new Padding(0, 2, 8, 0);
+            txtSearch.KeyDown += (s, e) =>
             {
-                Text = "Trạng thái:",
-                AutoSize = true,
-                Margin = new Padding(0, 8, 4, 0),
-                Font = UITheme.FontSmallBold,
-                ForeColor = UITheme.TextSecondary
+                if (e.KeyCode == Keys.Enter)
+                {
+                    e.Handled = true;
+                    e.SuppressKeyPress = true;
+                    LoadData();
+                }
             };
+            txtSearch.TextChanged += TxtSearch_TextChanged;
+
             cmbStatus = new ComboBox
             {
-                Width = 120,
-                Height = 30,
+                Width = 138,
+                Height = 32,
                 Font = UITheme.FontBody,
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 BackColor = UITheme.SurfaceAlt,
-                Margin = new Padding(0, 2, 14, 0)
+                Margin = new Padding(0, 2, 8, 0)
             };
             cmbStatus.Items.AddRange(new object[] { "Tất cả", "Chưa nộp", "Nộp 1 phần", "Đã nộp đủ", "Nộp muộn", "Quá hạn" });
             cmbStatus.SelectedIndex = 0;
+
+            cmbClass = new ComboBox
+            {
+                Width = 150,
+                Height = 32,
+                Font = UITheme.FontBody,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                BackColor = UITheme.SurfaceAlt,
+                Margin = new Padding(0, 2, 8, 0)
+            };
+
+            var btnReset = UITheme.GhostBtn("Xóa lọc", 76, 32);
+            btnReset.Margin = new Padding(0, 2, 0, 0);
+            btnReset.Click += (s, e) => ResetFilters();
 
             lblStudentContext = new Label
             {
@@ -191,26 +189,57 @@ namespace _26K1_DotNet
             lblStudentContext.Click += (s, e) => ResetFilters();
 
             flowFilters.Controls.AddRange(new Control[] {
-                lblStatus, cmbStatus,
-                lblStudentContext
+                txtSearch, cmbStatus, cmbClass, btnReset, lblStudentContext
             });
 
             row2.Controls.Add(flowFilters);
 
             cmbSem.SelectedIndexChanged += FilterCombo_SelectedIndexChanged;
             cmbStatus.SelectedIndexChanged += FilterCombo_SelectedIndexChanged;
+            cmbClass.SelectedIndexChanged += FilterCombo_SelectedIndexChanged;
 
-            toolbar.Controls.Add(row2);
+            var row3 = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 36,
+                BackColor = Color.Transparent
+            };
+            var segments = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Left,
+                AutoSize = true,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                BackColor = Color.Transparent,
+                Margin = Padding.Empty,
+                Padding = Padding.Empty
+            };
+            for (var index = 0; index < 5; index++)
+            {
+                int statusIndex = new[] { 0, 1, 2, 3, 5 }[index];
+                var segment = UITheme.GhostBtn(string.Empty, 78, 28);
+                segment.Margin = new Padding(0, 3, 6, 0);
+                segment.Padding = new Padding(8, 0, 8, 0);
+                segment.Font = UITheme.FontSmallBold;
+                segment.Click += (s, e) => cmbStatus.SelectedIndex = statusIndex;
+                _statusSegments.Add(segment);
+                segments.Controls.Add(segment);
+            }
+            row3.Controls.Add(segments);
+
             toolbar.Controls.Add(row1);
-            toolbar.Controls.SetChildIndex(row1, 0);
-            toolbar.Controls.SetChildIndex(row2, 1);
+            toolbar.Controls.Add(row2);
+            toolbar.Controls.Add(row3);
+            toolbar.Controls.SetChildIndex(row1, 1);
+            toolbar.Controls.SetChildIndex(row2, 2);
+            toolbar.Controls.SetChildIndex(row3, 3);
 
-            // ── Summary cards (Responsive TableLayoutPanel) ───────────────
+            // ── Compact financial metrics ─────────────────────────────────
             var summaryRow = new Panel
             {
-                Dock = DockStyle.Top, Height = 106,
+                Dock = DockStyle.Top, Height = 88,
                 BackColor = UITheme.Background,
-                Padding = new Padding(28, 12, 28, 12)
+                Padding = new Padding(28, 10, 28, 8)
             };
 
             var tableLayout = new TableLayoutPanel
@@ -218,7 +247,8 @@ namespace _26K1_DotNet
                 Dock = DockStyle.Fill,
                 ColumnCount = 4,
                 RowCount = 1,
-                BackColor = Color.Transparent
+                BackColor = UITheme.Surface,
+                Padding = new Padding(6, 0, 6, 0)
             };
             tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
             tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
@@ -226,10 +256,16 @@ namespace _26K1_DotNet
             tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
             tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
-            var c1 = MakeCard("Tổng phải thu", UITheme.Primary, out lblTotalVal);
-            var c2 = MakeCard("Đã thu",        UITheme.Success, out lblPaidVal);
-            var c3 = MakeCard("Còn phải thu",  UITheme.Danger,  out lblLeftVal);
-            var c4 = MakeCard("Số phiếu",      UITheme.Purple,  out lblCountVal);
+            tableLayout.Paint += (s, e) =>
+            {
+                using var pen = new Pen(UITheme.Border, 1);
+                e.Graphics.DrawRectangle(pen, 0, 0, tableLayout.Width - 1, tableLayout.Height - 1);
+            };
+
+            var c1 = MakeMetric("Tổng phải thu", UITheme.TextPrimary, out lblTotalVal);
+            var c2 = MakeMetric("Đã thu", UITheme.SuccessDark, out lblPaidVal);
+            var c3 = MakeMetric("Còn phải thu", UITheme.DangerDark, out lblLeftVal);
+            var c4 = MakeMetric("Phiếu học phí", UITheme.PrimaryDark, out lblCountVal);
 
             tableLayout.Controls.Add(c1, 0, 0);
             tableLayout.Controls.Add(c2, 1, 0);
@@ -240,6 +276,7 @@ namespace _26K1_DotNet
             // ── DataGridView ──────────────────────────────────────────────
             dgv = new DataGridView { Dock = DockStyle.Fill, MultiSelect = false };
             UITheme.StyleGrid(dgv);
+            dgv.RowTemplate.Height = 48;
             dgv.ContextMenuStrip = _selectionMenu;
             dgv.MouseDown += (s, e) =>
             {
@@ -295,7 +332,7 @@ namespace _26K1_DotNet
             });
             actionBar.Controls.Add(flow);
 
-            // ── Card wrapper (Generous breathing room) ────────────────────
+            // ── Ledger table ───────────────────────────────────────────────
             var wrap = new Panel { Dock = DockStyle.Fill, Padding = new Padding(28, 4, 28, 20), BackColor = UITheme.Background };
             var card = new Panel { Dock = DockStyle.Fill, BackColor = UITheme.Surface };
             card.Paint += (s, e) =>
@@ -318,34 +355,26 @@ namespace _26K1_DotNet
 
         // ── Helpers ───────────────────────────────────────────────────────────
 
-        private static Panel MakeCard(string title, Color accent, out Label valLbl)
+        private static Panel MakeMetric(string title, Color valueColor, out Label valLbl)
         {
             var card = new Panel
             {
                 Dock = DockStyle.Fill,
-                Margin = new Padding(6, 0, 6, 0),
-                BackColor = UITheme.Surface
+                Margin = Padding.Empty,
+                BackColor = UITheme.Surface,
+                Padding = new Padding(16, 0, 12, 0)
             };
             card.Paint += (s, e) =>
             {
-                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                var rect = new Rectangle(0, 0, card.Width - 1, card.Height - 1);
-                using (var pen = new Pen(UITheme.Border, 1))
-                using (var path = UITheme.GetRoundedPath(rect, 8))
-                {
-                    e.Graphics.DrawPath(pen, path);
-                }
-                using (var accentBrush = new SolidBrush(accent))
-                {
-                    e.Graphics.FillRectangle(accentBrush, 0, 8, 4, Math.Max(0, card.Height - 16));
-                }
+                using var pen = new Pen(UITheme.Border, 1);
+                e.Graphics.DrawLine(pen, card.Width - 1, 14, card.Width - 1, Math.Max(14, card.Height - 14));
             };
 
             var lblTitle = new Label
             {
                 Text = title,
                 AutoSize = true,
-                Location = new Point(16, 12),
+                Location = new Point(16, 11),
                 Font = UITheme.FontSmallBold,
                 ForeColor = UITheme.TextSecondary,
                 Parent = card
@@ -355,9 +384,9 @@ namespace _26K1_DotNet
             {
                 Text = "—",
                 AutoSize = true,
-                Location = new Point(14, 32),
-                Font = UITheme.FontCardValue2,
-                ForeColor = accent,
+                Location = new Point(15, 30),
+                Font = UITheme.FontCardValue,
+                ForeColor = valueColor,
                 Parent = card
             };
             return card;
@@ -397,6 +426,18 @@ namespace _26K1_DotNet
                 int index = Enumerable.Range(0, cmbSem.Items.Count)
                     .FirstOrDefault(i => cmbSem.Items[i] is SemItem item && item.Id == selectedSemesterId);
                 cmbSem.SelectedIndex = cmbSem.Items.Count == 0 ? -1 : index;
+
+                var selectedClass = cmbClass.SelectedItem?.ToString();
+                cmbClass.Items.Clear();
+                cmbClass.Items.Add("Tất cả lớp");
+                foreach (var className in _svSvc.GetAllStudents()
+                    .Select(student => student.ClassName)
+                    .Where(className => !string.IsNullOrWhiteSpace(className))
+                    .Distinct(StringComparer.CurrentCultureIgnoreCase)
+                    .OrderBy(className => className, StringComparer.CurrentCultureIgnoreCase))
+                    cmbClass.Items.Add(className);
+                int classIndex = selectedClass == null ? 0 : cmbClass.FindStringExact(selectedClass);
+                cmbClass.SelectedIndex = classIndex >= 0 ? classIndex : 0;
             }
             finally
             {
@@ -417,9 +458,10 @@ namespace _26K1_DotNet
             try
             {
                 cmbStatus.SelectedIndex = 0;
+                cmbClass.SelectedIndex = 0;
                 _studentContextId = studentId;
                 txtSearch.Text = sv.FullName;
-                lblStudentContext.Text = $"Đang lọc: {sv.FullName} ({studentId})  [x]";
+                lblStudentContext.Text = $"Đang lọc: {sv.FullName} ({sv.StudentCode})  [x]";
                 lblStudentContext.Visible = true;
             }
             finally
@@ -448,6 +490,7 @@ namespace _26K1_DotNet
             try
             {
                 cmbStatus.SelectedIndex = 0;
+                cmbClass.SelectedIndex = 0;
                 _studentContextId = null;
                 txtSearch.Text = string.Empty;
                 lblStudentContext.Visible = false;
@@ -470,10 +513,22 @@ namespace _26K1_DotNet
                 5 => PaymentStatus.Overdue, _ => null
             };
             IEnumerable<int>? ids = _studentContextId.HasValue ? new[] { _studentContextId.Value } : null;
+            var students = _svSvc.GetAllStudents();
+            var filteredFees = _tuiSvc.Filter(semId, st, ids);
+            string? selectedClass = cmbClass.SelectedIndex > 0 ? cmbClass.SelectedItem?.ToString() : null;
+            if (!string.IsNullOrWhiteSpace(selectedClass))
+            {
+                var classStudentIds = students
+                    .Where(student => string.Equals(student.ClassName, selectedClass, StringComparison.CurrentCultureIgnoreCase))
+                    .Select(student => student.Id)
+                    .ToHashSet();
+                filteredFees = filteredFees.Where(fee => classStudentIds.Contains(fee.StudentId)).ToList();
+            }
+
             if (ids == null && !string.IsNullOrWhiteSpace(txtSearch.Text))
             {
                 string q = txtSearch.Text.Trim();
-                var matchedSvIds = _svSvc.GetAllStudents()
+                var matchedSvIds = students
                     .Where(s =>
                         (!string.IsNullOrEmpty(s.FullName) && s.FullName.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0) ||
                         (!string.IsNullOrEmpty(s.StudentCode) && s.StudentCode.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0) ||
@@ -484,8 +539,7 @@ namespace _26K1_DotNet
                     .Select(x => x.Id)
                     .ToHashSet();
 
-                var allFees = _tuiSvc.Filter(semId, st, null);
-                _current = allFees.Where(f =>
+                _current = filteredFees.Where(f =>
                     matchedSvIds.Contains(f.StudentId) ||
                     f.Id.ToString() == q ||
                     f.Id.ToString() == q.TrimStart('#') ||
@@ -494,11 +548,20 @@ namespace _26K1_DotNet
             }
             else
             {
-                _current = _tuiSvc.Filter(semId, st, ids);
+                _current = filteredFees.ToList();
             }
 
-            var svDict  = _svSvc.GetAllStudents().ToDictionary(x => x.Id);
+            var svDict  = students.ToDictionary(x => x.Id);
             var semDict = _semSvc.GetAll().ToDictionary(x => x.Id);
+
+            var selectedSemester = semId.HasValue && semDict.TryGetValue(semId.Value, out var semester)
+                ? semester
+                : null;
+            lblSemesterName.Text = "Học phí";
+            lblSemesterMeta.Text = selectedSemester == null
+                ? "Chưa chọn học kỳ"
+                : $"{selectedSemester.Name}  ·  {selectedSemester.TuitionPerCredit:N0} ₫ / tín chỉ  ·  Hạn nộp {selectedSemester.DueDate:dd/MM/yyyy}";
+            UpdateStatusSegments(_tuiSvc.Filter(semId, null, null));
 
             _current = SortFees(_current, svDict, semDict).ToList();
 
@@ -506,7 +569,7 @@ namespace _26K1_DotNet
             {
                 f.Id,
                 MaSV     = svDict.TryGetValue(f.StudentId, out var student) ? student.StudentCode : "—",
-                HoTen    = svDict.TryGetValue(f.StudentId, out var sv) ? sv.FullName : $"#{f.StudentId}",
+                HoTen    = svDict.TryGetValue(f.StudentId, out var sv) ? $"{sv.FullName}\n{sv.StudentCode}" : $"#{f.StudentId}",
                 Lop      = svDict.TryGetValue(f.StudentId, out var sv2) ? sv2.ClassName : "",
                 HocKy    = semDict.TryGetValue(f.SemesterId, out var sem) ? sem.Name : $"#{f.SemesterId}",
                 TinChi   = f.Credits,
@@ -522,7 +585,7 @@ namespace _26K1_DotNet
             dgv.DataSource = null;
             dgv.DataSource = rows;
 
-            bool hasFilter = cmbStatus.SelectedIndex > 0 || _studentContextId.HasValue || !string.IsNullOrWhiteSpace(txtSearch.Text);
+            bool hasFilter = cmbStatus.SelectedIndex > 0 || cmbClass.SelectedIndex > 0 || _studentContextId.HasValue || !string.IsNullOrWhiteSpace(txtSearch.Text);
             if (_current.Count == 0)
             {
                 _lblEmpty.Text = hasFilter
@@ -567,10 +630,10 @@ namespace _26K1_DotNet
                 }
 
                 Hide("Id");
-                Center("MaSV", "Mã SV", 95);
+                Hide("MaSV");
                 if (dgv.Columns["HoTen"] is { } name)
                 {
-                    name.HeaderText = "Họ và tên";
+                    name.HeaderText = "Sinh viên";
                     name.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
                     name.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
                     name.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleLeft;
@@ -578,13 +641,20 @@ namespace _26K1_DotNet
                     name.HeaderCell.Style.Padding = new Padding(8, 0, 4, 0);
                 }
                 Center("Lop", "Lớp", 100);
-                Center("HocKy", "Học kỳ", 125);
+                Hide("HocKy");
                 Hide("TinChi");
-                Num("PhaiNop", "Phải nộp", 105);
-                Num("DaNop", "Đã nộp", 105);
+                Num("PhaiNop", "Học phí", 110);
+                Num("DaNop", "Đã nộp", 110);
                 Num("ConLai", "Còn lại", 105);
-                Center("HanNop", "Hạn nộp", 100);
-                Center("TrangThai", "Trạng thái", 120);
+                Center("HanNop", "Hạn", 82);
+                if (dgv.Columns["TrangThai"] is { } status)
+                {
+                    status.HeaderText = "Trạng thái";
+                    status.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+                    status.Width = 118;
+                    status.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
+                    status.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleLeft;
+                }
                 Hide("NgayNop");
                 Hide("GhiChu");
                 foreach (var column in new[] { "MaSV", "HoTen", "Lop", "HocKy", "PhaiNop", "DaNop", "ConLai", "HanNop", "TrangThai" })
@@ -599,6 +669,30 @@ namespace _26K1_DotNet
             lblLeftVal.Text  = $"{(tot - pid):N0} ₫";
             lblCountVal.Text = $"{_current.Count} phiếu";
             UpdateSelectionActions();
+        }
+
+        private void UpdateStatusSegments(IEnumerable<TuitionFee> fees)
+        {
+            var items = new[]
+            {
+                ("Tất cả", (PaymentStatus?)null),
+                ("Chưa nộp", (PaymentStatus?)PaymentStatus.Unpaid),
+                ("Nộp 1 phần", (PaymentStatus?)PaymentStatus.PartiallyPaid),
+                ("Đã nộp", (PaymentStatus?)PaymentStatus.Paid),
+                ("Quá hạn", (PaymentStatus?)PaymentStatus.Overdue)
+            };
+            var snapshot = fees.ToList();
+            for (var i = 0; i < _statusSegments.Count && i < items.Length; i++)
+            {
+                var (title, status) = items[i];
+                int count = status.HasValue ? snapshot.Count(fee => fee.Status == status.Value) : snapshot.Count;
+                var button = _statusSegments[i];
+                bool selected = cmbStatus.SelectedIndex == new[] { 0, 1, 2, 3, 5 }[i];
+                button.Text = $"{title} {count}";
+                button.BackColor = selected ? UITheme.PrimaryLight : UITheme.Surface;
+                button.ForeColor = selected ? UITheme.PrimaryDark : UITheme.TextSecondary;
+                button.FlatAppearance.BorderColor = selected ? UITheme.ActiveBorder : UITheme.Border;
+            }
         }
 
         private IEnumerable<TuitionFee> SortFees(IEnumerable<TuitionFee> fees,
@@ -660,7 +754,21 @@ namespace _26K1_DotNet
             if (col != null && e.ColumnIndex == col.Index && e.Value != null)
             {
                 e.PaintBackground(e.ClipBounds, (e.State & DataGridViewElementStates.Selected) != 0);
-                UITheme.DrawStatusBadge(e.Graphics, e.CellBounds, e.Value.ToString() ?? "");
+                string status = e.Value.ToString() ?? string.Empty;
+                Color cue = status switch
+                {
+                    "Đã nộp đủ" => UITheme.Success,
+                    "Nộp muộn" or "Nộp 1 phần" => UITheme.Warning,
+                    "Quá hạn" => UITheme.Danger,
+                    _ => UITheme.TextMuted
+                };
+                var dot = new Rectangle(e.CellBounds.X + 10, e.CellBounds.Y + (e.CellBounds.Height - 8) / 2, 8, 8);
+                using var brush = new SolidBrush(cue);
+                e.Graphics.FillEllipse(brush, dot);
+                var textBounds = new Rectangle(dot.Right + 7, e.CellBounds.Y, e.CellBounds.Width - (dot.Right - e.CellBounds.X) - 10, e.CellBounds.Height);
+                TextRenderer.DrawText(e.Graphics, status, UITheme.FontSmallBold, textBounds,
+                    (e.State & DataGridViewElementStates.Selected) != 0 ? Color.White : UITheme.TextSecondary,
+                    TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
                 e.Handled = true;
             }
         }

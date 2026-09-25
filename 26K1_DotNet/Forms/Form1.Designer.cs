@@ -7,7 +7,7 @@ namespace _26K1_DotNet
         // Sidebar
         private Panel panelSidebar;
         private Panel panelLogo;
-        internal NavButton btnNavStudents, btnNavTuition, btnNavStatistics, btnNavSettings;
+        internal NavButton btnNavOverview, btnNavStudents, btnNavTuition, btnNavStatistics, btnNavSettings;
         internal Panel panelSemWidget;
         internal Label lblWidgetSemName;
         internal Label lblWidgetStatus;
@@ -47,27 +47,18 @@ namespace _26K1_DotNet
             // SIDEBAR
             // ═══════════════════════════════════════════════════════════════
             panelSidebar.Dock = DockStyle.Left;
-            panelSidebar.Width = 240;
+            panelSidebar.Width = 220;
             panelSidebar.BackColor = UITheme.SidebarBg;
             panelSidebar.Paint += (s, e) =>
             {
                 using var pen = new Pen(UITheme.SidebarDivider, 1);
                 e.Graphics.DrawLine(pen, panelSidebar.Width - 1, 0, panelSidebar.Width - 1, panelSidebar.Height);
 
-                // Subtle contour-line motif: a geological signature without visual noise.
-                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                using var contourPen = new Pen(Color.FromArgb(22, UITheme.SidebarAccent), 1);
-                for (int i = 0; i < 4; i++)
-                {
-                    int inset = i * 13;
-                    e.Graphics.DrawArc(contourPen, -88 + inset, panelSidebar.Height - 260 + inset,
-                        270 - inset * 2, 210 - inset * 2, 282, 132);
-                }
             };
 
             // Logo area
             panelLogo.Dock = DockStyle.Top;
-            panelLogo.Height = 84;
+            panelLogo.Height = 72;
             panelLogo.BackColor = UITheme.SidebarDeep;
             typeof(Panel).InvokeMember("DoubleBuffered",
                 System.Reflection.BindingFlags.SetProperty | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic,
@@ -80,33 +71,38 @@ namespace _26K1_DotNet
                 g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
                 g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
 
-                // 1. Original EduFee graduation badge.
-                var badgeRect = new Rectangle(14, 20, 40, 40);
-                using (var logoBg = new System.Drawing.Drawing2D.LinearGradientBrush(badgeRect,
-                    UITheme.Primary, UITheme.PrimaryDark, 90F))
-                using (var path = UITheme.GetRoundedPath(badgeRect, 10))
+                // Vector ledger mark: document lines + Vietnamese currency symbol.
+                var badgeRect = new Rectangle(14, 16, 38, 38);
+                using (var logoBg = new SolidBrush(UITheme.Primary))
+                using (var path = UITheme.GetRoundedPath(badgeRect, 9))
                 {
                     g.FillPath(logoBg, path);
-                    using var logoPen = new Pen(UITheme.ActiveBorder, 1);
-                    g.DrawPath(logoPen, path);
                 }
 
-                using (var iconBrush = new SolidBrush(Color.White))
+                using (var markPen = new Pen(Color.White, 1.6F))
                 {
-                    var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
-                    g.DrawString("🎓", UITheme.FontEmojiLarge, iconBrush, badgeRect, sf);
+                    markPen.StartCap = System.Drawing.Drawing2D.LineCap.Round;
+                    markPen.EndCap = System.Drawing.Drawing2D.LineCap.Round;
+                    g.DrawLine(markPen, 23, 27, 35, 27);
+                    g.DrawLine(markPen, 23, 34, 31, 34);
+                    g.DrawLine(markPen, 23, 41, 35, 41);
+                }
+                using (var currencyBrush = new SolidBrush(Color.White))
+                using (var currencyFont = new Font("Segoe UI", 8F, FontStyle.Bold))
+                {
+                    g.DrawString("₫", currencyFont, currencyBrush, new PointF(37, 29));
                 }
 
                 // 2. Title: "EduFee" (pure grayscale anti-aliasing against dark background, no ghosting/fringing)
                 using (var titleBrush = new SolidBrush(Color.White))
                 {
-                    g.DrawString("EduFee", UITheme.FontLogoBrand, titleBrush, new PointF(62, 17), StringFormat.GenericTypographic);
+                    g.DrawString("EduFee", UITheme.FontLogoBrand, titleBrush, new PointF(60, 13), StringFormat.GenericTypographic);
                 }
 
-                // 3. Subtitle: "Quản lý học phí"
+                // 3. Product subtitle
                 using (var subBrush = new SolidBrush(UITheme.AccentLavender))
                 {
-                    g.DrawString("Quản lý học phí", UITheme.FontSmallBold, subBrush, new PointF(62, 43), StringFormat.GenericTypographic);
+                    g.DrawString("Tuition Management", UITheme.FontSmall, subBrush, new PointF(60, 39), StringFormat.GenericTypographic);
                 }
 
                 // 4. Bottom separator line
@@ -128,7 +124,7 @@ namespace _26K1_DotNet
             // Section label "MENU"
             var lblSection = new Label
             {
-                Text = "MENU",
+                Text = "Workspace",
                 Font = UITheme.FontSmallBold,
                 ForeColor = UITheme.SidebarText,
                 BackColor = Color.Transparent,
@@ -138,25 +134,29 @@ namespace _26K1_DotNet
             flowNavMiddle.Controls.Add(lblSection);
 
             // Nav buttons — floating contiguous pills with vector icons
-            btnNavStudents   = new NavButton(UITheme.IconType.Students, "Sinh viên") { Size = new Size(216, 44), Margin = new Padding(0, 0, 0, 6) };
-            btnNavTuition    = new NavButton(UITheme.IconType.Tuition, "Học phí")     { Size = new Size(216, 44), Margin = new Padding(0, 0, 0, 6) };
-            btnNavStatistics = new NavButton(UITheme.IconType.Statistics, "Thống kê") { Size = new Size(216, 44), Margin = new Padding(0, 0, 0, 6) };
-            btnNavSettings   = new NavButton(UITheme.IconType.Settings, "Cài đặt")   { Size = new Size(216, 44), Margin = new Padding(0, 0, 0, 14) };
+            btnNavOverview   = new NavButton(UITheme.IconType.Overview, "Tổng quan")  { Size = new Size(196, 42), Margin = new Padding(0, 0, 0, 4) };
+            btnNavStudents   = new NavButton(UITheme.IconType.Students, "Sinh viên")  { Size = new Size(196, 42), Margin = new Padding(0, 0, 0, 4) };
+            btnNavTuition    = new NavButton(UITheme.IconType.Tuition, "Học phí")     { Size = new Size(196, 42), Margin = new Padding(0, 0, 0, 4) };
+            btnNavStatistics = new NavButton(UITheme.IconType.Statistics, "Báo cáo")  { Size = new Size(196, 42), Margin = new Padding(0, 0, 0, 12) };
+            btnNavSettings   = new NavButton(UITheme.IconType.Settings, "Cài đặt")    { Size = new Size(196, 42), Margin = new Padding(0, 8, 0, 14) };
 
+            btnNavOverview.Click   += (s, e) => ShowPanel("overview");
             btnNavStudents.Click   += (s, e) => ShowPanel("students");
             btnNavTuition.Click    += (s, e) => ShowPanel("tuition");
             btnNavStatistics.Click += (s, e) => ShowPanel("statistics");
             btnNavSettings.Click   += (s, e) => OpenSystemSettingsMenu();
 
+            flowNavMiddle.Controls.Add(btnNavOverview);
             flowNavMiddle.Controls.Add(btnNavStudents);
             flowNavMiddle.Controls.Add(btnNavTuition);
             flowNavMiddle.Controls.Add(btnNavStatistics);
+            flowNavMiddle.Controls.Add(new Panel { Size = new Size(196, 1), BackColor = UITheme.SidebarDivider, Margin = new Padding(0, 2, 0, 2) });
             flowNavMiddle.Controls.Add(btnNavSettings);
 
             // Quick Semester Info Widget in Sidebar (Placed below navigation)
             panelSemWidget = new Panel
             {
-                Size = new Size(216, 78),
+                Size = new Size(196, 78),
                 Margin = new Padding(0, 0, 0, 14),
                 BackColor = UITheme.SidebarCard,
                 Cursor = Cursors.Hand
@@ -225,7 +225,7 @@ namespace _26K1_DotNet
 
             // Sidebar footer
             panelSidebarFooter.Dock = DockStyle.Bottom;
-            panelSidebarFooter.Height = 112;
+            panelSidebarFooter.Height = 48;
             panelSidebarFooter.BackColor = UITheme.SidebarDeep;
             panelSidebarFooter.Paint += (s, e) =>
             {
@@ -233,57 +233,14 @@ namespace _26K1_DotNet
                 e.Graphics.DrawLine(pen, 0, 0, panelSidebarFooter.Width, 0);
             };
 
-            var lblFooterOrg = new Label
-            {
-                Text = "EduFee Desktop",
-                Location = new Point(88, 33),
-                Font = UITheme.FontSmallBold,
-                ForeColor = UITheme.SidebarText,
-                BackColor = UITheme.SidebarDeep,
-                AutoSize = true
-            };
-
-            lblVersion.Text = "Quản lý học phí";
-            lblVersion.Location = new Point(88, 54);
+            lblVersion.Text = "EduFee Desktop  ·  UI V2";
+            lblVersion.Location = new Point(16, 16);
             lblVersion.Font = UITheme.FontSmall;
             lblVersion.ForeColor = UITheme.TextSecondary;
             lblVersion.BackColor = UITheme.SidebarDeep;
             lblVersion.AutoSize = true;
 
-            var appLogo = new Panel
-            {
-                Location = new Point(16, 20),
-                Size = new Size(60, 60),
-                BackColor = Color.Transparent,
-                AccessibleName = "Logo EduFee",
-                TabStop = false
-            };
-            appLogo.Paint += (s, e) =>
-            {
-                var g = e.Graphics;
-                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-
-                var sealRect = new Rectangle(4, 4, 51, 51);
-                using (var fill = new System.Drawing.Drawing2D.LinearGradientBrush(sealRect,
-                    UITheme.Primary, UITheme.PrimaryDark, 90F))
-                using (var path = UITheme.GetRoundedPath(sealRect, 14))
-                {
-                    g.FillPath(fill, path);
-                    using var border = new Pen(UITheme.ActiveBorder, 1);
-                    g.DrawPath(border, path);
-                }
-
-                using var iconBrush = new SolidBrush(Color.White);
-                using var iconFont = new Font("Segoe UI Emoji", 20F);
-                using var sf = new StringFormat
-                {
-                    Alignment = StringAlignment.Center,
-                    LineAlignment = StringAlignment.Center
-                };
-                g.DrawString("🎓", iconFont, iconBrush, sealRect, sf);
-            };
-
-            panelSidebarFooter.Controls.AddRange(new Control[] { appLogo, lblFooterOrg, lblVersion });
+            panelSidebarFooter.Controls.Add(lblVersion);
 
             panelSidebar.Controls.Add(flowNavMiddle);
             panelSidebar.Controls.Add(panelLogo);
@@ -293,7 +250,7 @@ namespace _26K1_DotNet
             // HEADER
             // ═══════════════════════════════════════════════════════════════
             panelHeader.Dock = DockStyle.Top;
-            panelHeader.Height = 86;
+            panelHeader.Height = 76;
             panelHeader.BackColor = UITheme.Surface;
             panelHeader.Padding = new Padding(32, 0, 32, 0);
 
@@ -380,7 +337,7 @@ namespace _26K1_DotNet
             Controls.Add(panelContent);
             Controls.Add(panelHeader);
             Controls.Add(panelSidebar);
-            Text = "EduFee — Quản Lý Học Phí · Trường Đại học Mỏ - Địa chất";
+            Text = "EduFee — Student Tuition Management";
             StartPosition = FormStartPosition.CenterScreen;
             BackColor = UITheme.Background;
             Load += Form1_Load;

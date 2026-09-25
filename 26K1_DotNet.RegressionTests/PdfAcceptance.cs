@@ -16,7 +16,7 @@ public static class PdfAcceptance
         ExportDebt(directory, "debt-101-long.pdf", rows, 2, check, "Debt PDF paginates 100+ rows and wrapped names");
 
         string receipt = Path.Combine(directory, "receipt-long.pdf");
-        ReceiptPdfRenderer.Export(receipt, new ReceiptPdfData("TRƯỜNG ĐẠI HỌC MỎ - ĐỊA CHẤT", "BL-LONG-0001", new DateTime(2026, 9, 19, 9, 30, 0), longText, "SV-LONG-0001", "Lớp rất dài kiểm tra trình bày biên lai học phí", "Học kỳ có tên dài", longText, "Chuyển khoản ngân hàng", 1_200_000m, 3_000_000m, 1_200_000m, 1_800_000m, new DateTime(2026, 9, 30), string.Join(" ", Enumerable.Repeat("Ghi chú dài phải được giữ nguyên và tiếp tục ở trang kế tiếp.", 120))));
+        ReceiptPdfRenderer.Export(receipt, new ReceiptPdfData("EduFee · Student Tuition Management", "BL-LONG-0001", new DateTime(2026, 9, 19, 9, 30, 0), longText, "SV-LONG-0001", "Lớp rất dài kiểm tra trình bày biên lai học phí", "Học kỳ có tên dài", longText, "Chuyển khoản ngân hàng", 1_200_000m, 3_000_000m, 1_200_000m, 1_800_000m, new DateTime(2026, 9, 30), string.Join(" ", Enumerable.Repeat("Ghi chú dài phải được giữ nguyên và tiếp tục ở trang kế tiếp.", 120))));
         // This note needs more than one content page. Requiring three pages catches a renderer
         // that merely moves one oversized row to a second page and clips the remainder.
         check(IsPdf(receipt) && CountPages(receipt) >= 3, "Receipt PDF splits oversized notes across continuation pages");
@@ -25,7 +25,7 @@ public static class PdfAcceptance
     private static void ExportDebt(string directory, string name, IReadOnlyList<DebtReportRow> rows, int minimumPages, Action<bool, string> check, string description)
     {
         string path = Path.Combine(directory, name);
-        DebtReportPdfRenderer.Export(path, new DebtReportPdfData("TRƯỜNG ĐẠI HỌC MỎ - ĐỊA CHẤT", "HK1 2026-2027", "Kiểm thử PDF", new DateTime(2026, 9, 19), rows));
+        DebtReportPdfRenderer.Export(path, new DebtReportPdfData("EduFee · Student Tuition Management", "HK1 2026-2027", "Kiểm thử PDF", new DateTime(2026, 9, 19), rows));
         check(IsPdf(path) && CountPages(path) >= minimumPages, description);
     }
 

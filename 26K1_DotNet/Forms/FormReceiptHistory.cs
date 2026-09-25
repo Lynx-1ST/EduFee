@@ -17,6 +17,10 @@ namespace _26K1_DotNet
 
         private DataGridView dgv = null!;
         private Label lblTotalSummary = null!;
+        private Label lblStudentName = null!;
+        private Label lblStudentMeta = null!;
+        private Label lblLedgerHint = null!;
+        private Panel ledgerSummary = null!;
         private List<PaymentReceipt> _receipts = new();
 
         public FormReceiptHistory(TuitionFee fee, Student student, Semester semester, ReceiptService receiptSvc)
@@ -31,9 +35,9 @@ namespace _26K1_DotNet
 
         private void BuildUI()
         {
-            Text = $"Lịch Sử Đóng Tiền - {_student.FullName} ({_semester.Name})";
-            ClientSize = new Size(960, 560);
-            MinimumSize = new Size(920, 520);
+            Text = $"Sổ giao dịch học phí - {_student.FullName}";
+            ClientSize = new Size(1040, 650);
+            MinimumSize = new Size(920, 560);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -42,65 +46,112 @@ namespace _26K1_DotNet
             Font = UITheme.FontBody;
             AutoScaleMode = AutoScaleMode.Font;
 
-            // ── Header ────────────────────────────────────────────────────
-            var topBar = new Panel
-            {
-                Dock = DockStyle.Top, Height = 72,
-                BackColor = UITheme.Purple
-            };
+            var topBar = UITheme.CreateDialogHeader(
+                string.Empty,
+                "Sổ giao dịch học phí",
+                $"{_student.StudentCode} · {_semester.Name}",
+                UITheme.PrimaryDark,
+                68);
 
-            var headerFlow = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                FlowDirection = FlowDirection.TopDown,
-                WrapContents = false,
-                AutoSize = false,
-                Padding = new Padding(24, 12, 24, 8),
-                BackColor = Color.Transparent
-            };
-
-            var lblHeaderTitle = new Label
-            {
-                Text = $"LỊCH SỬ NỘP TIỀN: {_student.FullName.ToUpper()}",
-                Font = UITheme.FontH1, ForeColor = Color.White,
-                AutoSize = true,
-                UseMnemonic = false,
-                Margin = new Padding(0, 0, 0, 4)
-            };
-
-            var lblHeaderSub = new Label
-            {
-                Text = $"Lớp: {_student.ClassName}  |  {_semester.Name}  |  Học phí: {_fee.TotalAmount:N0} VNĐ",
-                Font = UITheme.FontSmall, ForeColor = UITheme.PurpleLight,
-                AutoSize = true,
-                UseMnemonic = false,
-                Margin = new Padding(0)
-            };
-            headerFlow.Controls.AddRange(new Control[] { lblHeaderTitle, lblHeaderSub });
-            topBar.Controls.Add(headerFlow);
-
-            // ── Content Card ──────────────────────────────────────────────
             var wrap = new Panel
             {
                 Dock = DockStyle.Fill,
-                Padding = new Padding(24, 16, 24, 16),
+                Padding = new Padding(UITheme.PadPage, 16, UITheme.PadPage, 16),
                 BackColor = UITheme.Background
             };
 
-            var card = new Panel
+            ledgerSummary = UITheme.CreateRoundedCard();
+            ledgerSummary.Dock = DockStyle.Top;
+            ledgerSummary.Height = 124;
+            ledgerSummary.AccessibleName = "Tóm tắt sổ giao dịch học phí";
+
+            lblStudentName = new Label
             {
-                Dock = DockStyle.Fill,
-                BackColor = UITheme.Surface
+                Text = _student.FullName,
+                Font = UITheme.FontH1,
+                ForeColor = UITheme.TextPrimary,
+                AutoSize = true
             };
-            card.Paint += (s, e) =>
+            lblStudentMeta = new Label
             {
-                using var pen = new Pen(UITheme.Border, 1);
-                e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
+                Text = $"{_student.StudentCode}  ·  {_student.ClassName}  ·  {_semester.Name}",
+                Font = UITheme.FontBody,
+                ForeColor = UITheme.TextSecondary,
+                AutoSize = true
             };
+            lblLedgerHint = new Label
+            {
+                Text = "Các giao dịch đã được ghi nhận theo thời gian. Chọn một dòng để mở biên lai.",
+                Font = UITheme.FontSmall,
+                ForeColor = UITheme.TextMuted,
+                AutoSize = true
+            };
+            ledgerSummary.Controls.AddRange(new Control[] { lblStudentName, lblStudentMeta, lblLedgerHint });
+
+            var totalCard = UITheme.CreateStatCard("TỔNG HỌC PHÍ", $"{_fee.TotalAmount:N0} ₫", null, UITheme.Primary, UITheme.TextPrimary);
+            var paidCard = UITheme.CreateStatCard("ĐÃ GHI NHẬN", $"{_fee.PaidAmount:N0} ₫", null, UITheme.Success, UITheme.SuccessDark);
+            var remainingCard = UITheme.CreateStatCard("CÒN LẠI", $"{_fee.RemainingAmount:N0} ₫", null,
+                _fee.RemainingAmount > 0m ? UITheme.Danger : UITheme.Success,
+                _fee.RemainingAmount > 0m ? UITheme.DangerDark : UITheme.SuccessDark);
+            ledgerSummary.Controls.AddRange(new Control[] { totalCard, paidCard, remainingCard });
+
+            ledgerSummary.Resize += (_, _) =>
+            {
+                const int leftWidth = 330;
+                const int cardGap = 8;
+                int cardWidth = Math.Max(150, (ledgerSummary.ClientSize.Width - leftWidth - UITheme.PadCard * 2 - cardGap * 2) / 3);
+                lblStudentName.Location = new Point(UITheme.PadCard, 20);
+                lblStudentMeta.Location = new Point(UITheme.PadCard, 50);
+                lblLedgerHint.Location = new Point(UITheme.PadCard, 78);
+                for (int i = 0; i < 3; i++)
+                {
+                    var stat = ledgerSummary.Controls[3 + i];
+                    stat.SetBounds(leftWidth + i * (cardWidth + cardGap), 16, cardWidth, 90);
+                }
+            };
+
+            var timelineHeader = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 54,
+                BackColor = Color.Transparent,
+                Padding = new Padding(0, 16, 0, 0)
+            };
+            var lblTimelineTitle = new Label
+            {
+                Text = "Dòng thời gian thanh toán",
+                Font = UITheme.FontH2,
+                ForeColor = UITheme.TextPrimary,
+                AutoSize = true,
+                Location = new Point(0, 17)
+            };
+            var lblTimelineSub = new Label
+            {
+                Text = "Biên lai mới nhất hiển thị trước",
+                Font = UITheme.FontSmall,
+                ForeColor = UITheme.TextMuted,
+                AutoSize = true,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            timelineHeader.Controls.AddRange(new Control[] { lblTimelineTitle, lblTimelineSub });
+            timelineHeader.Resize += (_, _) => lblTimelineSub.Location = new Point(
+                Math.Max(lblTimelineTitle.Right + 24, timelineHeader.ClientSize.Width - lblTimelineSub.Width), 19);
+
+            var card = UITheme.CreateRoundedCard();
+            card.Dock = DockStyle.Fill;
+            card.Padding = Padding.Empty;
+            card.AccessibleName = "Dòng thời gian các biên lai";
 
             dgv = new DataGridView { Dock = DockStyle.Fill };
             UITheme.StyleGrid(dgv);
             dgv.DoubleClick += (s, e) => ViewSelectedReceipt();
+            dgv.KeyDown += (s, e) =>
+            {
+                if (e.KeyCode != Keys.Enter) return;
+                e.Handled = true;
+                ViewSelectedReceipt();
+            };
+            dgv.CellPainting += DrawTimelineMarker;
 
             // ── Bottom Action Bar ─────────────────────────────────────────
             var bottomBar = new Panel
@@ -112,8 +163,9 @@ namespace _26K1_DotNet
 
             lblTotalSummary = new Label
             {
-                Location = new Point(20, 20), AutoSize = true,
-                Font = UITheme.FontBold, ForeColor = UITheme.PrimaryDark
+                Location = new Point(UITheme.PadCard, 20), AutoSize = true,
+                Font = UITheme.FontBold, ForeColor = UITheme.TextPrimary,
+                AccessibleName = "Tổng kết giao dịch"
             };
             bottomBar.Controls.Add(lblTotalSummary);
 
@@ -135,7 +187,7 @@ namespace _26K1_DotNet
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = false,
                 AutoSize = true,
-                Padding = new Padding(0, 14, 20, 0),
+                Padding = new Padding(0, 14, UITheme.PadCard, 0),
                 BackColor = Color.Transparent
             };
             AcceptButton = btnView;
@@ -144,28 +196,33 @@ namespace _26K1_DotNet
             flow.Controls.AddRange(new Control[] { btnView, btnExport, btnClose });
             bottomBar.Controls.Add(flow);
 
-            card.Controls.Add(bottomBar);
             card.Controls.Add(dgv);
-            dgv.BringToFront();
 
             wrap.Controls.Add(card);
+            wrap.Controls.Add(timelineHeader);
+            wrap.Controls.Add(ledgerSummary);
 
             Controls.Add(wrap);
             Controls.Add(topBar);
+            Controls.Add(bottomBar);
         }
 
         private void LoadData()
         {
             _receipts = _receiptSvc.GetByTuitionFeeId(_fee.Id);
 
-            var rows = _receipts.Select(r => new
+            var rows = _receipts
+                .OrderByDescending(r => r.PaymentDate)
+                .Select(r => new
             {
                 r.Id,
+                Timeline = string.Empty,
                 r.ReceiptCode,
                 r.PaymentDate,
                 r.Amount,
                 r.PaymentMethod,
                 r.PayerName,
+                Status = "Đã ghi nhận",
                 r.Note
             }).ToList();
 
@@ -174,31 +231,50 @@ namespace _26K1_DotNet
 
             if (dgv.Columns.Count > 0)
             {
-                if (dgv.Columns["Id"] is { } c0) { c0.HeaderText = "ID"; c0.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; c0.Width = 55; }
-                if (dgv.Columns["ReceiptCode"] is { } c1) { c1.HeaderText = "Mã Biên Lai"; c1.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; c1.Width = 140; }
+                if (dgv.Columns["Id"] is { } c0) c0.Visible = false;
+                if (dgv.Columns["Timeline"] is { } timeline) { timeline.HeaderText = string.Empty; timeline.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; timeline.Width = 42; timeline.SortMode = DataGridViewColumnSortMode.NotSortable; }
+                if (dgv.Columns["ReceiptCode"] is { } c1) { c1.HeaderText = "BIÊN LAI"; c1.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; c1.Width = 150; c1.DefaultCellStyle.Font = UITheme.FontBold; }
                 if (dgv.Columns["PaymentDate"] is { } c2)
                 {
-                    c2.HeaderText = "Ngày Giờ";
+                    c2.HeaderText = "THỜI ĐIỂM";
                     c2.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
                     c2.Width = 155;
                     c2.DefaultCellStyle.Format = "dd/MM/yyyy HH:mm";
                 }
                 if (dgv.Columns["Amount"] is { } c3)
                 {
-                    c3.HeaderText = "Số Tiền";
+                    c3.HeaderText = "SỐ TIỀN";
                     c3.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
                     c3.Width = 120;
                     c3.DefaultCellStyle.Format = "N0";
                     c3.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
                     c3.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight;
                 }
-                if (dgv.Columns["PaymentMethod"] is { } c4) { c4.HeaderText = "Hình Thức"; c4.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; c4.Width = 150; }
-                if (dgv.Columns["PayerName"] is { } c5) { c5.HeaderText = "Người Nộp"; c5.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; c5.Width = 175; }
-                if (dgv.Columns["Note"] is { } c6) { c6.HeaderText = "Ghi Chú"; c6.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill; }
+                if (dgv.Columns["PaymentMethod"] is { } c4) { c4.HeaderText = "HÌNH THỨC"; c4.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; c4.Width = 135; }
+                if (dgv.Columns["PayerName"] is { } c5) { c5.HeaderText = "NGƯỜI NỘP"; c5.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; c5.Width = 155; }
+                if (dgv.Columns["Status"] is { } c6) { c6.HeaderText = "TRẠNG THÁI"; c6.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; c6.Width = 120; c6.DefaultCellStyle.ForeColor = UITheme.SuccessDark; c6.DefaultCellStyle.Font = UITheme.FontSmallBold; }
+                if (dgv.Columns["Note"] is { } c7) { c7.HeaderText = "GHI CHÚ"; c7.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill; }
             }
 
             decimal totalPaid = _receipts.Sum(r => r.Amount);
-            lblTotalSummary.Text = $"Đã thu {_receipts.Count} lần: {totalPaid:N0} VNĐ  |  Còn lại: {_fee.RemainingAmount:N0} VNĐ";
+            lblTotalSummary.Text = _receipts.Count == 0
+                ? "Chưa có giao dịch được ghi nhận cho khoản học phí này."
+                : $"{_receipts.Count:N0} giao dịch  ·  Đã ghi nhận {totalPaid:N0} ₫  ·  Còn lại {_fee.RemainingAmount:N0} ₫";
+        }
+
+        private void DrawTimelineMarker(object? sender, DataGridViewCellPaintingEventArgs e)
+        {
+            if (e.RowIndex < 0 || dgv.Columns[e.ColumnIndex].Name != "Timeline") return;
+            if (e.Graphics is not { } graphics) return;
+
+            e.Paint(e.CellBounds, DataGridViewPaintParts.Background | DataGridViewPaintParts.Border);
+            var centerX = e.CellBounds.Left + e.CellBounds.Width / 2;
+            using var line = new Pen(UITheme.BorderStrong, 2);
+            using var dot = new SolidBrush(UITheme.Success);
+            if (e.RowIndex > 0) graphics.DrawLine(line, centerX, e.CellBounds.Top, centerX, e.CellBounds.Top + e.CellBounds.Height / 2);
+            if (e.RowIndex < dgv.Rows.Count - 1) graphics.DrawLine(line, centerX, e.CellBounds.Top + e.CellBounds.Height / 2, centerX, e.CellBounds.Bottom);
+            graphics.FillEllipse(dot, centerX - 5, e.CellBounds.Top + e.CellBounds.Height / 2 - 5, 10, 10);
+            e.Handled = true;
         }
 
         private void ViewSelectedReceipt()

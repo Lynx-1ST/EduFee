@@ -211,7 +211,7 @@ namespace _26K1_DotNet
             chkSsl.Checked = s.EnableSsl;
             txtSenderEmail.Text = s.SenderEmail;
             txtPassword.Text = s.SenderPassword;
-            txtDisplayName.Text = string.IsNullOrEmpty(s.SenderDisplayName) ? "Trường Đại học Mỏ - Địa chất (Phòng Tài Vụ)" : s.SenderDisplayName;
+            txtDisplayName.Text = string.IsNullOrEmpty(s.SenderDisplayName) ? "EduFee - Student Tuition Management" : s.SenderDisplayName;
             txtTestEmail.Text = s.SenderEmail;
             UpdateFieldStates();
         }

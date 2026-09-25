@@ -1107,7 +1107,7 @@ namespace _26K1_DotNet
             try
             {
                 DebtReportPdfRenderer.Export(dialog.FileName, new DebtReportPdfData(
-                    "TRƯỜNG ĐẠI HỌC MỎ - ĐỊA CHẤT", selectedSemester.Name,
+                    "EduFee · Student Tuition Management", selectedSemester.Name,
                     viewDescription, DateTime.Now, rows));
                 UiFeedback.ShowSuccess($"Đã xuất báo cáo PDF:\n{dialog.FileName}");
             }

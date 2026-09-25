@@ -88,10 +88,10 @@ namespace _26K1_DotNet
 
             int y = 14;
 
-            // University / Header
+            // Product header
             var lblUni = new Label
             {
-                Text = "TRƯỜNG ĐẠI HỌC MỎ - ĐỊA CHẤT",
+                Text = "EDUFEE · STUDENT TUITION MANAGEMENT",
                 Font = UITheme.FontSmallBold,
                 ForeColor = UITheme.TextSecondary,
                 Location = new Point(28, y), AutoSize = true, Parent = paper
@@ -300,7 +300,7 @@ namespace _26K1_DotNet
         }
 
         private ReceiptPdfData BuildReceiptData() => new(
-            "TRƯỜNG ĐẠI HỌC MỎ - ĐỊA CHẤT", _receipt.ReceiptCode, _receipt.PaymentDate,
+            "EduFee · Student Tuition Management", _receipt.ReceiptCode, _receipt.PaymentDate,
             ReceiptStudentName, ReceiptStudentCode, ReceiptClassName, ReceiptSemesterName,
             _receipt.PayerName, _receipt.PaymentMethod, _receipt.Amount, ReceiptTotal,
             ReceiptPaidAfter, ReceiptRemaining, ReceiptDueDate, _receipt.Note);

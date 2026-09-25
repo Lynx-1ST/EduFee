@@ -328,7 +328,7 @@ internal static class Program
         Directory.CreateDirectory(outputDirectory);
         string receiptPath = Path.Combine(outputDirectory, "bien-lai-mau.pdf");
         ReceiptPdfRenderer.Export(receiptPath, new ReceiptPdfData(
-            "TRƯỜNG ĐẠI HỌC MỎ - ĐỊA CHẤT", "BL-2026-0001", new DateTime(2026, 9, 19, 9, 30, 0),
+            "EduFee · Student Tuition Management", "BL-2026-0001", new DateTime(2026, 9, 19, 9, 30, 0),
             "Nguyễn Thị Ánh", "SV0101", "K26-CNTT", "HK1 2026-2027", "Trần Văn Bình",
             "Chuyển khoản ngân hàng", 1_200_000m, 3_000_000m, 1_200_000m, 1_800_000m,
             new DateTime(2026, 9, 30), "Thanh toán học phí lần 1"));
@@ -339,7 +339,7 @@ internal static class Program
             new DateTime(2026, 9, 30), index % 2 == 0 ? "Quá hạn" : "Nộp 1 phần")).ToList();
         string debtPath = Path.Combine(outputDirectory, "bao-cao-cong-no-mau.pdf");
         DebtReportPdfRenderer.Export(debtPath, new DebtReportPdfData(
-            "TRƯỜNG ĐẠI HỌC MỎ - ĐỊA CHẤT", "HK1 2026-2027", "Sinh viên còn nợ",
+            "EduFee · Student Tuition Management", "HK1 2026-2027", "Sinh viên còn nợ",
             new DateTime(2026, 9, 19, 10, 0, 0), rows));
 
         bool IsPdf(string path) => File.Exists(path) && new FileInfo(path).Length > 1_000 &&
@@ -349,7 +349,7 @@ internal static class Program
 
         string fullLastPagePath = Path.Combine(outputDirectory, "bao-cao-25-dong.pdf");
         DebtReportPdfRenderer.Export(fullLastPagePath, new DebtReportPdfData(
-            "TRƯỜNG ĐẠI HỌC MỎ - ĐỊA CHẤT", "HK1 2026-2027", "Kiểm tra phân trang",
+            "EduFee · Student Tuition Management", "HK1 2026-2027", "Kiểm tra phân trang",
             new DateTime(2026, 9, 19), rows.Take(25).ToList()));
         string pdfAscii = System.Text.Encoding.ASCII.GetString(File.ReadAllBytes(fullLastPagePath));
         check(IsPdf(fullLastPagePath) && pdfAscii.Split("/Type /Page ", StringSplitOptions.None).Length - 1 == 2,

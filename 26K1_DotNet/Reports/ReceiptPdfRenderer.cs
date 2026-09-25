@@ -1,6 +1,5 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
-using _26K1_DotNet;
 
 namespace K26_DotNet.Reports;
 
@@ -123,9 +122,7 @@ public static class ReceiptPdfRenderer
     {
         using var titleFont = new Font("Segoe UI", 25, FontStyle.Bold); using var headingFont = new Font("Segoe UI", 14, FontStyle.Bold); using var bodyFont = new Font("Segoe UI", 13); using var boldFont = new Font("Segoe UI", 13, FontStyle.Bold); using var smallFont = new Font("Segoe UI", 11);
         using var muted = new SolidBrush(Color.FromArgb(80, 90, 105)); using var navy = new SolidBrush(Color.FromArgb(26, 78, 137)); using var dark = new SolidBrush(Color.FromArgb(35, 40, 48)); using var green = new SolidBrush(Color.FromArgb(22, 124, 80)); using var greenLight = new SolidBrush(Color.FromArgb(231, 248, 239)); using var border = new Pen(Color.FromArgb(211, 218, 227), 2);
-        using var logo = BrandAssets.TryLoadHumgLogo();
-        if (logo != null) graphics.DrawImage(logo, new Rectangle(Left, 92, 88, 88));
-        int headerLeft = logo == null ? Left : Left + 112;
+        int headerLeft = Left;
         DrawText(graphics, data.OrganizationName, headingFont, muted, headerLeft, 108, Right - headerLeft, 35); DrawText(graphics, "BIÊN LAI THU TIỀN HỌC PHÍ", titleFont, navy, headerLeft, 153, Right - headerLeft, 48);
         DrawText(graphics, $"Mã biên lai: {data.ReceiptCode}    |    Ngày lập: {data.PaymentDate:dd/MM/yyyy HH:mm}", smallFont, muted, headerLeft, 215, Right - headerLeft, 28); graphics.DrawLine(border, Left, 285, Right, 285);
         int y = ContentY;

@@ -142,10 +142,10 @@ namespace _26K1_DotNet
 
             int y = 14;
 
-            // Header Institution
+            // Product header
             var lblUni = new Label
             {
-                Text = "TRƯỜNG ĐẠI HỌC MỎ - ĐỊA CHẤT",
+                Text = "EDUFEE · STUDENT TUITION MANAGEMENT",
                 Font = UITheme.FontBold,
                 ForeColor = UITheme.TextSecondary,
                 Location = new Point(24, y), AutoSize = true, Parent = paper

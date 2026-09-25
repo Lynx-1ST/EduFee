@@ -41,9 +41,9 @@ public static class QrPaymentAcceptance
         System.Windows.Forms.Application.DoEvents();
         var visibleButtons = Descendants(form).OfType<System.Windows.Forms.Button>()
             .Where(button => button.Visible).Select(button => button.Text).ToList();
-        check(visibleButtons.Contains("Tôi đã chuyển khoản") &&
+        check(visibleButtons.Contains("Quản trị viên xác nhận đã nhận tiền") &&
               visibleButtons.All(text => !text.Contains("Mô phỏng", StringComparison.OrdinalIgnoreCase)),
-            "VietQR uses manual transfer confirmation without mock terminology");
+            "VietQR uses an explicit administrator confirmation without mock terminology");
         using var bitmap = new System.Drawing.Bitmap(form.Width, form.Height);
         form.DrawToBitmap(bitmap, new System.Drawing.Rectangle(0, 0, bitmap.Width, bitmap.Height));
         string? artifacts = Environment.GetEnvironmentVariable("EDUFEE_PDF_SAMPLE_DIR");

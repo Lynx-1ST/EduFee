@@ -17,6 +17,7 @@ public sealed class FormQrPayment : Form
     private Label _status = null!;
     private Label _lblCountdown = null!;
     private Button _confirmTransferred = null!;
+    private bool _isMomo;
     private bool _pollStarted;
     private bool _completed;
     private bool _pollDisposed;
@@ -35,11 +36,12 @@ public sealed class FormQrPayment : Form
     private void BuildUI()
     {
         bool isMomo = _session.Provider.Contains("momo", StringComparison.OrdinalIgnoreCase);
+        _isMomo = isMomo;
         string providerDisplay = isMomo ? "MoMo" : "VietQR";
 
         Text = $"{providerDisplay} — Thanh toán học phí";
-        ClientSize = new Size(460, 720);
-        MinimumSize = MaximumSize = new Size(460, 720);
+        ClientSize = new Size(480, 740);
+        MinimumSize = MaximumSize = new Size(480, 740);
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
@@ -63,7 +65,7 @@ public sealed class FormQrPayment : Form
             Image = logo,
             SizeMode = PictureBoxSizeMode.Zoom,
             Size = logo.Size,
-            Location = new Point((460 - logo.Width) / 2, 8),
+            Location = new Point((480 - logo.Width) / 2, 8),
             BackColor = Color.Transparent
         };
         pbLogo.Disposed += (_, _) => logo.Dispose();
@@ -79,7 +81,7 @@ public sealed class FormQrPayment : Form
 
         var qrPanel = new Panel
         {
-            Location = new Point(105, 56),
+            Location = new Point(115, 56),
             Size = new Size(250, 250),
             BackColor = Color.White
         };
@@ -117,7 +119,7 @@ public sealed class FormQrPayment : Form
             Font = new Font("Segoe UI", 16F, FontStyle.Bold),
             ForeColor = brandColor,
             Location = new Point(20, 312),
-            Size = new Size(420, 30),
+            Size = new Size(440, 30),
             TextAlign = ContentAlignment.MiddleCenter
         };
         body.Controls.Add(lblAmount);
@@ -132,18 +134,29 @@ public sealed class FormQrPayment : Form
             Font = UITheme.FontSmall,
             ForeColor = UITheme.TextSecondary,
             Location = new Point(20, 346),
-            Size = new Size(420, 64),
+            Size = new Size(440, 64),
             TextAlign = ContentAlignment.MiddleCenter
         };
         body.Controls.Add(lblDetail);
+
+        var statusCaption = new Label
+        {
+            Text = isMomo ? "TRẠNG THÁI MOMO" : "XÁC NHẬN VIETQR",
+            Font = UITheme.FontCardTitle,
+            ForeColor = UITheme.TextSecondary,
+            Location = new Point(20, 410),
+            Size = new Size(440, 18),
+            TextAlign = ContentAlignment.MiddleCenter
+        };
+        body.Controls.Add(statusCaption);
 
         // Đếm ngược thời gian hết hạn mã QR
         _lblCountdown = new Label
         {
             Font = UITheme.FontSmallBold,
             ForeColor = Color.FromArgb(225, 29, 72),
-            Location = new Point(20, 416),
-            Size = new Size(420, 24),
+            Location = new Point(20, 428),
+            Size = new Size(440, 24),
             TextAlign = ContentAlignment.MiddleCenter
         };
         body.Controls.Add(_lblCountdown);
@@ -151,11 +164,13 @@ public sealed class FormQrPayment : Form
         // Trạng thái giao dịch
         _status = new Label
         {
-            Text = isMomo ? "Đang chờ quét mã MoMo..." : "Đang chờ quét mã thanh toán...",
+            Text = isMomo
+                ? "Đang chờ MoMo xác nhận · tự kiểm tra mỗi vài giây"
+                : "Chờ quản trị viên đối soát giao dịch",
             Font = UITheme.FontSmallBold,
             ForeColor = UITheme.WarningDark,
-            Location = new Point(20, 444),
-            Size = new Size(420, 26),
+            Location = new Point(20, 456),
+            Size = new Size(440, 26),
             TextAlign = ContentAlignment.MiddleCenter
         };
         body.Controls.Add(_status);
@@ -168,12 +183,23 @@ public sealed class FormQrPayment : Form
         _countdownTimer.Tick += (_, _) => UpdateCountdown();
         _countdownTimer.Start();
 
-        // VietQR không có API đối soát trong ứng dụng desktop; người dùng xác nhận thủ công.
-        _confirmTransferred = UITheme.PrimaryBtn("Tôi đã chuyển khoản", 210, 34);
-        _confirmTransferred.Location = new Point(125, 476);
+        // VietQR không có API đối soát trong ứng dụng desktop; quản trị viên xác nhận sau khi đối soát.
+        _confirmTransferred = UITheme.PrimaryBtn("Quản trị viên xác nhận đã nhận tiền", 290, 34);
+        _confirmTransferred.Location = new Point(95, 488);
         _confirmTransferred.Visible = !isMomo && _gateway is VietQrPaymentGateway;
+        _confirmTransferred.AccessibleName = "Quản trị viên xác nhận đã nhận tiền";
         _confirmTransferred.Click += (_, _) => ConfirmVietQrTransfer();
         body.Controls.Add(_confirmTransferred);
+
+        var confirmationNote = new Label
+        {
+            Text = "Chỉ xác nhận sau khi đối soát sao kê ngân hàng.",
+            Location = new Point(20, 526), Size = new Size(440, 20),
+            Font = UITheme.FontSmall, ForeColor = UITheme.TextSecondary,
+            TextAlign = ContentAlignment.MiddleCenter,
+            Visible = !isMomo && _gateway is VietQrPaymentGateway
+        };
+        body.Controls.Add(confirmationNote);
 
         var footer = new Panel { Dock = DockStyle.Bottom, Height = 66, BackColor = UITheme.Surface };
         footer.Controls.Add(UITheme.HSep(DockStyle.Top));
@@ -250,7 +276,7 @@ public sealed class FormQrPayment : Form
             _lblCountdown.ForeColor = UITheme.Danger;
             if (_status != null)
             {
-                _status.Text = "Giao dịch đã hết hạn.";
+                _status.Text = "Giao dịch đã hết hạn · tạo một mã mới để tiếp tục.";
                 _status.ForeColor = UITheme.Danger;
             }
         }
@@ -311,7 +337,9 @@ public sealed class FormQrPayment : Form
             catch (OperationCanceledException) when (token.IsCancellationRequested) { return; }
             catch
             {
-                _status.Text = "Chưa thể kiểm tra giao dịch. Sẽ thử lại...";
+                _status.Text = _isMomo
+                    ? "Chưa thể kiểm tra MoMo · hệ thống sẽ tự thử lại..."
+                    : "Chưa thể kiểm tra giao dịch · hệ thống sẽ tự thử lại...";
                 _status.ForeColor = UITheme.WarningDark;
             }
             try { await Task.Delay(_pollInterval, token); }
@@ -325,13 +353,15 @@ public sealed class FormQrPayment : Form
         {
             vietQr.ConfirmTransferred(_session.OrderId);
             _confirmTransferred.Enabled = false;
-            _status.Text = "Đã xác nhận chuyển khoản, đang ghi nhận...";
+            _status.Text = "Đã xác nhận đối soát · đang ghi nhận giao dịch...";
         }
     }
 
-    private static string StatusText(PaymentGatewayStatus status) => status.Status switch
+    private string StatusText(PaymentGatewayStatus status) => status.Status switch
     {
-        GatewayPaymentStatus.Pending => "Đang chờ thanh toán...",
+        GatewayPaymentStatus.Pending => _isMomo
+            ? "Đang chờ MoMo xác nhận · tự kiểm tra mỗi vài giây"
+            : "Chờ quản trị viên đối soát giao dịch",
         GatewayPaymentStatus.Failed => "Giao dịch không thành công.",
         GatewayPaymentStatus.Cancelled => "Giao dịch đã bị hủy.",
         GatewayPaymentStatus.Expired => "Giao dịch đã hết hạn.",

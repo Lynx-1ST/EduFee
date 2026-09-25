@@ -1,6 +1,5 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
-using _26K1_DotNet;
 
 namespace K26_DotNet.Reports;
 
@@ -112,9 +111,7 @@ public static class DebtReportPdfRenderer
     {
         using var titleFont = new Font("Segoe UI", 22, FontStyle.Bold); using var headingFont = new Font("Segoe UI", 12, FontStyle.Bold); using var bodyFont = new Font("Segoe UI", 10); using var smallFont = new Font("Segoe UI", 9);
         using var navy = new SolidBrush(Color.FromArgb(26, 78, 137)); using var dark = new SolidBrush(Color.FromArgb(35, 40, 48)); using var muted = new SolidBrush(Color.FromArgb(85, 95, 110)); using var headerFill = new SolidBrush(Color.FromArgb(232, 241, 250)); using var totalFill = new SolidBrush(Color.FromArgb(235, 249, 241)); using var grid = new Pen(Color.FromArgb(201, 211, 221));
-        using var logo = BrandAssets.TryLoadHumgLogo();
-        if (logo != null) graphics.DrawImage(logo, new Rectangle(Left, 52, 84, 84));
-        int headerLeft = logo == null ? Left : Left + 108;
+        int headerLeft = Left;
         graphics.DrawString(data.OrganizationName ?? string.Empty, headingFont, muted, new RectangleF(headerLeft, 70, Right - headerLeft, 30)); graphics.DrawString("BÁO CÁO CÔNG NỢ HỌC PHÍ", titleFont, navy, new RectangleF(headerLeft, 112, Right - headerLeft, 44));
         graphics.DrawString($"Học kỳ: {data.SemesterName}", bodyFont, dark, new RectangleF(Left, 175, 620, 28)); graphics.DrawString($"Bộ lọc: {data.FilterDescription}", bodyFont, dark, new RectangleF(Left, 205, Right - Left, 28)); graphics.DrawString($"Thời điểm xuất: {data.ExportedAt:dd/MM/yyyy HH:mm}", smallFont, muted, new RectangleF(Left, 240, Right - Left, 24));
         DrawTableHeader(graphics, headingFont, dark, headerFill, grid);

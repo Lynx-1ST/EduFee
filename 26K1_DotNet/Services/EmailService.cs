@@ -79,7 +79,7 @@ namespace K26_DotNet.Services
                 return (false, "Sinh viên chưa có địa chỉ email trong hồ sơ!");
             }
 
-            string subject = $"[ĐH Mỏ - Địa chất] Biên lai thu học phí điện tử - {receipt.ReceiptCode} - {student.FullName}";
+            string subject = $"[EduFee] Biên lai thu học phí điện tử - {receipt.ReceiptCode} - {student.FullName}";
             string bodyHtml = GenerateReceiptEmailHtml(student, semester, fee, receipt);
 
             return await SendEmailAsync(student.Email, student.FullName, subject, bodyHtml);
@@ -96,7 +96,7 @@ namespace K26_DotNet.Services
                 return (false, "Sinh viên chưa có địa chỉ email trong hồ sơ!");
             }
 
-            string subject = $"[ĐH Mỏ - Địa chất] Giấy báo nợ học phí - {semester.Name} - {student.FullName}";
+            string subject = $"[EduFee] Giấy báo nợ học phí - {semester.Name} - {student.FullName}";
             string bodyHtml = GenerateDebtNoticeEmailHtml(student, semester, fee);
 
             return await SendEmailAsync(student.Email, student.FullName, subject, bodyHtml);
@@ -218,7 +218,7 @@ namespace K26_DotNet.Services
 <body>
   <div class='container'>
     <div class='header'>
-      <p style='text-transform: uppercase; letter-spacing: 1px; font-size: 11px; margin-bottom: 4px;'>Trường Đại học Mỏ - Địa chất</p>
+      <p style='text-transform: uppercase; letter-spacing: 1px; font-size: 11px; margin-bottom: 4px;'>EduFee · Student Tuition Management</p>
       <h1>XÁC NHẬN NỘP HỌC PHÍ THÀNH CÔNG</h1>
       <p>Mã biên lai điện tử: <b>{receipt.ReceiptCode}</b></p>
     </div>
@@ -231,7 +231,7 @@ namespace K26_DotNet.Services
 
     <div class='body-content'>
       <p style='font-size: 14px;'>Kính gửi sinh viên <b>{studentName}</b>,</p>
-      <p style='font-size: 13px; color: #475569;'>Nhà trường xác nhận đã nhận được khoản thanh toán học phí của bạn với các thông tin chi tiết dưới đây:</p>
+      <p style='font-size: 13px; color: #475569;'>Hệ thống EduFee xác nhận đã nhận được khoản thanh toán học phí của bạn với các thông tin chi tiết dưới đây:</p>
 
       <table>
         <tr><td style='padding:6px 0;color:#64748b;'>Mã sinh viên:</td><td style='padding:6px 0;font-weight:600;text-align:right;'>{studentCode}</td></tr>
@@ -256,7 +256,7 @@ namespace K26_DotNet.Services
 
     <div class='footer'>
       <p style='margin: 0 0 4px 0;'>Biên lai điện tử có giá trị xác nhận tương đương biên lai giấy.</p>
-      <p style='margin: 0;'>Mọi thắc mắc xin vui lòng liên hệ <b>Phòng Kế toán - Tài vụ</b> để được hỗ trợ.</p>
+      <p style='margin: 0;'>Mọi thắc mắc xin vui lòng liên hệ <b>EduFee Student Support</b> để được hỗ trợ.</p>
     </div>
   </div>
 </body>
@@ -290,7 +290,7 @@ namespace K26_DotNet.Services
 <body>
   <div class='container'>
     <div class='header'>
-      <p style='text-transform: uppercase; letter-spacing: 1px; font-size: 11px; margin-bottom: 4px;'>Trường Đại học Mỏ - Địa chất</p>
+      <p style='text-transform: uppercase; letter-spacing: 1px; font-size: 11px; margin-bottom: 4px;'>EduFee · Student Tuition Management</p>
       <h1>GIẤY BÁO NỢ HỌC PHÍ</h1>
       <p>Học kỳ: <b>{semester.Name}</b></p>
     </div>
@@ -319,7 +319,7 @@ namespace K26_DotNet.Services
     </div>
 
     <div class='footer'>
-      <p style='margin: 0;'>Trường Đại học Mỏ - Địa chất · Phòng Tài chính - Kế toán</p>
+      <p style='margin: 0;'>EduFee · Student Tuition Management</p>
     </div>
   </div>
 </body>

@@ -23,8 +23,11 @@ namespace _26K1_DotNet
         private void FormStudentDetail_Load(object sender, EventArgs e)
         {
             Text = _isNewStudent ? "Thêm Sinh Viên Mới" : "Sửa Thông Tin Sinh Viên";
-            labelHeaderTitle.Text = _isNewStudent ? "THÊM SINH VIÊN MỚI" : "CHỈNH SỬA SINH VIÊN";
-            labelHeaderSub.Text = _isNewStudent ? "Nhập thông tin để thêm hồ sơ sinh viên mới vào hệ thống" : $"Chỉnh sửa thông tin cho sinh viên: {_student?.FullName}";
+            labelHeaderTitle.Text = _isNewStudent ? "Hồ sơ mới" : "Chỉnh sửa hồ sơ";
+            labelHeaderSub.Text = _isNewStudent ? "Nhập thông tin sinh viên" : "Cập nhật thông tin học tập và liên hệ";
+            labelProfileName.Text = _isNewStudent ? "Thêm sinh viên" : _student?.FullName ?? "Hồ sơ sinh viên";
+            labelProfileMeta.Text = _isNewStudent ? "Tạo hồ sơ để quản lý học phí" : $"{_student?.StudentCode} · {_student?.ClassName}";
+            labelAvatar.Text = _isNewStudent ? "+" : GetInitials(_student?.FullName);
 
             if (_isNewStudent)
             {
@@ -100,6 +103,15 @@ namespace _26K1_DotNet
             valid &= UiFeedback.ValidateRequired(_ep, textBoxClassName, "lớp");
             if (!valid) UiFeedback.FocusFirstError(_ep, textBoxId, textBoxFullName, textBoxEmail, textBoxPhoneNumber, textBoxClassName);
             return valid;
+        }
+
+        private static string GetInitials(string? fullName)
+        {
+            if (string.IsNullOrWhiteSpace(fullName)) return "SV";
+            var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            return parts.Length == 1
+                ? parts[0][..Math.Min(2, parts[0].Length)].ToUpperInvariant()
+                : $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant();
         }
     }
 }

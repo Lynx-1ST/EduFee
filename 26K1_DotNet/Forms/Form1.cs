@@ -26,6 +26,7 @@ namespace _26K1_DotNet
         private PanelStudents? _panelStudents;
         private PanelTuition? _panelTuition;
         private PanelStatistics? _panelStatistics;
+        private PanelOverview? _panelOverview;
         private string _currentPanel = "";
         private readonly bool _demoMode;
         private readonly string? _dataDirectory;
@@ -58,7 +59,7 @@ namespace _26K1_DotNet
                 if (_demoMode) _emailService.Settings.IsSimulationMode = true;
 
                 UpdateHeaderActiveSemester();
-                ShowPanel("students");
+                ShowPanel("overview");
                 if (!string.IsNullOrWhiteSpace(bootstrap.Notice))
                     lblPageSub.Text = bootstrap.Notice;
                 if (!_demoMode && _momoSettingsService.Settings.Enabled)
@@ -82,16 +83,27 @@ namespace _26K1_DotNet
 
             switch (name)
             {
+                case "overview":
+                    labelPageTitle.Text = "Tổng quan";
+                    lblPageSub.Text = "Tình hình thu học phí và các khoản cần xử lý";
+                    if (_panelOverview == null)
+                        _panelOverview = new PanelOverview(_studentService, _semesterService, _tuitionService,
+                            _receiptService, NavigateToTuitionForStudent);
+                    else
+                        _panelOverview.RefreshData();
+                    Show(_panelOverview);
+                    break;
+
                 case "students":
-                    labelPageTitle.Text = "Quản Lý Sinh Viên";
-                    lblPageSub.Text = "Xem, thêm, sửa và quản lý danh sách sinh viên các lớp";
+                    labelPageTitle.Text = "Sinh viên";
+                    lblPageSub.Text = "Hồ sơ và danh sách sinh viên";
                     _panelStudents ??= new PanelStudents(_studentService, this);
                     Show(_panelStudents);
                     break;
 
                 case "tuition":
-                    labelPageTitle.Text = "Quản Lý Học Phí";
-                    lblPageSub.Text = "Theo dõi, tính học phí theo tín chỉ và ghi nhận thu tiền";
+                    labelPageTitle.Text = "Học phí";
+                    lblPageSub.Text = "Theo dõi nghĩa vụ tài chính và ghi nhận thanh toán";
                     if (_panelTuition == null)
                         _panelTuition = new PanelTuition(_studentService, _semesterService, _tuitionService, _receiptService, this);
                     else
@@ -100,8 +112,8 @@ namespace _26K1_DotNet
                     break;
 
                 case "statistics":
-                    labelPageTitle.Text = "Thống Kê & Báo Cáo";
-                    lblPageSub.Text = "Tổng hợp tài chính, tiến độ thu học phí và theo dõi nợ";
+                    labelPageTitle.Text = "Báo cáo";
+                    lblPageSub.Text = "Công nợ, tổng hợp theo lớp và dữ liệu xuất báo cáo";
                     if (_panelStatistics == null)
                         _panelStatistics = new PanelStatistics(_studentService, _semesterService, _tuitionService, _receiptService, this);
                     else
@@ -119,6 +131,7 @@ namespace _26K1_DotNet
 
         private void SetNavActive(string name)
         {
+            btnNavOverview.IsActive   = (name == "overview");
             btnNavStudents.IsActive   = (name == "students");
             btnNavTuition.IsActive    = (name == "tuition");
             btnNavStatistics.IsActive = (name == "statistics");
@@ -146,6 +159,7 @@ namespace _26K1_DotNet
             var act = _semesterService.GetActive();
             _panelTuition?.RefreshData(act?.Id);
             _panelStatistics?.RefreshData(act?.Id);
+            _panelOverview?.RefreshData();
         }
 
         public void OpenSemesterQuickSwitch(Control anchor, Point offset)
@@ -165,6 +179,7 @@ namespace _26K1_DotNet
                         UpdateHeaderActiveSemester();
                         _panelTuition?.RefreshData(sem.Id);
                         _panelStatistics?.RefreshData(sem.Id);
+                        _panelOverview?.RefreshData();
                         UiFeedback.ShowSuccess($"Đã đặt «{sem.Name}» làm học kỳ hiện tại!");
                     });
                 if (isCurrent)
@@ -316,6 +331,7 @@ namespace _26K1_DotNet
             _panelStudents?.LoadData();
             _panelTuition?.RefreshData();
             _panelStatistics?.RefreshData();
+            _panelOverview?.RefreshData();
             UpdateHeaderActiveSemester();
         }
     }

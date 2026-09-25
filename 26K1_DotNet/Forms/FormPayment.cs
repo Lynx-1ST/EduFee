@@ -54,8 +54,8 @@ namespace _26K1_DotNet
             string studentCode = student?.StudentCode ?? "—";
 
             Text = $"Ghi Nhận Thanh Toán - {studentName}";
-            ClientSize = new Size(520, 680);
-            MinimumSize = new Size(520, 680);
+            ClientSize = new Size(600, 700);
+            MinimumSize = new Size(600, 700);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -102,7 +102,7 @@ namespace _26K1_DotNet
             // Info block
             var infoPanel = new Panel
             {
-                Location = new Point(24, 14), Size = new Size(472, 122),
+                Location = new Point(24, 14), Size = new Size(552, 122),
                 BackColor = UITheme.SurfaceAlt,
                 Parent = card
             };
@@ -125,11 +125,11 @@ namespace _26K1_DotNet
             string dueStr = dueDate.HasValue ? dueDate.Value.ToString("dd/MM/yyyy") : "—";
             bool isOverdue = dueDate.HasValue && DateTime.Today > dueDate.Value.Date && !_fee.IsFullyPaid;
 
-            InfoRow(infoPanel, "Sinh viên:", $"{studentName} ({student?.ClassName})", UITheme.TextPrimary, 10);
-            InfoRow(infoPanel, "Tổng học phí:", $"{_fee.TotalAmount:N0} ₫", UITheme.TextPrimary, 32);
-            InfoRow(infoPanel, "Đã nộp:", $"{_fee.PaidAmount:N0} ₫", UITheme.Success, 54);
-            InfoRow(infoPanel, "Còn phải nộp:", $"{_fee.RemainingAmount:N0} ₫", UITheme.Danger, 76);
-            InfoRow(infoPanel, "Hạn nộp:", isOverdue ? $"{dueStr}  (Quá hạn)" : dueStr, isOverdue ? UITheme.Danger : UITheme.TextSecondary, 98);
+            InfoRow(infoPanel, "Sinh viên", $"{studentName}  ·  {student?.ClassName ?? "—"}", UITheme.TextPrimary, 10);
+            InfoRow(infoPanel, "Tổng học phí", $"{_fee.TotalAmount:N0} ₫", UITheme.TextPrimary, 32);
+            InfoRow(infoPanel, "Đã ghi nhận", $"{_fee.PaidAmount:N0} ₫", UITheme.Success, 54);
+            InfoRow(infoPanel, "Còn phải nộp", $"{_fee.RemainingAmount:N0} ₫", UITheme.Danger, 76);
+            InfoRow(infoPanel, "Hạn thanh toán", isOverdue ? $"{dueStr}  ·  Quá hạn" : dueStr, isOverdue ? UITheme.Danger : UITheme.TextSecondary, 98);
 
             int y = 146;
 
@@ -137,7 +137,7 @@ namespace _26K1_DotNet
             card.Controls.Add(FieldLabel("Số tiền nộp (VNĐ) *:", y)); y += 22;
             numAmount = new NumericUpDown
             {
-                Location = new Point(24, y), Size = new Size(472, 34),
+                Location = new Point(24, y), Size = new Size(552, 34),
                 Font = UITheme.FontInputLarge, BackColor = UITheme.SurfaceAlt,
                 Minimum = 0, Maximum = Math.Max(0, _fee.RemainingAmount),
                 Value = Math.Max(0, _fee.RemainingAmount),
@@ -151,7 +151,7 @@ namespace _26K1_DotNet
             card.Controls.Add(FieldLabel("Hình thức thanh toán *:", y)); y += 22;
             cmbMethod = new ComboBox
             {
-                Location = new Point(24, y), Size = new Size(472, 30),
+                Location = new Point(24, y), Size = new Size(552, 30),
                 Font = UITheme.FontBody, DropDownStyle = ComboBoxStyle.DropDownList,
                 BackColor = UITheme.SurfaceAlt,
                 AccessibleName = "Hình thức thanh toán"
@@ -172,7 +172,7 @@ namespace _26K1_DotNet
             card.Controls.Add(FieldLabel("Cổng thanh toán QR:", y)); y += 22;
             cmbGateway = new ComboBox
             {
-                Location = new Point(24, y), Size = new Size(472, 30), Font = UITheme.FontBody,
+                Location = new Point(24, y), Size = new Size(552, 30), Font = UITheme.FontBody,
                 DropDownStyle = ComboBoxStyle.DropDownList, BackColor = UITheme.SurfaceAlt,
                 AccessibleName = "Cổng thanh toán QR"
             };
@@ -182,11 +182,21 @@ namespace _26K1_DotNet
             card.Controls.Add(cmbGateway);
             y += 42;
 
+            var gatewayHint = new Label
+            {
+                Text = "VietQR cần quản trị viên đối soát; MoMo tự động kiểm tra trạng thái giao dịch.",
+                Location = new Point(24, y - 3), Size = new Size(552, 20),
+                Font = UITheme.FontSmall, ForeColor = UITheme.TextSecondary,
+                AccessibleName = "Hướng dẫn cổng thanh toán"
+            };
+            card.Controls.Add(gatewayHint);
+            y += 20;
+
             // Payer Name
             card.Controls.Add(FieldLabel("Người nộp tiền *:", y)); y += 22;
             txtPayer = new TextBox
             {
-                Location = new Point(24, y), Size = new Size(472, 30),
+                Location = new Point(24, y), Size = new Size(552, 30),
                 Font = UITheme.FontBody, BackColor = UITheme.SurfaceAlt,
                 Text = studentName,
                 AccessibleName = "Người nộp tiền"
@@ -198,7 +208,7 @@ namespace _26K1_DotNet
             card.Controls.Add(FieldLabel("Ghi chú nộp tiền:", y)); y += 22;
             txtNote = new TextBox
             {
-                Location = new Point(24, y), Size = new Size(472, 54),
+                Location = new Point(24, y), Size = new Size(552, 54),
                 Font = UITheme.FontBody, Multiline = true,
                 BackColor = UITheme.SurfaceAlt, BorderStyle = BorderStyle.FixedSingle,
                 AccessibleName = "Ghi chú nộp tiền"
@@ -236,7 +246,7 @@ namespace _26K1_DotNet
         private static void InfoRow(Panel parent, string label, string value, Color valColor, int y)
         {
             new Label { Text = label, Location = new Point(14, y), AutoSize = true, Font = UITheme.FontSmall, ForeColor = UITheme.TextSecondary, Parent = parent };
-            new Label { Text = value, Location = new Point(160, y), AutoSize = true, Font = UITheme.FontBold, ForeColor = valColor, Parent = parent };
+            new Label { Text = value, Location = new Point(170, y), AutoSize = true, Font = UITheme.FontBold, ForeColor = valColor, Parent = parent };
         }
 
         private ErrorProvider _ep = null!;
