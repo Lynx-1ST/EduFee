@@ -48,14 +48,14 @@ internal static class DatabaseAcceptance
         check(values.SequenceEqual([(300L, 700L), (1000L, 0L)]),
             "Schema v1 migration rebuilds receipt snapshots cumulatively by payment date and ID");
 
-        check(ReadVersion(legacyPath) == 5 && CanStoreLatePaid(legacyPath) && ReadStudentCode(legacyPath, 1) == "SV0001",
+        check(ReadVersion(legacyPath) == 6 && CanStoreLatePaid(legacyPath) && ReadStudentCode(legacyPath, 1) == "SV0001" && ReadTuitionPerCredit(legacyPath, 1) == 620_000,
             "Schema v1 migrates sequentially through v2, v3, v4 and v5 with a deterministic student code");
 
         string v2Path = Path.Combine(root, "legacy-v2.db");
         CreateV2Database(v2Path);
         var beforeV2 = ReadFinancialSummary(v2Path);
         _ = new SqlDatabaseContext(v2Path);
-        check(ReadVersion(v2Path) == 5 && CanStoreLatePaid(v2Path) && ReadStudentCode(v2Path, 1) == "SV0001" && ReadFinancialSummary(v2Path) == beforeV2,
+        check(ReadVersion(v2Path) == 6 && CanStoreLatePaid(v2Path) && ReadStudentCode(v2Path, 1) == "SV0001" && ReadFinancialSummary(v2Path) == beforeV2,
             "Schema v2 migrates through v3 to v5 without changing record counts or tuition totals");
 
         string retryPath = Path.Combine(root, "migration-retry-v2.db");
@@ -74,14 +74,14 @@ internal static class DatabaseAcceptance
             "Failed v2 to v3 migration rolls back and keeps schema version 2");
 
         _ = new SqlDatabaseContext(retryPath);
-        check(ReadVersion(retryPath) == 5 && CanStoreLatePaid(retryPath) && ReadFinancialSummary(retryPath) == beforeRetry,
+        check(ReadVersion(retryPath) == 6 && CanStoreLatePaid(retryPath) && ReadFinancialSummary(retryPath) == beforeRetry,
             "A rolled-back migration can retry without changing records or tuition totals");
 
         string v3Path = Path.Combine(root, "legacy-v3.db");
         CreateV3Database(v3Path);
         var beforeV3 = ReadFinancialSummary(v3Path);
         _ = new SqlDatabaseContext(v3Path);
-        check(ReadVersion(v3Path) == 5 && ReadStudentCode(v3Path, 1) == "SV0001" && ReadFinancialSummary(v3Path) == beforeV3,
+        check(ReadVersion(v3Path) == 6 && ReadStudentCode(v3Path, 1) == "SV0001" && ReadFinancialSummary(v3Path) == beforeV3,
             "Schema v3 migrates through v4 to v5 and preserves IDs, records and tuition totals");
 
         string retryV4Path = Path.Combine(root, "migration-retry-v3.db");
@@ -96,7 +96,7 @@ internal static class DatabaseAcceptance
         check(failed && ReadVersion(retryV4Path) == 3 && !HasStudentCodeColumn(retryV4Path) && ReadFinancialSummary(retryV4Path) == beforeRetryV4,
             "Failed v3 to v4 migration rolls back StudentCode and keeps schema version 3");
         _ = new SqlDatabaseContext(retryV4Path);
-        check(ReadVersion(retryV4Path) == 5 && ReadStudentCode(retryV4Path, 1) == "SV0001" && ReadFinancialSummary(retryV4Path) == beforeRetryV4,
+        check(ReadVersion(retryV4Path) == 6 && ReadStudentCode(retryV4Path, 1) == "SV0001" && ReadFinancialSummary(retryV4Path) == beforeRetryV4,
             "A rolled-back StudentCode migration can retry without changing financial data");
 
         string mismatchedPath = Path.Combine(root, "mismatched-v4.db");
@@ -210,6 +210,16 @@ internal static class DatabaseAcceptance
         command.CommandText = "SELECT StudentCode FROM Students WHERE Id=@id;";
         command.Parameters.AddWithValue("@id", id);
         return Convert.ToString(command.ExecuteScalar()) ?? string.Empty;
+    }
+
+    private static long ReadTuitionPerCredit(string path, int id)
+    {
+        using var connection = new SqliteConnection($"Data Source={path}");
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT TuitionPerCredit FROM Semesters WHERE Id=@id;";
+        command.Parameters.AddWithValue("@id", id);
+        return Convert.ToInt64(command.ExecuteScalar());
     }
 
     private static bool HasStudentCodeColumn(string path)

@@ -776,7 +776,7 @@ Không mô tả Sandbox như hệ thống thanh toán Production.
 
 - [ ] Manual transaction re-check.
 - [ ] Payment history UI.
-- [ ] Retry pending transaction sau restart.
+- [x] Retry pending transaction sau restart.
 - [ ] Provider diagnostics trong Settings.
 
 ---

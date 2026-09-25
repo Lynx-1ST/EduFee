@@ -52,6 +52,26 @@ public sealed class SqliteRepository
         return reader.Read() ? ReadGatewayTransaction(reader) : null;
     }
 
+    public List<GatewayTransactionRow> GetRecoverableGatewayTransactions(string provider,
+        int pendingStatus, int unknownStatus)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(provider);
+        using var connection = _db.CreateConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = @"SELECT Id, Provider, OrderId, ProviderTransactionId, TuitionFeeId, ReceiptId, Amount, Status,
+            CreatedAt, CompletedAt, RawResultCode
+            FROM PaymentGatewayTransactions
+            WHERE Provider=@provider AND Status IN (@pending, @unknown) AND ReceiptId IS NULL
+            ORDER BY CreatedAt, Id;";
+        command.Parameters.AddWithValue("@provider", provider.Trim());
+        command.Parameters.AddWithValue("@pending", pendingStatus);
+        command.Parameters.AddWithValue("@unknown", unknownStatus);
+        using var reader = command.ExecuteReader();
+        var rows = new List<GatewayTransactionRow>();
+        while (reader.Read()) rows.Add(ReadGatewayTransaction(reader));
+        return rows;
+    }
+
     /// <summary>Records the receipt and marks its matching gateway transaction completed in one SQLite transaction.</summary>
     public PaymentReceipt? RecordGatewayPayment(string provider, string orderId, string providerTransactionId,
         decimal amount, int successStatus, string? rawResultCode, string payerName, DateTime? semesterDueDate = null)
@@ -180,8 +200,8 @@ public sealed class SqliteRepository
         using var connection = _db.CreateConnection();
         using var command = connection.CreateCommand();
         command.CommandText = """
-            INSERT INTO Semesters (Id, Name, StartDate, EndDate, DueDate, IsActive)
-            VALUES (@id, @name, @start, @end, @due, @active);
+            INSERT INTO Semesters (Id, Name, StartDate, EndDate, DueDate, IsActive, TuitionPerCredit)
+            VALUES (@id, @name, @start, @end, @due, @active, @tuitionPerCredit);
             """;
         AddSemesterParameters(command, semester);
         command.ExecuteNonQuery();
@@ -193,7 +213,7 @@ public sealed class SqliteRepository
         using var command = connection.CreateCommand();
         command.CommandText = """
             UPDATE Semesters SET Name=@name, StartDate=@start, EndDate=@end,
-                DueDate=@due, IsActive=@active WHERE Id=@id;
+                DueDate=@due, IsActive=@active, TuitionPerCredit=@tuitionPerCredit WHERE Id=@id;
             """;
         AddSemesterParameters(command, semester);
         RequireOne(command.ExecuteNonQuery(), "Không tìm thấy học kỳ cần cập nhật.");
@@ -448,6 +468,7 @@ public sealed class SqliteRepository
         command.Parameters.AddWithValue("@end", FormatDate(semester.EndDate));
         command.Parameters.AddWithValue("@due", FormatDate(semester.DueDate));
         command.Parameters.AddWithValue("@active", semester.IsActive ? 1 : 0);
+        command.Parameters.AddWithValue("@tuitionPerCredit", checked((long)semester.TuitionPerCredit));
     }
 
     private static void AddFeeParameters(SqliteCommand command, TuitionFee fee)

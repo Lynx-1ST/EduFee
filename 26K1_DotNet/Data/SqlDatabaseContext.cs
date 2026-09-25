@@ -7,7 +7,7 @@ namespace K26_DotNet.Data
 {
     public class SqlDatabaseContext
     {
-        private const int CurrentSchemaVersion = 5;
+        private const int CurrentSchemaVersion = 6;
         private static readonly string[] ApplicationTables =
         {
             "Students", "Semesters", "TuitionFees", "PaymentReceipts", "PaymentGatewayTransactions"
@@ -59,6 +59,7 @@ namespace K26_DotNet.Data
                 MigrateV2ToV3(conn);
                 MigrateV3ToV4(conn);
                 MigrateV4ToV5(conn);
+                MigrateV5ToV6(conn);
                 return;
             }
 
@@ -68,6 +69,7 @@ namespace K26_DotNet.Data
                 MigrateV2ToV3(conn);
                 MigrateV3ToV4(conn);
                 MigrateV4ToV5(conn);
+                MigrateV5ToV6(conn);
                 return;
             }
 
@@ -76,6 +78,7 @@ namespace K26_DotNet.Data
                 EnsureSchemaMatchesVersion(conn, version);
                 MigrateV3ToV4(conn);
                 MigrateV4ToV5(conn);
+                MigrateV5ToV6(conn);
                 return;
             }
 
@@ -83,6 +86,14 @@ namespace K26_DotNet.Data
             {
                 EnsureSchemaMatchesVersion(conn, version);
                 MigrateV4ToV5(conn);
+                MigrateV5ToV6(conn);
+                return;
+            }
+
+            if (version == 5)
+            {
+                EnsureSchemaMatchesVersion(conn, version);
+                MigrateV5ToV6(conn);
                 return;
             }
 
@@ -195,6 +206,18 @@ namespace K26_DotNet.Data
                 string[] required = ["Provider", "OrderId", "ProviderTransactionId", "TuitionFeeId", "ReceiptId", "Amount", "Status", "CreatedAt", "CompletedAt", "RawResultCode"];
                 if (required.Any(name => !names.Contains(name)) || !HasUniqueIndex(conn, "PaymentGatewayTransactions", "OrderId"))
                     throw new InvalidOperationException("Schema version 5 thiếu bảng hoặc ràng buộc giao dịch cổng thanh toán.");
+            }
+            if (version >= 6)
+            {
+                using var semesterColumns = conn.CreateCommand();
+                semesterColumns.CommandText = "PRAGMA table_info('Semesters');";
+                bool hasTuitionPerCredit = false;
+                using var reader = semesterColumns.ExecuteReader();
+                while (reader.Read())
+                    if (string.Equals(reader.GetString(1), "TuitionPerCredit", StringComparison.OrdinalIgnoreCase))
+                        hasTuitionPerCredit = true;
+                if (!hasTuitionPerCredit)
+                    throw new InvalidOperationException("Schema version 6 thiếu đơn giá tín chỉ theo học kỳ.");
             }
         }
 
@@ -430,7 +453,7 @@ namespace K26_DotNet.Data
             {
                 ExecuteNonQuery(conn, tx, CreateGatewayTransactionsSql());
                 MigrationCheckpointForTests?.Invoke("V4ToV5.BeforeVersion");
-                SetSchemaVersion(conn, tx, CurrentSchemaVersion);
+                SetSchemaVersion(conn, tx, 5);
                 tx.Commit();
             }
             catch (Exception ex)
@@ -439,6 +462,24 @@ namespace K26_DotNet.Data
                 throw new InvalidOperationException("Không thể bổ sung lưu vết giao dịch cổng thanh toán. Dữ liệu gốc không bị thay đổi.", ex);
             }
 
+            EnsureSchemaMatchesVersion(conn, 5);
+        }
+
+        private static void MigrateV5ToV6(SqliteConnection conn)
+        {
+            EnsureSchemaMatchesVersion(conn, 5);
+            using var tx = conn.BeginTransaction();
+            try
+            {
+                ExecuteNonQuery(conn, tx, "ALTER TABLE Semesters ADD COLUMN TuitionPerCredit INTEGER NOT NULL DEFAULT 620000 CHECK (typeof(TuitionPerCredit) = 'integer' AND TuitionPerCredit > 0);");
+                SetSchemaVersion(conn, tx, CurrentSchemaVersion);
+                tx.Commit();
+            }
+            catch (Exception ex)
+            {
+                tx.Rollback();
+                throw new InvalidOperationException("Không thể bổ sung đơn giá tín chỉ theo học kỳ. Dữ liệu gốc không bị thay đổi.", ex);
+            }
             EnsureSchemaMatchesVersion(conn, CurrentSchemaVersion);
         }
 
@@ -538,6 +579,7 @@ namespace K26_DotNet.Data
                 EndDate TEXT,
                 DueDate TEXT,
                 IsActive INTEGER NOT NULL DEFAULT 0 CHECK (IsActive IN (0, 1))
+                ,TuitionPerCredit INTEGER NOT NULL DEFAULT 620000 CHECK (typeof(TuitionPerCredit) = 'integer' AND TuitionPerCredit > 0)
             );
 
             CREATE TABLE {fees} (
@@ -677,7 +719,7 @@ namespace K26_DotNet.Data
             {
                 shape.CommandText = @"
                     SELECT Id, StudentCode, FullName, Email, PhoneNumber, DateOfBirth, ClassName FROM Students LIMIT 0;
-                    SELECT Id, Name, StartDate, EndDate, DueDate, IsActive FROM Semesters LIMIT 0;
+                    SELECT Id, Name, StartDate, EndDate, DueDate, IsActive, TuitionPerCredit FROM Semesters LIMIT 0;
                     SELECT Id, StudentId, SemesterId, Credits, TotalAmount, DiscountAmount, DiscountReason, PaidAmount, PaidDate, DueDate, Status, Note FROM TuitionFees LIMIT 0;
                     SELECT Id, FeeId, StudentId, SemesterId, ReceiptCode, Amount, PaymentDate, PaymentMethod, PayerName, Note,
                            StudentNameSnapshot, StudentCodeSnapshot, ClassNameSnapshot, SemesterNameSnapshot,

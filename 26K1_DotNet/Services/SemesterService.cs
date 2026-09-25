@@ -157,6 +157,8 @@ namespace K26_DotNet.Services
             if (semester.StartDate.Date > semester.EndDate.Date) throw new ArgumentException("Ngày kết thúc không thể trước ngày bắt đầu.");
             if (semester.DueDate.Date < semester.StartDate.Date || semester.DueDate.Date > semester.EndDate.Date)
                 throw new ArgumentException("Hạn nộp học phí phải nằm trong thời gian học kỳ.", nameof(semester.DueDate));
+            if (semester.TuitionPerCredit <= 0 || decimal.Truncate(semester.TuitionPerCredit) != semester.TuitionPerCredit)
+                throw new ArgumentException("Đơn giá tín chỉ phải là số nguyên VNĐ lớn hơn 0.", nameof(semester.TuitionPerCredit));
         }
 
         private static void CopySemester(Semester source, Semester destination)
@@ -166,12 +168,13 @@ namespace K26_DotNet.Services
             destination.EndDate = source.EndDate;
             destination.DueDate = source.DueDate;
             destination.IsActive = source.IsActive;
+            destination.TuitionPerCredit = source.TuitionPerCredit;
         }
 
         private static Semester CloneSemester(Semester s) => new()
         {
             Id = s.Id, Name = s.Name, StartDate = s.StartDate, EndDate = s.EndDate,
-            DueDate = s.DueDate, IsActive = s.IsActive
+            DueDate = s.DueDate, IsActive = s.IsActive, TuitionPerCredit = s.TuitionPerCredit
         };
 
         private static List<Semester> CloneSemesters(IEnumerable<Semester> semesters) => semesters.Select(CloneSemester).ToList();

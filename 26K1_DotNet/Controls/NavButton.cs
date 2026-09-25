@@ -134,10 +134,8 @@ namespace _26K1_DotNet
             var rect = new Rectangle(0, 0, Width - 1, Height - 1);
             int radius = 8;
 
-            // 1. Background Fill
             if (IsActive)
             {
-                // Rich Indigo Pill gradient with subtle border
                 using var brush = new LinearGradientBrush(rect,
                     UITheme.PrimaryDark,
                     UITheme.Primary,
@@ -149,7 +147,6 @@ namespace _26K1_DotNet
             }
             else if (_isHovered)
             {
-                // Dark Slate hover highlight
                 using var brush = new SolidBrush(UITheme.SidebarHover);
                 FillRoundedRectangle(g, brush, rect, radius);
 
@@ -159,7 +156,6 @@ namespace _26K1_DotNet
 
             int yOffset = _isPressed ? 1 : 0;
 
-            // 2. Icon
             var iconColor = IsActive ? Color.White : (_isHovered ? Color.White : UITheme.SidebarText);
             if (VectorIcon.HasValue)
             {
@@ -173,7 +169,6 @@ namespace _26K1_DotNet
                     TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
             }
 
-            // 3. Title — uses cached UITheme fonts
             {
                 var textFont = IsActive ? UITheme.FontNavBold : UITheme.FontNavRegular;
                 var textColor = IsActive ? Color.White : (_isHovered ? Color.White : UITheme.TextLight);
@@ -182,7 +177,6 @@ namespace _26K1_DotNet
                     TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
             }
 
-            // 5. Focus rectangle for keyboard navigation
             if (Focused && ShowFocusCues)
             {
                 var focusRect = new Rectangle(2, 2, Width - 5, Height - 5);

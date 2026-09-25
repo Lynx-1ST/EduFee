@@ -13,6 +13,8 @@ namespace _26K1_DotNet
         private MomoSettingsService _momoSettingsService = null!;
         private GatewayPaymentPersistenceService _gatewayPaymentPersistence = null!;
         private SqlDatabaseContext _dbContext = null!;
+        private readonly CancellationTokenSource _gatewayRecoveryCancellation = new();
+        private bool _gatewayRecoveryRunning;
 
         public EmailService EmailService => _emailService;
         public SqlDatabaseContext DbContext => _dbContext;
@@ -59,6 +61,8 @@ namespace _26K1_DotNet
                 ShowPanel("students");
                 if (!string.IsNullOrWhiteSpace(bootstrap.Notice))
                     lblPageSub.Text = bootstrap.Notice;
+                if (!_demoMode && _momoSettingsService.Settings.Enabled)
+                    BeginInvoke(new Action(async () => await RecoverPendingMomoPaymentsAsync(showSummary: false)));
             }
             catch (Exception ex)
             {
@@ -136,7 +140,7 @@ namespace _26K1_DotNet
         /// </summary>
         public void OpenSemesterManager()
         {
-            using var form = new FormSemesterManage(_semesterService);
+            using var form = new FormSemesterManage(_semesterService, _tuitionService);
             form.ShowDialog();
             UpdateHeaderActiveSemester();
             var act = _semesterService.GetActive();
@@ -201,10 +205,13 @@ namespace _26K1_DotNet
             cm.Font = UITheme.FontBody;
             var itemEmail = new ToolStripMenuItem("Cấu hình gửi Email SMTP...", null, (s, e) => OpenEmailSettings());
             var itemMomo = new ToolStripMenuItem("Cấu hình thanh toán MoMo Sandbox...", null, (s, e) => OpenMomoSettings());
+            var itemRecoverMomo = new ToolStripMenuItem("Kiểm tra lại giao dịch MoMo đang chờ...", null,
+                async (s, e) => await RecoverPendingMomoPaymentsAsync(showSummary: true));
             var itemDb = new ToolStripMenuItem("Quản trị cơ sở dữ liệu SQL...", null, (s, e) => OpenDatabaseConfig());
             var itemSem = new ToolStripMenuItem("Quản lý danh sách học kỳ...", null, (s, e) => OpenSemesterManager());
 
-            cm.Items.AddRange(new ToolStripItem[] { itemEmail, itemMomo, itemDb, new ToolStripSeparator(), itemSem });
+            cm.Items.AddRange(new ToolStripItem[]
+                { itemEmail, itemMomo, itemRecoverMomo, itemDb, new ToolStripSeparator(), itemSem });
             cm.Show(btnNavSettings, new Point(0, btnNavSettings.Height));
         }
 
@@ -229,6 +236,73 @@ namespace _26K1_DotNet
             }
             using var form = new FormMomoSettings(_momoSettingsService);
             form.ShowDialog(this);
+        }
+
+        public async Task RecoverPendingMomoPaymentsAsync(bool showSummary)
+        {
+            if (_gatewayRecoveryRunning)
+            {
+                if (showSummary) UiFeedback.ShowInfo("Ứng dụng đang kiểm tra các giao dịch MoMo đang chờ.");
+                return;
+            }
+            if (_demoMode)
+            {
+                if (showSummary) UiFeedback.ShowInfo("Chế độ demo không truy vấn MoMo Sandbox.");
+                return;
+            }
+            var gateway = MomoGateway;
+            if (gateway == null)
+            {
+                if (showSummary) UiFeedback.ShowWarning("MoMo Sandbox chưa được bật hoặc cấu hình chưa đầy đủ.");
+                return;
+            }
+
+            _gatewayRecoveryRunning = true;
+            try
+            {
+                var recovery = new GatewayPaymentRecoveryService(_gatewayPaymentPersistence);
+                var result = await recovery.RecoverAsync(gateway, transaction =>
+                {
+                    var fee = _tuitionService.GetById(transaction.TuitionFeeId)
+                        ?? throw new InvalidOperationException("Không tìm thấy học phí của giao dịch đang khôi phục.");
+                    var student = _studentService.GetStudentById(fee.StudentId);
+                    var semester = _semesterService.GetById(fee.SemesterId);
+                    return new GatewayRecoveryContext(student?.FullName ?? "Thanh toán MoMo", semester?.DueDate);
+                }, _gatewayRecoveryCancellation.Token);
+
+                if (result.ReceiptsCreated > 0) RefreshCurrentPanel();
+                if (result.Errors.Count > 0)
+                {
+                    string message = $"Đã kiểm tra {result.Checked} giao dịch; {result.Errors.Count} giao dịch chưa thể khôi phục.";
+                    if (showSummary) UiFeedback.ShowWarning(message + "\n" + string.Join("\n", result.Errors.Take(3)));
+                    else lblPageSub.Text = message + " Có thể kiểm tra lại từ menu Cài đặt.";
+                }
+                else if (showSummary || result.ReceiptsCreated > 0)
+                {
+                    UiFeedback.ShowSuccess($"Đã kiểm tra {result.Checked} giao dịch; " +
+                        $"tạo {result.ReceiptsCreated} biên lai và cập nhật {result.StatusesUpdated} trạng thái.");
+                }
+            }
+            catch (OperationCanceledException) when (_gatewayRecoveryCancellation.IsCancellationRequested)
+            {
+                // Application is closing.
+            }
+            catch (Exception ex)
+            {
+                if (showSummary) UiFeedback.ShowException(ex, "Không thể kiểm tra lại giao dịch MoMo");
+                else lblPageSub.Text = "Chưa thể kiểm tra lại giao dịch MoMo. Có thể thử lại từ menu Cài đặt.";
+            }
+            finally
+            {
+                _gatewayRecoveryRunning = false;
+            }
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            _gatewayRecoveryCancellation.Cancel();
+            _gatewayRecoveryCancellation.Dispose();
+            base.OnFormClosed(e);
         }
 
         public void OpenDatabaseConfig()

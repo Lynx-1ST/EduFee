@@ -47,6 +47,12 @@ public sealed class GatewayPaymentPersistenceService
         return row == null ? null : ToModel(row);
     }
 
+    public IReadOnlyList<PaymentGatewayTransaction> GetRecoverableTransactions(string provider) =>
+        _repository.GetRecoverableGatewayTransactions(provider, (int)GatewayPaymentStatus.Pending,
+                (int)GatewayPaymentStatus.Unknown)
+            .Select(ToModel)
+            .ToList();
+
     /// <summary>Accepts only a verified provider success. Duplicate polling returns null and creates no second receipt.</summary>
     public PaymentReceipt? RecordConfirmedSuccess(PaymentGatewayStatus confirmation, string payerName,
         DateTime? dueDate = null)

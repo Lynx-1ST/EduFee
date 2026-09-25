@@ -11,12 +11,10 @@ namespace _26K1_DotNet
         private readonly TuitionFee? _fee;
         private readonly bool _isNew;
 
-        private const decimal PRICE_PER_CREDIT = TuitionService.DefaultPricePerCredit;
-
         private ComboBox cmbStudent = null!, cmbSemester = null!, cmbDiscount = null!;
         private NumericUpDown numCredits = null!, numDiscount = null!;
         private DateTimePicker dtpDueDate = null!;
-        private Label lblStudentInfo = null!, lblTotal = null!, lblFormula = null!;
+        private Label lblStudentInfo = null!, lblTotal = null!, lblFormula = null!, lblPrice = null!;
         private TextBox txtNote = null!;
         private ErrorProvider _errorProvider = null!;
 
@@ -91,6 +89,10 @@ namespace _26K1_DotNet
                     var sem = _semSvc.GetById(sm.Id);
                     if (sem != null) dtpDueDate.Value = sem.DueDate;
                 }
+                if (cmbDiscount.SelectedIndex > 0 && !cmbDiscount.SelectedItem!.ToString()!.Contains("Tùy chỉnh"))
+                    OnDiscountPolicyChanged();
+                else
+                    UpdateTotal();
             };
             y += 36;
 
@@ -122,9 +124,9 @@ namespace _26K1_DotNet
             };
             body.Controls.Add(numCredits);
 
-            var lblPrice = new Label
+            lblPrice = new Label
             {
-                Text = $"×  {PRICE_PER_CREDIT:N0} VNĐ/tín",
+                Text = string.Empty,
                 Location = new Point(278, y + 5), AutoSize = true,
                 Font = UITheme.FontSmall, ForeColor = UITheme.TextSecondary
             };
@@ -275,7 +277,7 @@ namespace _26K1_DotNet
         private void OnDiscountPolicyChanged()
         {
             int credits = (int)numCredits.Value;
-            decimal original = credits * PRICE_PER_CREDIT;
+            decimal original = credits * GetTuitionPerCredit();
             string sel = cmbDiscount.SelectedItem?.ToString() ?? "";
 
             if (sel.Contains("100%"))
@@ -308,7 +310,8 @@ namespace _26K1_DotNet
         private void UpdateTotal()
         {
             int credits = (int)numCredits.Value;
-            decimal original = credits * PRICE_PER_CREDIT;
+            decimal pricePerCredit = GetTuitionPerCredit();
+            decimal original = credits * pricePerCredit;
             decimal discount = numDiscount != null ? numDiscount.Value : 0;
             if (discount > original)
             {
@@ -320,7 +323,15 @@ namespace _26K1_DotNet
             if (discount > 0)
                 lblFormula.Text = $"Gốc: {original:N0}đ  -  Giảm: {discount:N0}đ  =  {net:N0} VNĐ";
             else
-                lblFormula.Text = $"{credits} tín chỉ  ×  {PRICE_PER_CREDIT:N0}  =  {net:N0} VNĐ";
+                lblFormula.Text = $"{credits} tín chỉ  ×  {pricePerCredit:N0}  =  {net:N0} VNĐ";
+            lblPrice.Text = $"×  {pricePerCredit:N0} VNĐ/tín";
+        }
+
+        private decimal GetTuitionPerCredit()
+        {
+            if (cmbSemester?.SelectedItem is SemItem semesterItem)
+                return _semSvc.GetById(semesterItem.Id)?.TuitionPerCredit ?? Semester.DefaultTuitionPerCredit;
+            return Semester.DefaultTuitionPerCredit;
         }
 
         private void LoadData()
@@ -401,16 +412,17 @@ namespace _26K1_DotNet
                 int studentId  = ((SvItem)cmbStudent.SelectedItem!).Id;
                 int semesterId = ((SemItem)cmbSemester.SelectedItem!).Id;
                 int credits    = (int)numCredits.Value;
+                decimal pricePerCredit = GetTuitionPerCredit();
                 DateTime dueDate = dtpDueDate.Value;
                 decimal discount = numDiscount.Value;
                 string discountReason = cmbDiscount.SelectedIndex > 0 ? cmbDiscount.SelectedItem!.ToString()! : "";
-                decimal netAmount = Math.Max(0, (credits * PRICE_PER_CREDIT) - discount);
+                decimal netAmount = Math.Max(0, (credits * pricePerCredit) - discount);
 
                 if (_isNew)
                 {
-                    var fee = new TuitionFee(0, studentId, semesterId, credits, PRICE_PER_CREDIT, txtNote.Text.Trim(), dueDate, discount, discountReason);
+                    var fee = new TuitionFee(0, studentId, semesterId, credits, pricePerCredit, txtNote.Text.Trim(), dueDate, discount, discountReason);
                     _tuiSvc.Add(fee);
-                    UiFeedback.ShowSuccess($"Đã tạo phiếu học phí:\n{credits} tín chỉ × {PRICE_PER_CREDIT:N0} = {credits * PRICE_PER_CREDIT:N0} VNĐ\nMiễn giảm: {discount:N0} VNĐ\nThực nộp: {netAmount:N0} VNĐ\nHạn nộp: {dueDate:dd/MM/yyyy}");
+                    UiFeedback.ShowSuccess($"Đã tạo phiếu học phí:\n{credits} tín chỉ × {pricePerCredit:N0} = {credits * pricePerCredit:N0} VNĐ\nMiễn giảm: {discount:N0} VNĐ\nThực nộp: {netAmount:N0} VNĐ\nHạn nộp: {dueDate:dd/MM/yyyy}");
                 }
                 else
                 {

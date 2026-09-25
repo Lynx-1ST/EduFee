@@ -220,6 +220,58 @@ namespace K26_DotNet.Services
             }
         }
 
+        /// <summary>
+        /// Tính lại học phí cho các phiếu trong học kỳ khi đơn giá tín chỉ thay đổi.
+        /// </summary>
+        public int RecalculateFeesForSemester(int semesterId, decimal newPricePerCredit, bool updateFullyPaid = false)
+        {
+            if (newPricePerCredit <= 0 || decimal.Truncate(newPricePerCredit) != newPricePerCredit)
+                throw new ArgumentException("Đơn giá tín chỉ phải là số nguyên VNĐ lớn hơn 0.", nameof(newPricePerCredit));
+
+            var targetFees = _fees.Where(f => f.SemesterId == semesterId).ToList();
+            if (targetFees.Count == 0) return 0;
+
+            int updatedCount = 0;
+            foreach (var fee in targetFees)
+            {
+                if (!updateFullyPaid && fee.IsFullyPaid) continue;
+
+                decimal originalAmount = fee.Credits * newPricePerCredit;
+                decimal newDiscount = 0;
+                if (!string.IsNullOrEmpty(fee.DiscountReason))
+                {
+                    if (fee.DiscountReason.Contains("100%"))
+                        newDiscount = originalAmount;
+                    else if (fee.DiscountReason.Contains("50%"))
+                        newDiscount = Math.Round(originalAmount * 0.5m);
+                    else if (fee.DiscountReason.Contains("30%"))
+                        newDiscount = Math.Round(originalAmount * 0.3m);
+                    else
+                        newDiscount = Math.Min(originalAmount, fee.DiscountAmount);
+                }
+                else if (fee.DiscountAmount > 0)
+                {
+                    newDiscount = Math.Min(originalAmount, fee.DiscountAmount);
+                }
+
+                decimal newTotal = Math.Max(0, originalAmount - newDiscount);
+                // An toàn tài chính: Tổng học phí không được nhỏ hơn số tiền đã thu
+                if (newTotal < fee.PaidAmount)
+                    newTotal = fee.PaidAmount;
+
+                if (newTotal != fee.TotalAmount || newDiscount != fee.DiscountAmount)
+                {
+                    var clone = Clone(fee);
+                    clone.TotalAmount = newTotal;
+                    clone.DiscountAmount = newDiscount;
+                    Update(clone);
+                    updatedCount++;
+                }
+            }
+
+            return updatedCount;
+        }
+
         public void Delete(int id)
         {
             var fee = _fees.FirstOrDefault(f => f.Id == id)

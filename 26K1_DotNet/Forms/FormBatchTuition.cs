@@ -14,7 +14,6 @@ namespace _26K1_DotNet
         private readonly SemesterService _semesterSvc;
         private readonly TuitionService _tuitionSvc;
 
-        private const decimal PRICE_PER_CREDIT = TuitionService.DefaultPricePerCredit;
 
         private ComboBox cmbClass = null!;
         private ComboBox cmbSemester = null!;
@@ -237,8 +236,11 @@ namespace _26K1_DotNet
         private void UpdatePreview()
         {
             int credits = (int)numCredits.Value;
-            decimal totalPerStudent = credits * PRICE_PER_CREDIT;
-            lblPerStudentTotal.Text = $"= {totalPerStudent:N0} VNĐ / SV";
+            decimal pricePerCredit = cmbSemester.SelectedItem is SemItem selectedSemester
+                ? _semesterSvc.GetById(selectedSemester.Id)?.TuitionPerCredit ?? Semester.DefaultTuitionPerCredit
+                : Semester.DefaultTuitionPerCredit;
+            decimal totalPerStudent = credits * pricePerCredit;
+            lblPerStudentTotal.Text = $"= {totalPerStudent:N0} VNĐ ({pricePerCredit:N0} đ/tín)";
 
             string? className = cmbClass.SelectedItem?.ToString();
             if (string.IsNullOrEmpty(className) || cmbSemester.SelectedItem is not SemItem sem)
@@ -290,7 +292,9 @@ namespace _26K1_DotNet
             }
 
             int credits = (int)numCredits.Value;
-            decimal totalPerStudent = credits * PRICE_PER_CREDIT;
+            decimal pricePerCredit = _semesterSvc.GetById(sem.Id)?.TuitionPerCredit
+                ?? throw new InvalidOperationException("Không tìm thấy học kỳ đã chọn.");
+            decimal totalPerStudent = credits * pricePerCredit;
             string note = txtNote.Text.Trim();
             DateTime dueDate = dtpDueDate.Value;
 
@@ -304,7 +308,7 @@ namespace _26K1_DotNet
             if (!confirm) return;
 
             var feesToCreate = targetStudents
-                .Select(st => new TuitionFee(0, st.Id, sem.Id, credits, PRICE_PER_CREDIT, note, dueDate))
+                .Select(st => new TuitionFee(0, st.Id, sem.Id, credits, pricePerCredit, note, dueDate))
                 .ToList();
 
             _tuitionSvc.AddRange(feesToCreate);

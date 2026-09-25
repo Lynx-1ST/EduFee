@@ -107,9 +107,31 @@ internal static class Program
     tuition.RefreshStatuses([new Semester(1, "Test", day, day.AddMonths(4), DateTime.Today.AddDays(-1))]);
     Check(tuition.GetAll()[0].Status == PaymentStatus.Overdue, "Status refresh uses semester due date fallback");
 
+    string recalcFeesPath = Path.Combine(root, "recalc-fees.json");
+    var recalcTuition = new TuitionService(recalcFeesPath);
+    recalcTuition.Add(new TuitionFee(0, 101, 1, 10, pricePerCredit: 620_000m));
+    recalcTuition.Add(new TuitionFee(0, 102, 1, 10, pricePerCredit: 620_000m, discountAmount: 3_100_000m, discountReason: "Học bổng Giỏi (50%)"));
+    recalcTuition.Add(new TuitionFee(0, 103, 2, 10, pricePerCredit: 620_000m));
+
+    int updatedCount = recalcTuition.RecalculateFeesForSemester(1, 630_000m);
+    Check(updatedCount == 2, "RecalculateFeesForSemester updates all fees in target semester");
+    var updatedFee1 = recalcTuition.GetAll().First(f => f.StudentId == 101);
+    Check(updatedFee1.TotalAmount == 6_300_000m, "RecalculateFeesForSemester updates total for unpaid fee");
+    var updatedFee2 = recalcTuition.GetAll().First(f => f.StudentId == 102);
+    Check(updatedFee2.DiscountAmount == 3_150_000m && updatedFee2.TotalAmount == 3_150_000m,
+        "RecalculateFeesForSemester recalculates percentage discounts correctly");
+    var sem2Fee = recalcTuition.GetAll().First(f => f.StudentId == 103);
+    Check(sem2Fee.TotalAmount == 6_200_000m, "RecalculateFeesForSemester does not modify other semesters");
+
     string semesters = Path.Combine(root, "semesters.json");
     File.WriteAllText(semesters, "[]");
     Check(new SemesterService(semesters).GetAll().Count == 0, "An intentionally empty semester list stays empty");
+    var semesterService = new SemesterService(semesters);
+    semesterService.Add(new Semester(0, "HK đơn giá riêng", day, day.AddMonths(4), day.AddMonths(1), tuitionPerCredit: 750_000m));
+    Check(new SemesterService(semesters).GetAll().Single().TuitionPerCredit == 750_000m,
+        "Semester-specific tuition per credit persists in JSON");
+    Check(Throws(() => semesterService.Add(new Semester(0, "HK đơn giá lỗi", day, day.AddMonths(4), day.AddMonths(1), tuitionPerCredit: 0))),
+        "Semester rejects a non-positive tuition per credit");
     File.WriteAllText(feesPath, "");
     Check(Throws(() => new TuitionService(feesPath)), "Empty data files report corruption");
     string settingsPath = Path.Combine(root, "email-settings.json");

@@ -47,7 +47,8 @@ public static class PaymentGatewayAcceptance
         check(pending.Status == GatewayPaymentStatus.Pending,
             "MoMo processing result codes remain pending for polling");
 
-        foreach (int failedCode in new[] { 98, 99, 1001, 1002, 1004, 1007, 1017, 1026, 2019, 4001, 4002, 4100 })
+        foreach (int failedCode in new[]
+                 { 98, 99, 1001, 1002, 1004, 1007, 1017, 1026, 1080, 1081, 1088, 2019, 4001, 4002, 4100 })
         {
             string failedOrderId = "FAILED-" + failedCode;
             string failedJson = $$"""{"partnerCode":"partner","requestId":"REQUEST","orderId":"{{failedOrderId}}","amount":1000,"resultCode":{{failedCode}},"transId":0}""";

@@ -61,7 +61,57 @@ internal static class GatewayPersistenceAcceptance
         var fee = tuition.GetById(1)!;
         check(fee.PaidAmount == 0m && receipts.GetAll().Count == 0,
             "Non-success gateway statuses never change tuition or create receipts");
+
+        VerifyRestartRecovery(root, check);
     }
+
+    private static void VerifyRestartRecovery(string root, Action<bool, string> check)
+    {
+        string path = Path.Combine(root, "gateway-restart.db");
+        var firstDatabase = new SqlDatabaseContext(path);
+        SeedFee(firstDatabase);
+        var firstPersistence = new GatewayPaymentPersistenceService(firstDatabase,
+            new TuitionService(firstDatabase), new ReceiptService(firstDatabase));
+        foreach (string orderId in new[] { "RECOVER-SUCCESS", "RECOVER-FAILED", "RECOVER-OFFLINE" })
+            firstPersistence.PersistIntent(1, MomoSandboxPaymentGateway.ProviderName,
+                new PaymentGatewayRequest(orderId, 100_000m, "Khôi phục", "SV1", "Sinh viên 1"));
+
+        // Recreate every service to model a real application restart.
+        var restartedDatabase = new SqlDatabaseContext(path);
+        var restartedTuition = new TuitionService(restartedDatabase);
+        var restartedReceipts = new ReceiptService(restartedDatabase);
+        var restartedPersistence = new GatewayPaymentPersistenceService(restartedDatabase,
+            restartedTuition, restartedReceipts);
+        var gateway = new RecoveryGateway(new Dictionary<string, PaymentGatewayStatus>
+        {
+            ["RECOVER-SUCCESS"] = Result("RECOVER-SUCCESS", GatewayPaymentStatus.Success, "0", "987654"),
+            ["RECOVER-FAILED"] = Result("RECOVER-FAILED", GatewayPaymentStatus.Failed, "1001", "")
+        });
+        var recovery = new GatewayPaymentRecoveryService(restartedPersistence);
+        var result = recovery.RecoverAsync(gateway,
+            _ => new GatewayRecoveryContext("Sinh viên 1", new DateTime(2026, 5, 1)))
+            .GetAwaiter().GetResult();
+
+        check(result.Checked == 2 && result.ReceiptsCreated == 1 && result.StatusesUpdated == 1 &&
+              result.Errors.Count == 1,
+            "Restart recovery confirms success, persists failure and isolates network errors");
+        check(restartedPersistence.GetTransaction("RECOVER-SUCCESS")!.Status == GatewayPaymentStatus.Success &&
+              restartedPersistence.GetTransaction("RECOVER-FAILED")!.Status == GatewayPaymentStatus.Failed &&
+              restartedPersistence.GetTransaction("RECOVER-OFFLINE")!.Status == GatewayPaymentStatus.Pending &&
+              restartedTuition.GetById(1)!.PaidAmount == 100_000m && restartedReceipts.GetAll().Count == 1,
+            "Restart recovery commits exactly one receipt and leaves unreachable transactions recoverable");
+
+        var second = recovery.RecoverAsync(gateway,
+            _ => new GatewayRecoveryContext("Sinh viên 1", null)).GetAwaiter().GetResult();
+        check(second.ReceiptsCreated == 0 && restartedReceipts.GetAll().Count == 1 &&
+              gateway.QueriesByOrder.GetValueOrDefault("RECOVER-SUCCESS") == 1,
+            "Repeated recovery never requeries completed transactions or duplicates receipts");
+    }
+
+    private static PaymentGatewayStatus Result(string orderId, GatewayPaymentStatus status,
+        string resultCode, string transactionId) =>
+        new(orderId, transactionId, 100_000m, status, resultCode, status.ToString())
+        { Provider = MomoSandboxPaymentGateway.ProviderName };
 
     private static void SeedFee(SqlDatabaseContext database)
     {
@@ -83,5 +133,24 @@ internal static class GatewayPersistenceAcceptance
     {
         try { action(); return false; }
         catch (InvalidOperationException) { return true; }
+    }
+
+    private sealed class RecoveryGateway(IReadOnlyDictionary<string, PaymentGatewayStatus> results) : IPaymentGateway
+    {
+        public string Provider => MomoSandboxPaymentGateway.ProviderName;
+        public Dictionary<string, int> QueriesByOrder { get; } = new(StringComparer.Ordinal);
+
+        public Task<PaymentSession> CreatePaymentAsync(PaymentGatewayRequest request,
+            CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+        public Task<PaymentGatewayStatus> QueryPaymentAsync(string orderId,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            QueriesByOrder[orderId] = QueriesByOrder.GetValueOrDefault(orderId) + 1;
+            if (!results.TryGetValue(orderId, out var result))
+                throw new HttpRequestException("Offline test");
+            return Task.FromResult(result);
+        }
     }
 }

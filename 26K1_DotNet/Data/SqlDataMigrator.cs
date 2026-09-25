@@ -86,8 +86,8 @@ namespace K26_DotNet.Data
                 {
                     cmd.Transaction = tx;
                     cmd.CommandText = @"
-                        INSERT INTO Semesters (Id, Name, StartDate, EndDate, DueDate, IsActive)
-                        VALUES (@id, @name, @start, @end, @due, @active);";
+                        INSERT INTO Semesters (Id, Name, StartDate, EndDate, DueDate, IsActive, TuitionPerCredit)
+                        VALUES (@id, @name, @start, @end, @due, @active, @tuitionPerCredit);";
 
                     var pId = cmd.Parameters.Add("@id", SqliteType.Integer);
                     var pName = cmd.Parameters.Add("@name", SqliteType.Text);
@@ -95,6 +95,7 @@ namespace K26_DotNet.Data
                     var pEnd = cmd.Parameters.Add("@end", SqliteType.Text);
                     var pDue = cmd.Parameters.Add("@due", SqliteType.Text);
                     var pActive = cmd.Parameters.Add("@active", SqliteType.Integer);
+                    var pTuitionPerCredit = cmd.Parameters.Add("@tuitionPerCredit", SqliteType.Integer);
 
                     foreach (var s in semesters)
                     {
@@ -104,6 +105,7 @@ namespace K26_DotNet.Data
                         pEnd.Value = s.EndDate.ToString("o", CultureInfo.InvariantCulture);
                         pDue.Value = s.DueDate.ToString("o", CultureInfo.InvariantCulture);
                         pActive.Value = s.IsActive ? 1 : 0;
+                        pTuitionPerCredit.Value = checked((long)s.TuitionPerCredit);
                         cmd.ExecuteNonQuery();
                     }
                 }
@@ -255,7 +257,7 @@ namespace K26_DotNet.Data
             // 2. Read Semesters
             using (var cmd = conn.CreateCommand())
             {
-                cmd.CommandText = "SELECT Id, Name, StartDate, EndDate, DueDate, IsActive FROM Semesters ORDER BY Id;";
+                cmd.CommandText = "SELECT Id, Name, StartDate, EndDate, DueDate, IsActive, TuitionPerCredit FROM Semesters ORDER BY Id;";
                 using var reader = cmd.ExecuteReader();
                 while (reader.Read())
                 {
@@ -270,7 +272,8 @@ namespace K26_DotNet.Data
                         StartDate = start,
                         EndDate = end,
                         DueDate = due,
-                        IsActive = reader.GetInt32(5) == 1
+                        IsActive = reader.GetInt32(5) == 1,
+                        TuitionPerCredit = reader.GetInt64(6)
                     });
                 }
             }
